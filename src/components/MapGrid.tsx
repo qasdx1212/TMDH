@@ -23,6 +23,7 @@ const CELL = 10
 const W = GRID_COLS * CELL
 const H = GRID_ROWS * CELL
 const DRAG_THRESHOLD = 4
+const RS = 3 // 내부 렌더 배율 — 캔버스를 3배 해상도로 그려 확대 시 선명도 유지
 
 export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds, activeZone }: MapGridProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -54,10 +55,9 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
     const canvas = canvasRef.current
     if (!canvas) return null
     const rect = canvas.getBoundingClientRect()
-    const scaleX = canvas.width / rect.width
-    const scaleY = canvas.height / rect.height
-    const col = Math.floor(((clientX - rect.left) * scaleX) / CELL)
-    const row = Math.floor(((clientY - rect.top) * scaleY) / CELL)
+    // rect는 CSS transform 이후 viewport 크기 — 그리드 비율로 나눠 좌표 계산
+    const col = Math.floor((clientX - rect.left) * GRID_COLS / rect.width)
+    const row = Math.floor((clientY - rect.top) * GRID_ROWS / rect.height)
     if (col < 0 || col >= GRID_COLS || row < 0 || row >= GRID_ROWS) return null
     return { col, row }
   }, [])
@@ -66,7 +66,9 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')!
-    ctx.clearRect(0, 0, W, H)
+    ctx.clearRect(0, 0, W * RS, H * RS)
+    ctx.save()
+    ctx.scale(RS, RS)
 
     ctx.fillStyle = '#2a1a0a'
     ctx.fillRect(0, 0, W, H)
@@ -171,6 +173,8 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
       ctx.fillText(`${w}×${h}`, sx + sw / 2, sy + sh / 2)
     }
+
+    ctx.restore()
   }, [houses, myHouseIds, selection, activeZone])
 
   useEffect(() => { draw() }, [draw])
@@ -297,10 +301,10 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       }}>
         <canvas
           ref={canvasRef}
-          width={W}
-          height={H}
+          width={W * RS}
+          height={H * RS}
           onWheel={handleWheel}
-          style={{ display: 'block', imageRendering: 'pixelated' }}
+          style={{ display: 'block', width: W, height: H }}
         />
       </div>
 

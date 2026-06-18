@@ -48,9 +48,13 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
   const handleFile = (type: 'exterior' | 'interior') => (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    const url = URL.createObjectURL(file)
-    if (type === 'exterior') setForm(f => ({ ...f, exteriorImage: file, exteriorPreview: url }))
-    else setForm(f => ({ ...f, interiorImage: file, interiorPreview: url }))
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string
+      if (type === 'exterior') setForm(f => ({ ...f, exteriorImage: file, exteriorPreview: dataUrl }))
+      else setForm(f => ({ ...f, interiorImage: file, interiorPreview: dataUrl }))
+    }
+    reader.readAsDataURL(file)
     e.target.value = ''
   }
 
