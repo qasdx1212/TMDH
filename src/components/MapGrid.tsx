@@ -46,6 +46,7 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
 
   const houseMap = useRef<Map<string, CellData>>(new Map())
   const addressMap = useRef<Map<string, CellData>>(new Map())
+  const imageCache = useRef<Map<string, HTMLImageElement>>(new Map())
   useEffect(() => {
     const m = new Map<string, CellData>()
     const am = new Map<string, CellData>()
@@ -117,16 +118,30 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       const x = h.col * CELL, y = h.row * CELL
       const w = (h.width ?? 1) * CELL, ht = (h.height ?? 1) * CELL
       const zone = ZONES[h.zone]
+      const cachedImg = imageCache.current.get(h.address)
+      const hasImage = !!(cachedImg && cachedImg.naturalWidth > 0)
 
-      // 핫플 하이라이트 (방문 5+)
-      if (h.visit_count >= 5) {
-        ctx.shadowColor = zone.color
-        ctx.shadowBlur = 10
+      if (hasImage) {
+        ctx.save()
+        ctx.beginPath()
+        ctx.rect(x + 1, y + 1, w - 2, ht - 2)
+        ctx.clip()
+        ctx.drawImage(cachedImg!, x + 1, y + 1, w - 2, ht - 2)
+        ctx.restore()
+        if (h.visit_count >= 5) {
+          ctx.shadowColor = zone.color; ctx.shadowBlur = 10
+          ctx.strokeStyle = zone.color; ctx.lineWidth = 2
+          ctx.strokeRect(x + 1, y + 1, w - 2, ht - 2)
+          ctx.shadowBlur = 0
+        }
+      } else {
+        if (h.visit_count >= 5) {
+          ctx.shadowColor = zone.color; ctx.shadowBlur = 10
+        }
+        ctx.fillStyle = zone.color + 'cc'
+        ctx.fillRect(x + 1, y + 1, w - 2, ht - 2)
+        ctx.shadowBlur = 0
       }
-
-      ctx.fillStyle = zone.color + 'cc'
-      ctx.fillRect(x + 1, y + 1, w - 2, ht - 2)
-      ctx.shadowBlur = 0
 
       if (h.border_effect === 'neon') {
         ctx.shadowColor = zone.color; ctx.shadowBlur = 6
@@ -144,7 +159,9 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
         ctx.fillStyle = '#fff'
         ctx.font = `bold ${Math.min(8, w / h.nickname.length)}px sans-serif`
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+        if (hasImage) { ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 3 }
         ctx.fillText(h.nickname, x + w / 2, y + ht / 2)
+        ctx.shadowBlur = 0
       }
     })
 
@@ -182,6 +199,19 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
 
     ctx.restore()
   }, [houses, myHouseIds, selection, activeZone])
+
+  // 외관 이미지 비동기 프리로드 — 로드 완료 시 재드로우
+  useEffect(() => {
+    houses.forEach(h => {
+      if (!h.exterior_image_url || h.parent_address) return
+      if (imageCache.current.has(h.address)) return
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+      img.onload = () => { imageCache.current.set(h.address, img); draw() }
+      img.onerror = () => { imageCache.current.set(h.address, img) }
+      img.src = h.exterior_image_url
+    })
+  }, [houses, draw])
 
   useEffect(() => { draw() }, [draw])
 
