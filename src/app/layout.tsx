@@ -13,8 +13,21 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CELLAR — 디지털 셀 판매 플랫폼",
-  description: "웹사이트 격자형 디지털 공간을 구매하세요",
+  title: "집.zip — 당신만의 공간, 집.zip",
+  description: "100×100 픽셀 지도 위에 당신만의 집을 입주하세요. 집.zip은 디지털 부동산 플랫폼입니다.",
+  keywords: ["집.zip", "픽셀 지도", "디지털 부동산", "집", "공간"],
+  openGraph: {
+    type: "website",
+    title: "집.zip — 당신만의 공간",
+    description: "100×100 픽셀 지도 위에 당신만의 집을 입주하세요.",
+    siteName: "집.zip",
+    locale: "ko_KR",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "집.zip — 당신만의 공간",
+    description: "100×100 픽셀 지도 위에 당신만의 집을 입주하세요.",
+  },
 };
 
 export default function RootLayout({
@@ -24,7 +37,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="ko"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>

@@ -1,66 +1,128 @@
 'use client'
 
+const ZONE_FILTERS = [
+  { key: null, label: '전체' },
+  { key: 'neon', label: '✨ 네온', color: '#c084fc' },
+  { key: 'riverside', label: '🌿 강변', color: '#34d399' },
+  { key: 'oldtown', label: '🏮 구시가', color: '#fbbf24' },
+  { key: 'artdistrict', label: '🎨 예술구', color: '#f87171' },
+]
+
 interface FloatingHeaderProps {
+  occupiedCount: number
   totalCells: number
-  takenCells: number
-  selectedCount: number
-  draftCount: number
+  totalDonation: number
+  userId?: string
+  activeZone: string | null
+  onZoneFilter: (zone: string | null) => void
+  onApplyClick: () => void
+  onMyHouseClick: () => void
 }
 
-export default function FloatingHeader({ totalCells, takenCells, selectedCount, draftCount }: FloatingHeaderProps) {
-  const remaining = totalCells - takenCells
-  const pct = Math.round((takenCells / totalCells) * 100)
+export default function FloatingHeader({
+  occupiedCount, totalCells, totalDonation, userId,
+  activeZone, onZoneFilter, onApplyClick, onMyHouseClick,
+}: FloatingHeaderProps) {
+  const occupancyRate = ((occupiedCount / totalCells) * 100).toFixed(1)
 
   return (
     <div style={{
-      position: 'fixed',
-      top: 16,
-      left: 16,
-      zIndex: 100,
-      display: 'flex',
-      alignItems: 'center',
-      gap: 10,
-      background: 'rgba(255,255,255,0.88)',
-      backdropFilter: 'blur(10px)',
-      WebkitBackdropFilter: 'blur(10px)',
-      border: '1px solid rgba(0,0,0,0.07)',
-      borderRadius: 12,
-      padding: '8px 14px',
-      boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      position: 'fixed', top: 0, left: 0, right: 0, zIndex: 300,
+      background: 'rgba(26,10,2,0.97)', backdropFilter: 'blur(12px)',
+      borderBottom: '1px solid #6b4c2a55',
+      fontFamily: '"Noto Sans KR", -apple-system, sans-serif',
     }}>
-      <span style={{ fontWeight: 800, fontSize: 14, letterSpacing: '-0.03em', color: '#0f172a' }}>
-        CELLAR
-      </span>
-
-      <div style={{ width: 1, height: 14, background: '#e2e8f0' }} />
-
-      <span style={{ fontSize: 11, color: '#64748b' }}>
-        잔여 <b style={{ color: '#0f172a', fontWeight: 600 }}>{remaining.toLocaleString()}</b>칸
-      </span>
-
+      {/* 메인 헤더 줄 */}
       <div style={{
-        width: 48, height: 4, background: '#f1f5f9', borderRadius: 2, overflow: 'hidden',
+        display: 'flex', alignItems: 'center', padding: '0 20px',
+        height: 52,
       }}>
-        <div style={{ width: `${pct}%`, height: '100%', background: '#6366f1', borderRadius: 2, transition: 'width 0.4s' }} />
+        {/* 로고 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginRight: 28, flexShrink: 0 }}>
+          <div style={{ fontSize: 22 }}>🏠</div>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: '#fff', letterSpacing: '-0.03em' }}>
+              집.zip{' '}
+              <span style={{ fontSize: 9, fontWeight: 500, color: '#6366f1', background: '#6366f120', padding: '1px 6px', borderRadius: 4, verticalAlign: 'middle' }}>BETA</span>
+            </div>
+            <div style={{ fontSize: 9, color: '#64748b', marginTop: -2 }}>당신만의 공간, 집.zip</div>
+          </div>
+        </div>
+
+        {/* 통계 */}
+        <div style={{ display: 'flex', gap: 24, flex: 1 }}>
+          <div>
+            <div style={{ fontSize: 9, color: '#64748b', letterSpacing: '0.06em' }}>전체 면적</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#e2e8f0' }}>1,000,000 px</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 9, color: '#64748b', letterSpacing: '0.06em' }}>분양률</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#22c55e' }}>{occupancyRate}%</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 9, color: '#64748b', letterSpacing: '0.06em' }}>누적 기부금</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#ef4444' }}>₩ {totalDonation.toLocaleString()}</div>
+          </div>
+        </div>
+
+        {/* 버튼들 */}
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+          <button
+            onClick={onApplyClick}
+            style={{
+              padding: '7px 14px', borderRadius: 8, border: 'none',
+              background: '#6366f1', color: '#fff',
+              fontSize: 12, fontWeight: 600, cursor: 'pointer',
+            }}
+          >
+            ✏️ 입주 신청
+          </button>
+          <button style={{
+            width: 34, height: 34, borderRadius: 8,
+            border: '1px solid #ffffff20', background: 'transparent',
+            color: '#94a3b8', fontSize: 15, cursor: 'pointer',
+          }}>🔔</button>
+          {userId && (
+            <button
+              onClick={onMyHouseClick}
+              style={{
+                padding: '7px 14px', borderRadius: 8,
+                border: '1px solid #ffffff30', background: 'transparent',
+                color: '#e2e8f0', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              }}
+            >내 집 보기</button>
+          )}
+        </div>
       </div>
 
-      {draftCount > 0 && (
-        <>
-          <div style={{ width: 1, height: 14, background: '#e2e8f0' }} />
-          <span style={{ background: '#f59e0b', color: '#fff', borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 600 }}>
-            대기 {draftCount}칸
-          </span>
-        </>
-      )}
-      {selectedCount > 0 && (
-        <>
-          <div style={{ width: 1, height: 14, background: '#e2e8f0' }} />
-          <span style={{ background: '#6366f1', color: '#fff', borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 600 }}>
-            {selectedCount}칸 선택됨
-          </span>
-        </>
-      )}
+      {/* 구역 필터 줄 */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 6,
+        padding: '0 20px 8px',
+        borderTop: '1px solid #ffffff08',
+      }}>
+        <span style={{ fontSize: 10, color: '#64748b', marginRight: 4, flexShrink: 0 }}>구역 필터</span>
+        {ZONE_FILTERS.map(({ key, label, color }) => {
+          const active = activeZone === key
+          return (
+            <button
+              key={String(key)}
+              onClick={() => onZoneFilter(key)}
+              style={{
+                padding: '3px 10px', borderRadius: 20,
+                border: `1px solid ${active ? (color ?? '#6366f1') : '#ffffff20'}`,
+                background: active ? (color ?? '#6366f1') + '33' : 'transparent',
+                color: active ? (color ?? '#e2e8f0') : '#94a3b8',
+                fontSize: 11, fontWeight: active ? 700 : 400,
+                cursor: 'pointer', transition: 'all 0.15s',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {label}
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 }

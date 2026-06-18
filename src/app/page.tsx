@@ -1,254 +1,175 @@
 'use client'
 
-import { useState, useCallback, useMemo, useEffect } from 'react'
-import { GRID_COLS, GRID_ROWS } from '@/lib/constants'
-import { getZone, countByZone } from '@/lib/utils'
-import type { CellData, ContentType, Draft, DraftCellInfo, LayoutMode, PreviewConfig, Zone } from '@/types/cell'
-import CellGrid from '@/components/CellGrid'
-import PurchaseDrawer from '@/components/PurchaseDrawer'
+import { useState, useEffect, useCallback } from 'react'
+import { supabase } from '@/lib/supabase'
+import { getZone } from '@/lib/constants'
+import type { CellData } from '@/types/cell'
+import MapGrid from '@/components/MapGrid'
 import FloatingHeader from '@/components/FloatingHeader'
-
-function initCells(): CellData[] {
-  const data: CellData[] = []
-  for (let row = 0; row < GRID_ROWS; row++) {
-    for (let col = 0; col < GRID_COLS; col++) {
-      data.push({
-        id: row * GRID_COLS + col, col, row,
-        zone: getZone(col, row),
-        taken: false, contentType: 'text', contentText: '',
-        textColor: '#000000', fontSize: 16, imageData: null,
-        isPermanent: false, expiresAt: null,
-      })
-    }
-  }
-  return data
-}
-
-type PurchaseConfig = {
-  contentType: ContentType
-  text: string
-  textColor: string
-  fontSize: number
-  imageData: string | null
-  days: number
-  layoutMode: LayoutMode
-}
-
-// 선택한 셀들의 span 정보 계산 (드래프트/구매 공통)
-function buildCellMap(
-  ids: number[],
-  config: PurchaseConfig,
-  cells: CellData[],
-  cellSize: number
-): Map<number, DraftCellInfo> {
-  const chars = config.text.split('')
-  const minCol = Math.min(...ids.map(id => cells[id]?.col ?? 0))
-  const maxCol = Math.max(...ids.map(id => cells[id]?.col ?? 0))
-  const minRow = Math.min(...ids.map(id => cells[id]?.row ?? 0))
-  const spanW = (maxCol - minCol + 1) * cellSize
-  const spanH = (Math.max(...ids.map(id => cells[id]?.row ?? 0)) - minRow + 1) * cellSize
-
-  let spanImageUrl: string | null = null
-  if (config.layoutMode === 'block' && config.contentType === 'text' && chars.length > 0) {
-    const canvas = document.createElement('canvas')
-    canvas.width = spanW; canvas.height = spanH
-    const ctx = canvas.getContext('2d')!
-    const charW = spanW / chars.length
-    let fs = spanH * 0.9
-    ctx.font = `bold ${fs}px Arial, sans-serif`
-    const m = ctx.measureText(chars[0] ?? 'A')
-    const aH = (m.actualBoundingBoxAscent ?? fs * 0.75) + (m.actualBoundingBoxDescent ?? fs * 0.15)
-    if (aH > 0) fs = fs * (spanH * 0.88 / aH)
-    fs = Math.min(fs, charW * 0.92)
-    ctx.font = `bold ${fs}px Arial, sans-serif`
-    ctx.fillStyle = config.textColor
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
-    chars.forEach((ch, i) => ctx.fillText(ch, charW * (i + 0.5), spanH / 2))
-    spanImageUrl = canvas.toDataURL()
-
-    // 빈 행 제거: 픽셀 스캔으로 글자가 실제로 있는 행 범위만 남김
-    const pd = ctx.getImageData(0, 0, spanW, spanH).data
-    let textMinY = spanH, textMaxY = -1
-    for (let y = 0; y < spanH; y++) {
-      for (let x = 0; x < spanW; x++) {
-        if (pd[(y * spanW + x) * 4 + 3] > 20) {
-          if (y < textMinY) textMinY = y
-          textMaxY = y
-          break
-        }
-      }
-    }
-    if (textMaxY >= 0) {
-      const pad = Math.ceil(cellSize * 0.2)
-      const keepFrom = Math.max(0, Math.floor((textMinY - pad) / cellSize))
-      const keepTo = Math.min(maxRow - minRow, Math.floor((textMaxY + pad) / cellSize))
-      effectiveIds = ids.filter(id => {
-        const relRow = (cells[id]?.row ?? minRow) - minRow
-        return relRow >= keepFrom && relRow <= keepTo
-      })
-    }
-  } else if (config.contentType === 'image' && config.imageData) {
-    spanImageUrl = config.imageData
-  }
-
-  const sortedIds = [...ids].sort((a, b) => a - b)
-  const idIndexMap = new Map(sortedIds.map((id, i) => [id, i]))
-  const map = new Map<number, DraftCellInfo>()
-
-  ids.forEach(id => {
-    const cell = cells[id]
-    if (!cell) return
-    const isSpanning = spanImageUrl !== null
-    const char = !isSpanning && config.contentType === 'text'
-      ? (chars[idIndexMap.get(id) ?? 0] ?? '') : ''
-    map.set(id, {
-      contentType: isSpanning ? 'image' : config.contentType,
-      contentText: char,
-      textColor: config.textColor,
-      fontSize: config.fontSize,
-      imageData: isSpanning ? spanImageUrl : null,
-      imageBgSize: isSpanning ? `${spanW}px ${spanH}px` : undefined,
-      imageBgPos: isSpanning ? `${-(cell.col - minCol) * cellSize}px ${-(cell.row - minRow) * cellSize}px` : undefined,
-    })
-  })
-  return map
-}
+import HousePopup from '@/components/HousePopup'
+import ApplyFlow from '@/components/ApplyFlow'
+import StatsPanel from '@/components/StatsPanel'
+import MyHousesDrawer from '@/components/MyHousesDrawer'
 
 export default function Home() {
-  const [cells, setCells] = useState<CellData[]>(initCells)
-  const [selected, setSelected] = useState<Set<number>>(new Set())
-  const [previewConfig, setPreviewConfig] = useState<PreviewConfig | null>(null)
-  const [cellSize, setCellSize] = useState(10)
-  const [drafts, setDrafts] = useState<Draft[]>([])
+  const [houses, setHouses] = useState<CellData[]>([])
+  const [userId, setUserId] = useState<string | undefined>()
+  const [myHouseIds, setMyHouseIds] = useState<Set<string>>(new Set())
+  const [selectedCell, setSelectedCell] = useState<CellData | null>(null)
+  const [showApply, setShowApply] = useState(false)
+  const [applyCell, setApplyCell] = useState<CellData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [activeZone, setActiveZone] = useState<string | null>(null)
+  const [showMyHouses, setShowMyHouses] = useState(false)
+
+  const occupiedCount = houses.filter(h => h.status === 'occupied').length
+  const totalDonation = occupiedCount * 5000
 
   useEffect(() => {
-    const calc = () => {
-      const maxW = Math.floor((window.innerWidth  - (GRID_COLS - 1)) / GRID_COLS)
-      const maxH = Math.floor((window.innerHeight - (GRID_ROWS - 1)) / GRID_ROWS)
-      setCellSize(Math.max(4, Math.min(maxW, maxH)))
-    }
-    calc()
-    window.addEventListener('resize', calc)
-    return () => window.removeEventListener('resize', calc)
+    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id))
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      setUserId(session?.user?.id)
+    })
+    return () => subscription.unsubscribe()
   }, [])
 
-  const sortedSelected = useMemo(() => Array.from(selected).sort((a, b) => a - b), [selected])
-  const zoneCounts = useMemo(() => countByZone(sortedSelected, cells), [sortedSelected, cells])
-  const takenCount = useMemo(() => cells.filter(c => c.taken).length, [cells])
+  useEffect(() => {
+    if (!userId) return
+    supabase.from('houses').select('id').eq('user_id', userId)
+      .then(({ data }) => setMyHouseIds(new Set((data ?? []).map((h: { id: string }) => h.id))))
+  }, [userId])
 
-  const selectionBounds = useMemo(() => {
-    if (selected.size === 0) return { minCol: 0, maxCol: 0 }
-    let minCol = GRID_COLS, maxCol = 0
-    for (const id of selected) {
-      const col = cells[id]?.col ?? 0
-      if (col < minCol) minCol = col
-      if (col > maxCol) maxCol = col
-    }
-    return { minCol, maxCol }
-  }, [selected, cells])
-
-  // 드래프트 셀 맵 (렌더링용)
-  const draftCellMap = useMemo(() => {
-    const map = new Map<number, DraftCellInfo>()
-    for (const draft of drafts) {
-      for (const [id, info] of draft.cellMap) map.set(id, info)
-    }
-    return map
-  }, [drafts])
-
-  const handleSelectionChange = useCallback((next: Set<number>) => {
-    setSelected(next)
-    if (next.size === 0) setPreviewConfig(null)
+  const fetchHouses = useCallback(async () => {
+    const { data } = await supabase
+      .from('houses')
+      .select('id, address, col, row, width, height, zone, status, name, nickname, description, link_url, exterior_image_url, border_effect, like_count, visit_count, occupied_at, expires_at, is_permanent')
+      .neq('status', 'available')
+    setHouses((data ?? []) as CellData[])
+    setLoading(false)
   }, [])
 
-  const handleClearSelection = useCallback(() => {
-    setSelected(new Set())
-    setPreviewConfig(null)
+  useEffect(() => {
+    fetchHouses()
+    const channel = supabase
+      .channel('houses-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'houses' }, () => fetchHouses())
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [fetchHouses])
+
+  // URL 파라미터로 특정 집 자동 오픈 (?house=N-0000)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const houseAddr = params.get('house')
+    if (!houseAddr || loading) return
+    const target = houses.find(h => h.address === houseAddr)
+    if (target) setSelectedCell(target)
+  }, [loading, houses])
+
+  const openApply = useCallback((cell: CellData) => {
+    setApplyCell(cell)
+    setShowApply(true)
   }, [])
 
-  // 현재 선택을 드래프트로 저장 → 선택 초기화 → 새 구간 선택 가능
-  const handleAddDraft = useCallback((config: PurchaseConfig) => {
-    const ids = Array.from(selected)
-    if (ids.length === 0) return
-    const cellMap = buildCellMap(ids, config, cells, cellSize)
-    setDrafts(prev => [...prev, { id: Date.now().toString(), cellMap }])
-    setSelected(new Set())
-    setPreviewConfig(null)
-  }, [selected, cells, cellSize])
+  const handleCellClick = useCallback((cell: CellData) => {
+    if (cell.status === 'available') openApply(cell)
+    else setSelectedCell(cell)
+  }, [openApply])
 
-  // 드래프트 + 현재 선택 전체 구매
-  const handlePurchase = useCallback((config: PurchaseConfig) => {
-    const currentIds = Array.from(selected)
-    const currentMap = currentIds.length > 0
-      ? buildCellMap(currentIds, config, cells, cellSize)
-      : new Map<number, DraftCellInfo>()
-
-    // 모든 드래프트 + 현재 선택 병합
-    const allUpdates = new Map<number, DraftCellInfo>()
-    for (const draft of drafts) {
-      for (const [id, info] of draft.cellMap) allUpdates.set(id, info)
+  const handleAreaSelect = useCallback(({ col, row, width, height }: { col: number; row: number; width: number; height: number }) => {
+    const zone = getZone(col + Math.floor(width / 2), row + Math.floor(height / 2))
+    const prefix = { neon: 'N', riverside: 'R', oldtown: 'O', artdistrict: 'A' }[zone]
+    const cell: CellData = {
+      id: '', address: `${prefix}-${String(row * 100 + col).padStart(4, '0')}`,
+      col, row, width, height, zone, status: 'available',
+      name: null, nickname: null, description: null, link_url: null,
+      exterior_image_url: null, border_effect: 'none',
+      like_count: 0, visit_count: 0, occupied_at: null, expires_at: null, is_permanent: false,
     }
-    for (const [id, info] of currentMap) allUpdates.set(id, info)
+    openApply(cell)
+  }, [openApply])
 
-    if (allUpdates.size === 0) return
+  const handleApplySuccess = useCallback(() => {
+    setShowApply(false)
+    setApplyCell(null)
+    fetchHouses()
+  }, [fetchHouses])
 
-    setCells(prev => prev.map(cell => {
-      const info = allUpdates.get(cell.id)
-      if (!info) return cell
-      return {
-        ...cell,
-        taken: true,
-        contentType: info.contentType,
-        contentText: info.contentText,
-        textColor: info.textColor,
-        fontSize: info.fontSize,
-        imageData: info.imageData ?? null,
-        imageBgSize: info.imageBgSize,
-        imageBgPos: info.imageBgPos,
-        isPermanent: config.days === -1,
-        expiresAt: config.days > 0 ? new Date(Date.now() + config.days * 86400000) : null,
-      }
-    }))
-
-    setDrafts([])
-    setSelected(new Set())
-    setPreviewConfig(null)
-  }, [selected, cells, cellSize, drafts])
-
-  const handleCancelDraft = useCallback((draftId: string) => {
-    setDrafts(prev => prev.filter(d => d.id !== draftId))
-  }, [])
+  const headerHeight = 52 + 34 // 메인 줄 + 필터 줄
 
   return (
-    <div style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden', background: '#f8fafc' }}>
-      <CellGrid
-        cells={cells}
-        selected={selected}
-        previewConfig={previewConfig}
-        cellSize={cellSize}
-        draftCellMap={draftCellMap}
-        onSelectionChange={handleSelectionChange}
-        onCellTaken={() => {}}
-      />
+    <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', background: '#1a0f05', overflow: 'hidden' }}>
       <FloatingHeader
-        totalCells={GRID_COLS * GRID_ROWS}
-        takenCells={takenCount}
-        selectedCount={selected.size}
-        draftCount={drafts.reduce((s, d) => s + d.cellMap.size, 0)}
+        occupiedCount={occupiedCount}
+        totalCells={10000}
+        totalDonation={totalDonation}
+        userId={userId}
+        activeZone={activeZone}
+        onZoneFilter={setActiveZone}
+        onApplyClick={() => setShowApply(true)}
+        onMyHouseClick={() => setShowMyHouses(true)}
       />
-      <PurchaseDrawer
-        isOpen={selected.size > 0}
-        selectedCount={selected.size}
-        zoneCounts={zoneCounts}
-        selectionMinCol={selectionBounds.minCol}
-        selectionMaxCol={selectionBounds.maxCol}
-        drafts={drafts}
-        onPreviewChange={setPreviewConfig}
-        onAddDraft={handleAddDraft}
-        onPurchase={handlePurchase}
-        onCancelDraft={handleCancelDraft}
-        onClose={handleClearSelection}
-      />
+
+      <div style={{ flex: 1, marginTop: headerHeight, overflow: 'hidden' }}>
+        {loading ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#a07850', fontSize: 14 }}>
+            지도를 불러오는 중...
+          </div>
+        ) : (
+          <MapGrid
+            houses={houses}
+            onCellClick={handleCellClick}
+            onAreaSelect={handleAreaSelect}
+            myHouseIds={myHouseIds}
+            activeZone={activeZone}
+          />
+        )}
+      </div>
+
+      <StatsPanel houses={houses} />
+
+      {selectedCell && (
+        <HousePopup
+          house={selectedCell}
+          currentUserId={userId}
+          onClose={() => setSelectedCell(null)}
+          onBuy={(cell) => { setSelectedCell(null); openApply(cell) }}
+        />
+      )}
+
+      {showApply && applyCell && userId && (
+        <ApplyFlow
+          selectedCell={applyCell}
+          userId={userId}
+          onClose={() => { setShowApply(false); setApplyCell(null) }}
+          onSuccess={handleApplySuccess}
+        />
+      )}
+
+      {showApply && !userId && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.8)' }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: 32, textAlign: 'center', maxWidth: 320, fontFamily: '"Noto Sans KR", -apple-system, sans-serif' }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>🔑</div>
+            <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>로그인이 필요해요</div>
+            <div style={{ fontSize: 13, color: '#64748b', marginBottom: 20 }}>입주 신청을 위해 로그인해 주세요.</div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setShowApply(false)} style={{ flex: 1, padding: '10px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', fontSize: 13 }}>취소</button>
+              <button
+                onClick={() => supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/auth/callback` } })}
+                style={{ flex: 2, padding: '10px', borderRadius: 8, border: 'none', background: '#6366f1', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
+              >구글로 로그인</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showMyHouses && userId && (
+        <MyHousesDrawer
+          userId={userId}
+          onClose={() => setShowMyHouses(false)}
+          onEdit={(house) => { setShowMyHouses(false); openApply(house) }}
+        />
+      )}
     </div>
   )
 }

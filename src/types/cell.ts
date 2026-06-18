@@ -1,47 +1,24 @@
-export type Zone = 'a' | 'b' | 'c'
-export type ContentType = 'text' | 'image'
+export type Zone = 'neon' | 'riverside' | 'oldtown' | 'artdistrict'
+export type HouseStatus = 'available' | 'pending' | 'occupied'
 
 export interface CellData {
-  id: number
+  id: string
+  address: string
   col: number
   row: number
+  width?: number
+  height?: number
   zone: Zone
-  taken: boolean
-  contentType: ContentType
-  contentText: string
-  textColor: string
-  fontSize: number
-  imageData: string | null
-  imageBgSize?: string   // 'cover' | '{w}px {h}px'
-  imageBgPos?: string    // 'center' | '{x}px {y}px'
-  isPermanent: boolean
-  expiresAt: Date | null
-}
-
-export type LayoutMode = 'perCell' | 'block'
-
-export interface DraftCellInfo {
-  contentType: ContentType
-  contentText: string
-  textColor: string
-  fontSize: number
-  imageData: string | null
-  imageBgSize?: string
-  imageBgPos?: string
-}
-
-export interface Draft {
-  id: string
-  cellMap: Map<number, DraftCellInfo>
-}
-
-export interface PreviewConfig {
-  contentType: ContentType
-  text: string
-  textColor: string
-  fontSize: number
-  imageData: string | null
-  layoutMode: LayoutMode
-  selectionMinCol: number
-  selectionMaxCol: number
+  status: HouseStatus
+  name: string | null
+  nickname: string | null
+  description: string | null
+  link_url: string | null
+  exterior_image_url: string | null
+  border_effect: 'none' | 'neon'
+  like_count: number
+  visit_count: number
+  occupied_at: string | null
+  expires_at: string | null
+  is_permanent: boolean
 }
