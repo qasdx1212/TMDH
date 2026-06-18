@@ -45,10 +45,16 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
   const [blockMsg, setBlockMsg] = useState('')
 
   const houseMap = useRef<Map<string, CellData>>(new Map())
+  const addressMap = useRef<Map<string, CellData>>(new Map())
   useEffect(() => {
     const m = new Map<string, CellData>()
-    houses.forEach(h => m.set(`${h.col},${h.row}`, h))
+    const am = new Map<string, CellData>()
+    houses.forEach(h => {
+      m.set(`${h.col},${h.row}`, h)
+      am.set(h.address, h)
+    })
     houseMap.current = m
+    addressMap.current = am
   }, [houses])
 
   const toGrid = useCallback((clientX: number, clientY: number) => {
@@ -240,7 +246,11 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       if (!grid) return
       const existing = houseMap.current.get(`${grid.col},${grid.row}`)
       if (existing) {
-        onCellClick(existing)
+        // 위성 칸 클릭 시 대표 칸으로 리다이렉트
+        const cell = existing.parent_address
+          ? (addressMap.current.get(existing.parent_address) ?? existing)
+          : existing
+        onCellClick(cell)
       } else {
         const zone = getZone(grid.col, grid.row)
         const prefix = { neon: 'N', riverside: 'R', oldtown: 'O', artdistrict: 'A' }[zone]

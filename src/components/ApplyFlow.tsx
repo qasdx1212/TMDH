@@ -125,7 +125,6 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                 is_permanent: form.days === PERMANENT_DAYS,
               })
               .eq('address', addr)
-              .eq('status', 'available')
           }
         }
       }
