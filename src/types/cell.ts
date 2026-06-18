@@ -21,4 +21,5 @@ export interface CellData {
   occupied_at: string | null
   expires_at: string | null
   is_permanent: boolean
+  parent_address?: string | null
 }

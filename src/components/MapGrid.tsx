@@ -104,8 +104,8 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       ctx.fillStyle = zone.color + 'aa'; ctx.fillText(zone.label, cx, cy)
     })
 
-    // 입주된 집
-    houses.forEach(h => {
+    // 입주된 집 (위성 칸 제외 — 대표 칸만 렌더링)
+    houses.filter(h => !h.parent_address).forEach(h => {
       const x = h.col * CELL, y = h.row * CELL
       const w = (h.width ?? 1) * CELL, ht = (h.height ?? 1) * CELL
       const zone = ZONES[h.zone]

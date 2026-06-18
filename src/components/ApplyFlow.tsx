@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
-import { ZONES, DURATIONS, PERMANENT_DAYS, calcPrice, formatKRW } from '@/lib/constants'
+import { ZONES, DURATIONS, PERMANENT_DAYS, calcPrice, formatKRW, getAddress } from '@/lib/constants'
 import type { CellData } from '@/types/cell'
 
 interface ApplyFlowProps {
@@ -79,7 +79,14 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
         ? null
         : new Date(Date.now() + form.days * 86400000).toISOString()
 
-      const { error, count } = await supabase
+      const col = selectedCell.col
+      const row = selectedCell.row
+      const width = selectedCell.width ?? 1
+      const height = selectedCell.height ?? 1
+      const occupiedAt = new Date().toISOString()
+
+      // 대표 칸 업데이트 (좌상단, width/height 포함)
+      const { error } = await supabase
         .from('houses')
         .update({
           user_id: userId,
@@ -91,20 +98,43 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
           interior_image_url: interiorUrl,
           border_effect: form.borderEffect,
           status: 'occupied',
-          occupied_at: new Date().toISOString(),
+          width,
+          height,
+          occupied_at: occupiedAt,
           expires_at: expiresAt,
           is_permanent: form.days === PERMANENT_DAYS,
         })
         .eq('address', selectedCell.address)
 
       if (error) {
-        console.error('Supabase update error:', error)
         setErrorMsg(`저장 실패: ${error.message}`)
         return
       }
+
+      // 위성 칸 업데이트 (나머지 칸들 — 재구매 방지용)
+      if (width > 1 || height > 1) {
+        for (let c = col; c < col + width; c++) {
+          for (let r = row; r < row + height; r++) {
+            if (c === col && r === row) continue
+            const addr = getAddress(c, r)
+            await supabase
+              .from('houses')
+              .update({
+                user_id: userId,
+                status: 'occupied',
+                parent_address: selectedCell.address,
+                occupied_at: occupiedAt,
+                expires_at: expiresAt,
+                is_permanent: form.days === PERMANENT_DAYS,
+              })
+              .eq('address', addr)
+              .eq('status', 'available')
+          }
+        }
+      }
+
       onSuccess()
     } catch (err) {
-      console.error('Submit error:', err)
       setErrorMsg('오류가 발생했습니다. 다시 시도해주세요.')
     } finally {
       setLoading(false)
