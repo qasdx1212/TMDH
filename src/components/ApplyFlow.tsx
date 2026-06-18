@@ -30,12 +30,19 @@ interface FormData {
 const STEPS = ['위치 확인', '집 정보', '이미지', '확인', '결제']
 
 export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: ApplyFlowProps) {
-  const [step, setStep] = useState<Step>(1)
+  const isEdit = selectedCell.status === 'occupied'
+  const [step, setStep] = useState<Step>(isEdit ? 2 : 1)
   const [form, setForm] = useState<FormData>({
-    name: '', description: '', linkUrl: '', nickname: '',
-    exteriorImage: null, exteriorPreview: null,
-    interiorImage: null, interiorPreview: null,
-    days: 30, borderEffect: 'none',
+    name: isEdit ? (selectedCell.name ?? '') : '',
+    description: isEdit ? (selectedCell.description ?? '') : '',
+    linkUrl: isEdit ? (selectedCell.link_url ?? '') : '',
+    nickname: isEdit ? (selectedCell.nickname ?? '') : '',
+    exteriorImage: null,
+    exteriorPreview: isEdit ? (selectedCell.exterior_image_url ?? null) : null,
+    interiorImage: null,
+    interiorPreview: isEdit ? (selectedCell.interior_image_url ?? null) : null,
+    days: 30,
+    borderEffect: isEdit ? (selectedCell.border_effect ?? 'none') : 'none',
   })
   const [loading, setLoading] = useState(false)
   const [payMethod, setPayMethod] = useState('card')
@@ -64,7 +71,8 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
     setLoading(true)
     setErrorMsg(null)
     try {
-      let exteriorUrl: string | null = null
+      // 새 파일이 없으면 기존 URL 유지
+      let exteriorUrl: string | null = selectedCell.exterior_image_url ?? null
       if (form.exteriorImage) {
         exteriorUrl = await uploadImage(
           form.exteriorImage,
@@ -72,7 +80,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
         )
       }
 
-      let interiorUrl: string | null = null
+      let interiorUrl: string | null = selectedCell.interior_image_url ?? null
       if (form.interiorImage) {
         interiorUrl = await uploadImage(
           form.interiorImage,
@@ -154,7 +162,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
           <div>
-            <div style={{ fontSize: 17, fontWeight: 800, color: '#fdf6e3' }}>🏠 입주 신청</div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: '#fdf6e3' }}>{isEdit ? '✏️ 집 정보 수정' : '🏠 입주 신청'}</div>
             <div style={{ fontSize: 11, color: zone.color, marginTop: 2, fontWeight: 600 }}>
               {zone.label} · {selectedCell.address} · {cellCount}칸
             </div>

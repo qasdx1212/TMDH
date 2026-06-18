@@ -4,12 +4,7 @@ import { useRef, useEffect, useCallback, useState } from 'react'
 import { GRID_COLS, GRID_ROWS, ZONES, getZone } from '@/lib/constants'
 import type { CellData } from '@/types/cell'
 
-interface Selection {
-  col: number
-  row: number
-  width: number
-  height: number
-}
+interface Selection { col: number; row: number; width: number; height: number }
 
 interface MapGridProps {
   houses: CellData[]
@@ -17,6 +12,7 @@ interface MapGridProps {
   onAreaSelect: (sel: Selection) => void
   myHouseIds?: Set<string>
   activeZone?: string | null
+  centerTarget?: { col: number; row: number } | null
 }
 
 const CELL = 10
@@ -25,7 +21,6 @@ const H = GRID_ROWS * CELL
 const DRAG_THRESHOLD = 4
 const RS = 3
 
-// seeded hash for deterministic terrain
 const rng = (x: number, y: number, s = 0) => {
   const n = Math.sin(x * 127.1 + y * 311.7 + s * 74.3) * 43758.5453
   return n - Math.floor(n)
@@ -33,127 +28,78 @@ const rng = (x: number, y: number, s = 0) => {
 
 function buildTerrainCanvas(): HTMLCanvasElement {
   const tc = document.createElement('canvas')
-  tc.width = W * RS
-  tc.height = H * RS
+  tc.width = W * RS; tc.height = H * RS
   const ctx = tc.getContext('2d')!
-  ctx.save()
-  ctx.scale(RS, RS)
+  ctx.save(); ctx.scale(RS, RS)
 
-  // ── Per-cell base tiles ──
   for (let c = 0; c < GRID_COLS; c++) {
     for (let r = 0; r < GRID_ROWS; r++) {
       const px = c * CELL, py = r * CELL
       const n = rng(c, r)
       let color: string
-
       if (c < 50 && r < 50) {
-        // Neon: dark city grid
-        if (c % 9 === 0 || r % 9 === 0) {
-          color = '#150c20'
-        } else {
-          const bn = rng(Math.floor(c / 3), Math.floor(r / 3), 1)
-          color = bn < 0.33 ? '#2d1a3e' : bn < 0.67 ? '#261535' : '#322046'
-        }
+        if (c % 9 === 0 || r % 9 === 0) { color = '#150c20' }
+        else { const bn = rng(Math.floor(c/3), Math.floor(r/3), 1); color = bn < 0.33 ? '#2d1a3e' : bn < 0.67 ? '#261535' : '#322046' }
       } else if (c >= 50 && r < 50) {
-        // Riverside: grass + river on right
         const riverX = 82 + Math.floor(Math.sin(r * 0.25) * 4)
-        if (c >= riverX) {
-          color = n < 0.4 ? '#154060' : n < 0.7 ? '#1a4e72' : '#122e4a'
-        } else if (c >= riverX - 3) {
-          color = n < 0.5 ? '#2a4a30' : '#233e28'
-        } else {
-          const path = (c - 50) % 14 === 7 || r % 12 === 6
-          color = path ? '#264430' : (n < 0.35 ? '#1a3028' : n < 0.7 ? '#1f3a2c' : '#243e30')
-        }
+        if (c >= riverX) { color = n < 0.4 ? '#154060' : n < 0.7 ? '#1a4e72' : '#122e4a' }
+        else if (c >= riverX - 3) { color = n < 0.5 ? '#2a4a30' : '#233e28' }
+        else { const path = (c-50)%14===7||r%12===6; color = path ? '#264430' : (n<0.35?'#1a3028':n<0.7?'#1f3a2c':'#243e30') }
       } else if (c < 50 && r >= 50) {
-        // Oldtown: cobblestone
-        const pathH = (r - 50) % 8 <= 1
-        const pathV = c % 8 === 0
-        if (pathH || pathV) {
-          color = n < 0.5 ? '#7a5a38' : '#8a6840'
-        } else {
-          const sn = rng(Math.floor(c / 2), Math.floor(r / 2), 2)
-          color = sn < 0.33 ? '#4a3520' : sn < 0.67 ? '#5a4228' : '#3e2c18'
-        }
+        const pathH = (r-50)%8<=1, pathV = c%8===0
+        if (pathH||pathV) { color = n<0.5?'#7a5a38':'#8a6840' }
+        else { const sn = rng(Math.floor(c/2), Math.floor(r/2), 2); color = sn<0.33?'#4a3520':sn<0.67?'#5a4228':'#3e2c18' }
       } else {
-        // Art District: warm dark
-        const bn = rng(Math.floor(c / 4), Math.floor(r / 4), 3)
-        color = n < 0.04 ? '#5a2525' : (bn < 0.4 ? '#3d1a1a' : bn < 0.75 ? '#4a2020' : '#33181a')
+        const bn = rng(Math.floor(c/4), Math.floor(r/4), 3)
+        color = n<0.04?'#5a2525':(bn<0.4?'#3d1a1a':bn<0.75?'#4a2020':'#33181a')
       }
-
-      ctx.fillStyle = color
-      ctx.fillRect(px, py, CELL, CELL)
+      ctx.fillStyle = color; ctx.fillRect(px, py, CELL, CELL)
     }
   }
 
-  // ── Grid lines ──
   Object.entries(ZONES).forEach(([, zone]) => {
-    ctx.strokeStyle = zone.gridColor
-    ctx.lineWidth = 0.4
-    for (let c = zone.colMin; c <= zone.colMax + 1; c++) {
-      ctx.beginPath(); ctx.moveTo(c * CELL, zone.rowMin * CELL); ctx.lineTo(c * CELL, (zone.rowMax + 1) * CELL); ctx.stroke()
-    }
-    for (let r = zone.rowMin; r <= zone.rowMax + 1; r++) {
-      ctx.beginPath(); ctx.moveTo(zone.colMin * CELL, r * CELL); ctx.lineTo((zone.colMax + 1) * CELL, r * CELL); ctx.stroke()
-    }
+    ctx.strokeStyle = zone.gridColor; ctx.lineWidth = 0.4
+    for (let c = zone.colMin; c <= zone.colMax+1; c++) { ctx.beginPath(); ctx.moveTo(c*CELL,zone.rowMin*CELL); ctx.lineTo(c*CELL,(zone.rowMax+1)*CELL); ctx.stroke() }
+    for (let r = zone.rowMin; r <= zone.rowMax+1; r++) { ctx.beginPath(); ctx.moveTo(zone.colMin*CELL,r*CELL); ctx.lineTo((zone.colMax+1)*CELL,r*CELL); ctx.stroke() }
   })
 
-  // ── Trees (riverside grass) ──
   for (let c = 50; c <= 78; c++) {
     for (let r = 0; r < 50; r++) {
       if (rng(c, r, 4) < 0.08) {
-        ctx.fillStyle = '#2a5235'
-        ctx.beginPath(); ctx.arc(c * CELL + 5, r * CELL + 5, 3.8, 0, Math.PI * 2); ctx.fill()
-        ctx.fillStyle = '#4a7050'
-        ctx.beginPath(); ctx.arc(c * CELL + 4, r * CELL + 4, 2.2, 0, Math.PI * 2); ctx.fill()
+        ctx.fillStyle='#2a5235'; ctx.beginPath(); ctx.arc(c*CELL+5,r*CELL+5,3.8,0,Math.PI*2); ctx.fill()
+        ctx.fillStyle='#4a7050'; ctx.beginPath(); ctx.arc(c*CELL+4,r*CELL+4,2.2,0,Math.PI*2); ctx.fill()
       }
     }
   }
-
-  // ── River ripples ──
   for (let c = 83; c < GRID_COLS; c++) {
     for (let r = 0; r < 50; r++) {
-      const riverX = 82 + Math.floor(Math.sin(r * 0.25) * 4)
-      if (c >= riverX && rng(c, r, 5) < 0.12) {
-        ctx.fillStyle = 'rgba(255,255,255,0.07)'
-        ctx.fillRect(c * CELL + 2, r * CELL + 4, 5, 1)
-      }
+      const riverX = 82+Math.floor(Math.sin(r*0.25)*4)
+      if (c>=riverX&&rng(c,r,5)<0.12) { ctx.fillStyle='rgba(255,255,255,0.07)'; ctx.fillRect(c*CELL+2,r*CELL+4,5,1) }
     }
   }
-
-  // ── Neon street lights (small dots at road intersections) ──
-  for (let c = 0; c < 50; c += 9) {
-    for (let r = 0; r < 50; r += 9) {
-      ctx.fillStyle = '#c084fc55'
-      ctx.beginPath(); ctx.arc(c * CELL + 1, r * CELL + 1, 1.5, 0, Math.PI * 2); ctx.fill()
-    }
+  for (let c = 0; c < 50; c += 9) for (let r = 0; r < 50; r += 9) {
+    ctx.fillStyle='#c084fc55'; ctx.beginPath(); ctx.arc(c*CELL+1,r*CELL+1,1.5,0,Math.PI*2); ctx.fill()
   }
+  ctx.strokeStyle='#6b4c2a'; ctx.lineWidth=2
+  ctx.beginPath(); ctx.moveTo(50*CELL,0); ctx.lineTo(50*CELL,H); ctx.stroke()
+  ctx.beginPath(); ctx.moveTo(0,50*CELL); ctx.lineTo(W,50*CELL); ctx.stroke()
 
-  // ── Zone boundary lines ──
-  ctx.strokeStyle = '#6b4c2a'
-  ctx.lineWidth = 2
-  ctx.beginPath(); ctx.moveTo(50 * CELL, 0); ctx.lineTo(50 * CELL, H); ctx.stroke()
-  ctx.beginPath(); ctx.moveTo(0, 50 * CELL); ctx.lineTo(W, 50 * CELL); ctx.stroke()
-
-  // ── Zone labels ──
   Object.entries(ZONES).forEach(([, zone]) => {
-    const cx = (zone.colMin + zone.colMax + 1) / 2 * CELL
-    const cy = (zone.rowMin + zone.rowMax + 1) / 2 * CELL
-    ctx.font = 'bold 13px sans-serif'
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
-    ctx.fillStyle = '#00000066'; ctx.fillText(zone.label, cx + 1, cy + 1)
-    ctx.fillStyle = zone.color + 'aa'; ctx.fillText(zone.label, cx, cy)
+    const cx=(zone.colMin+zone.colMax+1)/2*CELL, cy=(zone.rowMin+zone.rowMax+1)/2*CELL
+    ctx.font='bold 13px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'
+    ctx.fillStyle='#00000066'; ctx.fillText(zone.label,cx+1,cy+1)
+    ctx.fillStyle=zone.color+'aa'; ctx.fillText(zone.label,cx,cy)
   })
-
   ctx.restore()
   return tc
 }
 
-export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds, activeZone }: MapGridProps) {
+export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds, activeZone, centerTarget }: MapGridProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState(1)
   const [offset, setOffset] = useState({ x: 0, y: 0 })
+  const scaleRef = useRef(1)
 
   const isPanning = useRef(false)
   const panStart = useRef({ x: 0, y: 0 })
@@ -168,24 +114,45 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
   const [selection, setSelection] = useState<{ c1: number; r1: number; c2: number; r2: number } | null>(null)
   const [blockMsg, setBlockMsg] = useState('')
   const [terrainReady, setTerrainReady] = useState(false)
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; text: string } | null>(null)
 
   const houseMap = useRef<Map<string, CellData>>(new Map())
   const addressMap = useRef<Map<string, CellData>>(new Map())
   const imageCache = useRef<Map<string, HTMLImageElement>>(new Map())
   const terrainCanvas = useRef<HTMLCanvasElement | null>(null)
 
+  // touch refs
+  const lastPinchDist = useRef<number | null>(null)
+  const touchStartPos = useRef<{ x: number; y: number } | null>(null)
+  const touchStartTime = useRef(0)
+
+  // keep scaleRef in sync
+  useEffect(() => { scaleRef.current = scale }, [scale])
+
+  // center map on target cell (e.g. from search)
+  useEffect(() => {
+    if (!centerTarget) return
+    const container = containerRef.current
+    if (!container) return
+    const rect = container.getBoundingClientRect()
+    const s = Math.max(scaleRef.current, 2)
+    const cellCx = (centerTarget.col + 0.5) * CELL
+    const cellCy = (centerTarget.row + 0.5) * CELL
+    const newX = rect.width / 2 - cellCx * s
+    const newY = rect.height / 2 - cellCy * s
+    scaleRef.current = s
+    lastOffset.current = { x: newX, y: newY }
+    setScale(s)
+    setOffset({ x: newX, y: newY })
+  }, [centerTarget])
+
   useEffect(() => {
     const m = new Map<string, CellData>()
     const am = new Map<string, CellData>()
-    houses.forEach(h => {
-      m.set(`${h.col},${h.row}`, h)
-      am.set(h.address, h)
-    })
-    houseMap.current = m
-    addressMap.current = am
+    houses.forEach(h => { m.set(`${h.col},${h.row}`, h); am.set(h.address, h) })
+    houseMap.current = m; addressMap.current = am
   }, [houses])
 
-  // Build terrain once on mount
   useEffect(() => {
     if (terrainCanvas.current) return
     terrainCanvas.current = buildTerrainCanvas()
@@ -207,109 +174,59 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
     if (!canvas) return
     const ctx = canvas.getContext('2d')!
     ctx.clearRect(0, 0, W * RS, H * RS)
+    if (terrainCanvas.current) ctx.drawImage(terrainCanvas.current, 0, 0)
+    else { ctx.fillStyle = '#2a1a0a'; ctx.fillRect(0, 0, W*RS, H*RS) }
+    ctx.save(); ctx.scale(RS, RS)
 
-    // Terrain layer (pre-rendered, RS-scale native)
-    if (terrainCanvas.current) {
-      ctx.drawImage(terrainCanvas.current, 0, 0)
-    } else {
-      ctx.fillStyle = '#2a1a0a'
-      ctx.fillRect(0, 0, W * RS, H * RS)
-    }
-
-    ctx.save()
-    ctx.scale(RS, RS)
-
-    // Houses (primary cells only)
     houses.filter(h => !h.parent_address).forEach(h => {
-      const x = h.col * CELL, y = h.row * CELL
-      const w = (h.width ?? 1) * CELL, ht = (h.height ?? 1) * CELL
+      const x = h.col*CELL, y = h.row*CELL
+      const w = (h.width??1)*CELL, ht = (h.height??1)*CELL
       const zone = ZONES[h.zone]
       const cachedImg = imageCache.current.get(h.address)
       const hasImage = !!(cachedImg && cachedImg.naturalWidth > 0)
-
       if (hasImage) {
-        ctx.save()
-        ctx.beginPath()
-        ctx.rect(x + 1, y + 1, w - 2, ht - 2)
-        ctx.clip()
-        ctx.drawImage(cachedImg!, x + 1, y + 1, w - 2, ht - 2)
-        ctx.restore()
-        if (h.visit_count >= 5) {
-          ctx.shadowColor = zone.color; ctx.shadowBlur = 10
-          ctx.strokeStyle = zone.color; ctx.lineWidth = 2
-          ctx.strokeRect(x + 1, y + 1, w - 2, ht - 2)
-          ctx.shadowBlur = 0
-        }
+        ctx.save(); ctx.beginPath(); ctx.rect(x+1,y+1,w-2,ht-2); ctx.clip()
+        ctx.drawImage(cachedImg!, x+1, y+1, w-2, ht-2); ctx.restore()
+        if (h.visit_count >= 5) { ctx.shadowColor=zone.color; ctx.shadowBlur=10; ctx.strokeStyle=zone.color; ctx.lineWidth=2; ctx.strokeRect(x+1,y+1,w-2,ht-2); ctx.shadowBlur=0 }
       } else {
-        if (h.visit_count >= 5) {
-          ctx.shadowColor = zone.color; ctx.shadowBlur = 10
-        }
-        ctx.fillStyle = zone.color + 'cc'
-        ctx.fillRect(x + 1, y + 1, w - 2, ht - 2)
-        ctx.shadowBlur = 0
+        if (h.visit_count >= 5) { ctx.shadowColor=zone.color; ctx.shadowBlur=10 }
+        ctx.fillStyle=zone.color+'cc'; ctx.fillRect(x+1,y+1,w-2,ht-2); ctx.shadowBlur=0
       }
-
-      if (h.border_effect === 'neon') {
-        ctx.shadowColor = zone.color; ctx.shadowBlur = 6
-        ctx.strokeStyle = zone.color; ctx.lineWidth = 1.5
-        ctx.strokeRect(x + 1, y + 1, w - 2, ht - 2)
-        ctx.shadowBlur = 0
-      }
-
-      if (myHouseIds?.has(h.id)) {
-        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2
-        ctx.strokeRect(x, y, w, ht)
-      }
-
+      if (h.border_effect==='neon') { ctx.shadowColor=zone.color; ctx.shadowBlur=6; ctx.strokeStyle=zone.color; ctx.lineWidth=1.5; ctx.strokeRect(x+1,y+1,w-2,ht-2); ctx.shadowBlur=0 }
+      if (myHouseIds?.has(h.id)) { ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.strokeRect(x,y,w,ht) }
       if (h.nickname && w >= 20) {
-        ctx.fillStyle = '#fff'
-        ctx.font = `bold ${Math.min(8, w / h.nickname.length)}px sans-serif`
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
-        if (hasImage) { ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 3 }
-        ctx.fillText(h.nickname, x + w / 2, y + ht / 2)
-        ctx.shadowBlur = 0
+        ctx.fillStyle='#fff'; ctx.font=`bold ${Math.min(8,w/h.nickname.length)}px sans-serif`
+        ctx.textAlign='center'; ctx.textBaseline='middle'
+        if (hasImage) { ctx.shadowColor='rgba(0,0,0,0.8)'; ctx.shadowBlur=3 }
+        ctx.fillText(h.nickname, x+w/2, y+ht/2); ctx.shadowBlur=0
       }
     })
 
-    // Active zone dimming
     if (activeZone) {
       Object.entries(ZONES).forEach(([key, zone]) => {
         if (key === activeZone) return
         ctx.fillStyle = 'rgba(0,0,0,0.6)'
-        ctx.fillRect(zone.colMin * CELL, zone.rowMin * CELL, (zone.colMax - zone.colMin + 1) * CELL, (zone.rowMax - zone.rowMin + 1) * CELL)
+        ctx.fillRect(zone.colMin*CELL, zone.rowMin*CELL, (zone.colMax-zone.colMin+1)*CELL, (zone.rowMax-zone.rowMin+1)*CELL)
       })
     }
 
-    // Drag selection
     if (selection) {
-      const { c1, r1, c2, r2 } = selection
-      const sx = Math.min(c1, c2) * CELL
-      const sy = Math.min(r1, r2) * CELL
-      const sw = (Math.abs(c2 - c1) + 1) * CELL
-      const sh = (Math.abs(r2 - r1) + 1) * CELL
-      ctx.fillStyle = '#ffffff22'
-      ctx.fillRect(sx, sy, sw, sh)
-      ctx.strokeStyle = '#fff'
-      ctx.lineWidth = 1.5
-      ctx.setLineDash([4, 3])
-      ctx.strokeRect(sx, sy, sw, sh)
-      ctx.setLineDash([])
-      ctx.fillStyle = '#fff'
-      ctx.font = 'bold 9px sans-serif'
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
-      ctx.fillText(`${Math.abs(c2 - c1) + 1}×${Math.abs(r2 - r1) + 1}`, sx + sw / 2, sy + sh / 2)
+      const { c1,r1,c2,r2 } = selection
+      const sx=Math.min(c1,c2)*CELL, sy=Math.min(r1,r2)*CELL
+      const sw=(Math.abs(c2-c1)+1)*CELL, sh=(Math.abs(r2-r1)+1)*CELL
+      ctx.fillStyle='#ffffff22'; ctx.fillRect(sx,sy,sw,sh)
+      ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.setLineDash([4,3]); ctx.strokeRect(sx,sy,sw,sh); ctx.setLineDash([])
+      ctx.fillStyle='#fff'; ctx.font='bold 9px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'
+      ctx.fillText(`${Math.abs(c2-c1)+1}×${Math.abs(r2-r1)+1}`, sx+sw/2, sy+sh/2)
     }
-
     ctx.restore()
   }, [houses, myHouseIds, selection, activeZone, terrainReady])
 
-  // Preload exterior images
   useEffect(() => {
     houses.forEach(h => {
       if (!h.exterior_image_url || h.parent_address) return
       if (imageCache.current.has(h.address)) return
-      const img = new Image()
-      img.crossOrigin = 'anonymous'
+      const img = new Image(); img.crossOrigin = 'anonymous'
       img.onload = () => { imageCache.current.set(h.address, img); draw() }
       img.onerror = () => { imageCache.current.set(h.address, img) }
       img.src = h.exterior_image_url
@@ -318,12 +235,119 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
 
   useEffect(() => { draw() }, [draw])
 
+  // Wheel: zoom to cursor
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const handler = (e: WheelEvent) => {
+      e.preventDefault()
+      const container = containerRef.current
+      if (!container) return
+      const rect = container.getBoundingClientRect()
+      const mx = e.clientX - rect.left
+      const my = e.clientY - rect.top
+      const newScale = Math.max(0.4, Math.min(6, scaleRef.current - e.deltaY * 0.002))
+      const wx = (mx - lastOffset.current.x) / scaleRef.current
+      const wy = (my - lastOffset.current.y) / scaleRef.current
+      const newX = mx - wx * newScale
+      const newY = my - wy * newScale
+      scaleRef.current = newScale
+      lastOffset.current = { x: newX, y: newY }
+      setScale(newScale)
+      setOffset({ x: newX, y: newY })
+    }
+    canvas.addEventListener('wheel', handler, { passive: false })
+    return () => canvas.removeEventListener('wheel', handler)
+  }, [])
+
+  // Touch: pan + pinch-zoom + tap
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 1) {
+        touchStartPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+        touchStartTime.current = Date.now()
+        panStart.current = {
+          x: e.touches[0].clientX - lastOffset.current.x,
+          y: e.touches[0].clientY - lastOffset.current.y,
+        }
+      } else if (e.touches.length === 2) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX
+        const dy = e.touches[0].clientY - e.touches[1].clientY
+        lastPinchDist.current = Math.sqrt(dx*dx + dy*dy)
+        touchStartPos.current = null
+      }
+    }
+
+    const onTouchMove = (e: TouchEvent) => {
+      e.preventDefault()
+      if (e.touches.length === 1) {
+        const nx = e.touches[0].clientX - panStart.current.x
+        const ny = e.touches[0].clientY - panStart.current.y
+        lastOffset.current = { x: nx, y: ny }
+        setOffset({ x: nx, y: ny })
+      } else if (e.touches.length === 2 && lastPinchDist.current !== null) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX
+        const dy = e.touches[0].clientY - e.touches[1].clientY
+        const dist = Math.sqrt(dx*dx + dy*dy)
+        const newScale = Math.max(0.4, Math.min(6, scaleRef.current * (dist / lastPinchDist.current)))
+        const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2
+        const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2
+        const rect = el.getBoundingClientRect()
+        const mx = cx - rect.left, my = cy - rect.top
+        const wx = (mx - lastOffset.current.x) / scaleRef.current
+        const wy = (my - lastOffset.current.y) / scaleRef.current
+        const newX = mx - wx * newScale, newY = my - wy * newScale
+        scaleRef.current = newScale
+        lastOffset.current = { x: newX, y: newY }
+        setScale(newScale); setOffset({ x: newX, y: newY })
+        lastPinchDist.current = dist
+      }
+    }
+
+    const onTouchEnd = (e: TouchEvent) => {
+      if (e.touches.length === 0 && touchStartPos.current) {
+        const t = e.changedTouches[0]
+        const elapsed = Date.now() - touchStartTime.current
+        const dx = Math.abs(t.clientX - touchStartPos.current.x)
+        const dy = Math.abs(t.clientY - touchStartPos.current.y)
+        if (elapsed < 300 && dx < 12 && dy < 12) {
+          const grid = toGrid(t.clientX, t.clientY)
+          if (grid) {
+            const existing = houseMap.current.get(`${grid.col},${grid.row}`)
+            if (existing) {
+              const cell = existing.parent_address ? (addressMap.current.get(existing.parent_address) ?? existing) : existing
+              onCellClick(cell)
+            } else {
+              const zone = getZone(grid.col, grid.row)
+              const prefix = { neon:'N', riverside:'R', oldtown:'O', artdistrict:'A' }[zone]
+              onCellClick({ id:'', address:`${prefix}-${String(grid.row*100+grid.col).padStart(4,'0')}`, col:grid.col, row:grid.row, zone, status:'available', name:null, nickname:null, description:null, link_url:null, exterior_image_url:null, border_effect:'none', like_count:0, visit_count:0, occupied_at:null, expires_at:null, is_permanent:false })
+            }
+          }
+        }
+      }
+      if (e.touches.length < 2) lastPinchDist.current = null
+      if (e.touches.length === 0) touchStartPos.current = null
+    }
+
+    el.addEventListener('touchstart', onTouchStart, { passive: false })
+    el.addEventListener('touchmove', onTouchMove, { passive: false })
+    el.addEventListener('touchend', onTouchEnd)
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart)
+      el.removeEventListener('touchmove', onTouchMove)
+      el.removeEventListener('touchend', onTouchEnd)
+    }
+  }, [toGrid, onCellClick])
+
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     mouseDownPos.current = { x: e.clientX, y: e.clientY }
     isMouseDown.current = true
+    setTooltip(null)
     if (e.button === 1 || e.altKey) {
-      isPanning.current = true
-      setCursor('grabbing')
+      isPanning.current = true; setCursor('grabbing')
       panStart.current = { x: e.clientX - lastOffset.current.x, y: e.clientY - lastOffset.current.y }
       return
     }
@@ -339,13 +363,22 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       setOffset({ x: nx, y: ny })
       return
     }
+    // hover tooltip
+    if (!isMouseDown.current) {
+      const grid = toGrid(e.clientX, e.clientY)
+      if (grid) {
+        const existing = houseMap.current.get(`${grid.col},${grid.row}`)
+        const primary = existing?.parent_address ? (addressMap.current.get(existing.parent_address) ?? existing) : existing
+        if (primary?.status === 'occupied') {
+          const text = primary.nickname ?? primary.name ?? '이름 없음'
+          setTooltip({ x: e.clientX, y: e.clientY, text })
+        } else { setTooltip(null) }
+      } else { setTooltip(null) }
+    }
     if (!isMouseDown.current) return
     const dx = Math.abs(e.clientX - mouseDownPos.current.x)
     const dy = Math.abs(e.clientY - mouseDownPos.current.y)
-    if (dx > DRAG_THRESHOLD || dy > DRAG_THRESHOLD) {
-      isSelecting.current = true
-      setCursor('crosshair')
-    }
+    if (dx > DRAG_THRESHOLD || dy > DRAG_THRESHOLD) { isSelecting.current = true; setCursor('crosshair') }
     if (isSelecting.current && selectStart.current) {
       const grid = toGrid(e.clientX, e.clientY)
       if (grid) {
@@ -356,105 +389,71 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
   }, [toGrid])
 
   const handleMouseUp = useCallback((e: React.MouseEvent) => {
-    isPanning.current = false
-    isMouseDown.current = false
-    setCursor('default')
-
+    isPanning.current = false; isMouseDown.current = false; setCursor('default')
     const dx = Math.abs(e.clientX - mouseDownPos.current.x)
     const dy = Math.abs(e.clientY - mouseDownPos.current.y)
     const wasClick = dx <= DRAG_THRESHOLD && dy <= DRAG_THRESHOLD
-
     if (wasClick) {
-      isSelecting.current = false
-      setSelection(null)
+      isSelecting.current = false; setSelection(null)
       const grid = toGrid(e.clientX, e.clientY)
       if (!grid) return
       const existing = houseMap.current.get(`${grid.col},${grid.row}`)
       if (existing) {
-        const cell = existing.parent_address
-          ? (addressMap.current.get(existing.parent_address) ?? existing)
-          : existing
+        const cell = existing.parent_address ? (addressMap.current.get(existing.parent_address) ?? existing) : existing
         onCellClick(cell)
       } else {
         const zone = getZone(grid.col, grid.row)
-        const prefix = { neon: 'N', riverside: 'R', oldtown: 'O', artdistrict: 'A' }[zone]
-        onCellClick({
-          id: '', address: `${prefix}-${String(grid.row * 100 + grid.col).padStart(4, '0')}`,
-          col: grid.col, row: grid.row, zone, status: 'available',
-          name: null, nickname: null, description: null, link_url: null,
-          exterior_image_url: null, border_effect: 'none',
-          like_count: 0, visit_count: 0, occupied_at: null, expires_at: null, is_permanent: false,
-        })
+        const prefix = { neon:'N', riverside:'R', oldtown:'O', artdistrict:'A' }[zone]
+        onCellClick({ id:'', address:`${prefix}-${String(grid.row*100+grid.col).padStart(4,'0')}`, col:grid.col, row:grid.row, zone, status:'available', name:null, nickname:null, description:null, link_url:null, exterior_image_url:null, border_effect:'none', like_count:0, visit_count:0, occupied_at:null, expires_at:null, is_permanent:false })
       }
     } else if (isSelecting.current && selectStart.current && selectEnd.current) {
-      const c1 = Math.min(selectStart.current.col, selectEnd.current.col)
-      const c2 = Math.max(selectStart.current.col, selectEnd.current.col)
-      const r1 = Math.min(selectStart.current.row, selectEnd.current.row)
-      const r2 = Math.max(selectStart.current.row, selectEnd.current.row)
-
+      const c1=Math.min(selectStart.current.col,selectEnd.current.col)
+      const c2=Math.max(selectStart.current.col,selectEnd.current.col)
+      const r1=Math.min(selectStart.current.row,selectEnd.current.row)
+      const r2=Math.max(selectStart.current.row,selectEnd.current.row)
       let hasOccupied = false
-      outer: for (let c = c1; c <= c2; c++) {
-        for (let r = r1; r <= r2; r++) {
-          if (houseMap.current.has(`${c},${r}`)) { hasOccupied = true; break outer }
-        }
-      }
-
-      setSelection(null)
-      isSelecting.current = false
-
-      if (hasOccupied) {
-        setBlockMsg('선택 영역에 이미 입주된 칸이 있어요 🏠')
-        setTimeout(() => setBlockMsg(''), 2500)
-      } else {
-        onAreaSelect({ col: c1, row: r1, width: c2 - c1 + 1, height: r2 - r1 + 1 })
-      }
+      outer: for (let c=c1;c<=c2;c++) for (let r=r1;r<=r2;r++) if (houseMap.current.has(`${c},${r}`)) { hasOccupied=true; break outer }
+      setSelection(null); isSelecting.current = false
+      if (hasOccupied) { setBlockMsg('선택 영역에 이미 입주된 칸이 있어요 🏠'); setTimeout(()=>setBlockMsg(''),2500) }
+      else onAreaSelect({ col:c1, row:r1, width:c2-c1+1, height:r2-r1+1 })
     }
-
-    selectStart.current = null
-    selectEnd.current = null
+    selectStart.current = null; selectEnd.current = null
   }, [toGrid, onCellClick, onAreaSelect])
-
-  // Non-passive wheel for zoom
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const handler = (e: WheelEvent) => {
-      e.preventDefault()
-      setScale(s => Math.max(0.5, Math.min(6, s - e.deltaY * 0.002)))
-    }
-    canvas.addEventListener('wheel', handler, { passive: false })
-    return () => canvas.removeEventListener('wheel', handler)
-  }, [])
 
   return (
     <div
       ref={containerRef}
-      style={{ width: '100%', height: '100%', overflow: 'hidden', cursor, background: '#1a0f05', userSelect: 'none', position: 'relative' }}
+      style={{ width:'100%', height:'100%', overflow:'hidden', cursor, background:'#1a0f05', userSelect:'none', position:'relative', touchAction:'none' }}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
-      onMouseLeave={() => { isPanning.current = false; isMouseDown.current = false; isSelecting.current = false; setSelection(null); setCursor('default') }}
+      onMouseLeave={() => { isPanning.current=false; isMouseDown.current=false; isSelecting.current=false; setSelection(null); setCursor('default'); setTooltip(null) }}
     >
-      <div style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`, transformOrigin: '0 0' }}>
-        <canvas
-          ref={canvasRef}
-          width={W * RS}
-          height={H * RS}
-          style={{ display: 'block', width: W, height: H }}
-        />
+      <div style={{ transform:`translate(${offset.x}px,${offset.y}px) scale(${scale})`, transformOrigin:'0 0' }}>
+        <canvas ref={canvasRef} width={W*RS} height={H*RS} style={{ display:'block', width:W, height:H }} />
       </div>
+
+      {tooltip && (
+        <div style={{
+          position: 'fixed', left: tooltip.x + 14, top: tooltip.y - 38,
+          background: 'rgba(26,15,5,0.95)', color: '#fdf6e3',
+          padding: '5px 12px', borderRadius: 6, fontSize: 12, fontWeight: 700,
+          border: '1.5px solid #8b6914', pointerEvents: 'none', zIndex: 200,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.5)', whiteSpace: 'nowrap',
+          fontFamily: '"Noto Sans KR", sans-serif',
+        }}>
+          🏠 {tooltip.text}
+        </div>
+      )}
 
       {blockMsg && (
         <div style={{
-          position: 'absolute', bottom: 24, left: '50%', transform: 'translateX(-50%)',
-          background: 'rgba(239,68,68,0.92)', color: '#fff',
-          padding: '10px 20px', borderRadius: 10,
-          fontSize: 13, fontWeight: 600, fontFamily: '"Noto Sans KR", sans-serif',
-          pointerEvents: 'none', whiteSpace: 'nowrap',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
-        }}>
-          {blockMsg}
-        </div>
+          position:'absolute', bottom:24, left:'50%', transform:'translateX(-50%)',
+          background:'rgba(239,68,68,0.92)', color:'#fff',
+          padding:'10px 20px', borderRadius:10, fontSize:13, fontWeight:600,
+          fontFamily:'"Noto Sans KR", sans-serif', pointerEvents:'none', whiteSpace:'nowrap',
+          boxShadow:'0 4px 20px rgba(0,0,0,0.4)',
+        }}>{blockMsg}</div>
       )}
     </div>
   )

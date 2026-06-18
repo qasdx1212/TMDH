@@ -21,6 +21,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [activeZone, setActiveZone] = useState<string | null>(null)
   const [showMyHouses, setShowMyHouses] = useState(false)
+  const [centerTarget, setCenterTarget] = useState<{ col: number; row: number } | null>(null)
 
   // Escape키로 모든 팝업 닫기
   useEffect(() => {
@@ -122,6 +123,12 @@ export default function Home() {
         onZoneFilter={setActiveZone}
         onApplyClick={() => setShowApply(true)}
         onMyHouseClick={() => setShowMyHouses(true)}
+        houses={houses}
+        onSearchSelect={(house) => {
+          setSelectedCell(house)
+          setCenterTarget({ col: house.col, row: house.row })
+          setTimeout(() => setCenterTarget(null), 100)
+        }}
       />
 
       <div style={{ flex: 1, marginTop: headerHeight, overflow: 'hidden' }}>
@@ -136,6 +143,7 @@ export default function Home() {
             onAreaSelect={handleAreaSelect}
             myHouseIds={myHouseIds}
             activeZone={activeZone}
+            centerTarget={centerTarget}
           />
         )}
       </div>

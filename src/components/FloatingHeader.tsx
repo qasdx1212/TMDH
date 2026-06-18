@@ -1,5 +1,8 @@
 'use client'
 
+import { useState, useRef, useEffect } from 'react'
+import type { CellData } from '@/types/cell'
+
 const ZONE_FILTERS = [
   { key: null,          label: '전체',     color: '#d4b483' },
   { key: 'neon',        label: '🌃 네온',  color: '#c084fc' },
@@ -17,13 +20,46 @@ interface FloatingHeaderProps {
   onZoneFilter: (zone: string | null) => void
   onApplyClick: () => void
   onMyHouseClick: () => void
+  houses: CellData[]
+  onSearchSelect: (house: CellData) => void
 }
 
 export default function FloatingHeader({
   occupiedCount, totalCells, totalDonation, userId,
   activeZone, onZoneFilter, onApplyClick, onMyHouseClick,
+  houses, onSearchSelect,
 }: FloatingHeaderProps) {
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchFocused, setSearchFocused] = useState(false)
+  const searchRef = useRef<HTMLDivElement>(null)
   const occupancyRate = ((occupiedCount / totalCells) * 100).toFixed(1)
+
+  const results = searchQuery.trim().length >= 1
+    ? houses.filter(h =>
+        h.status === 'occupied' && (
+          h.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          h.nickname?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          h.address.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      ).slice(0, 6)
+    : []
+
+  // 외부 클릭으로 드롭다운 닫기
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setSearchFocused(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const handleSelect = (house: CellData) => {
+    onSearchSelect(house)
+    setSearchQuery('')
+    setSearchFocused(false)
+  }
 
   return (
     <div style={{
@@ -34,105 +70,129 @@ export default function FloatingHeader({
       fontFamily: '"Noto Sans KR", -apple-system, sans-serif',
     }}>
       {/* 메인 줄 */}
-      <div style={{
-        display: 'flex', alignItems: 'center',
-        padding: '0 20px', height: 56,
-        gap: 20,
-      }}>
+      <div style={{ display:'flex', alignItems:'center', padding:'0 16px', height:56, gap:16 }}>
         {/* 로고 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, marginRight: 8 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
           <div style={{
-            width: 38, height: 38, borderRadius: 8,
-            background: 'linear-gradient(135deg, #8b6914, #5a3e10)',
-            border: '2px solid #c8a96e',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 20, boxShadow: '0 2px 0 #3d2a08',
+            width:38, height:38, borderRadius:8,
+            background:'linear-gradient(135deg,#8b6914,#5a3e10)',
+            border:'2px solid #c8a96e',
+            display:'flex', alignItems:'center', justifyContent:'center',
+            fontSize:20, boxShadow:'0 2px 0 #3d2a08', flexShrink:0,
           }}>🏠</div>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 16, fontWeight: 900, color: '#fdf6e3', letterSpacing: '-0.03em' }}>집.zip</span>
-              <span style={{
-                fontSize: 9, fontWeight: 700, color: '#c084fc',
-                background: '#c084fc20', padding: '1px 5px', borderRadius: 3,
-                border: '1px solid #c084fc44',
-              }}>BETA</span>
+          <div className="hide-on-mobile">
+            <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+              <span style={{ fontSize:16, fontWeight:900, color:'#fdf6e3', letterSpacing:'-0.03em' }}>집.zip</span>
+              <span style={{ fontSize:9, fontWeight:700, color:'#c084fc', background:'#c084fc20', padding:'1px 5px', borderRadius:3, border:'1px solid #c084fc44' }}>BETA</span>
             </div>
-            <div style={{ fontSize: 9, color: '#7a5c3a', marginTop: -1 }}>당신만의 공간, 집.zip</div>
+            <div style={{ fontSize:9, color:'#7a5c3a' }}>당신만의 공간, 집.zip</div>
           </div>
         </div>
 
-        {/* 통계 */}
-        <div style={{ display: 'flex', gap: 20, flex: 1 }}>
-          <StatItem label="전체 면적" value="1,000,000 pixels" valueColor="#d4b483" />
+        {/* 통계 — 태블릿 이상 */}
+        <div style={{ display:'flex', gap:20, flex:1 }} className="hide-on-mobile">
+          <StatItem label="전체 면적" value="1,000,000 px" valueColor="#d4b483" />
           <StatItem label="분양률" value={`${occupancyRate}%`} valueColor="#4ade80" />
-          <StatItem
-            label="누적 기부금"
-            value={`₩ ${totalDonation.toLocaleString()}`}
-            valueColor="#f87171"
-          />
+          <StatItem label="누적 기부금" value={`₩${totalDonation.toLocaleString()}`} valueColor="#f87171" />
+        </div>
+
+        {/* 검색 */}
+        <div ref={searchRef} style={{ position:'relative', flex:1, maxWidth:240, minWidth:120 }}>
+          <div style={{ position:'relative' }}>
+            <span style={{
+              position:'absolute', left:10, top:'50%', transform:'translateY(-50%)',
+              fontSize:13, pointerEvents:'none', color:'#7a5c3a',
+            }}>🔍</span>
+            <input
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              onFocus={() => setSearchFocused(true)}
+              placeholder="집 이름, 닉네임 검색..."
+              style={{
+                width:'100%', padding:'7px 10px 7px 30px', borderRadius:8, boxSizing:'border-box',
+                background:'rgba(255,255,255,0.08)', border:'1.5px solid #4a3010',
+                color:'#fdf6e3', fontSize:12, outline:'none',
+                fontFamily:'"Noto Sans KR", sans-serif',
+              }}
+            />
+          </div>
+          {/* 검색 결과 드롭다운 */}
+          {searchFocused && results.length > 0 && (
+            <div style={{
+              position:'absolute', top:'calc(100% + 6px)', left:0, right:0,
+              background:'#2a1a08', border:'2px solid #8b6914',
+              borderRadius:8, overflow:'hidden', zIndex:400,
+              boxShadow:'0 8px 30px rgba(0,0,0,0.6)',
+            }}>
+              {results.map(h => (
+                <button
+                  key={h.id}
+                  onMouseDown={() => handleSelect(h)}
+                  style={{
+                    display:'block', width:'100%', padding:'10px 14px',
+                    background:'transparent', border:'none',
+                    borderBottom:'1px solid #3d2a1844',
+                    color:'#fdf6e3', cursor:'pointer', textAlign:'left',
+                    fontFamily:'"Noto Sans KR", sans-serif',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = '#3d2a18')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                >
+                  <div style={{ fontSize:12, fontWeight:700, marginBottom:2 }}>
+                    {h.nickname ? `${h.name} (${h.nickname})` : (h.name ?? h.address)}
+                  </div>
+                  <div style={{ fontSize:10, color:'#8b6914' }}>{h.address}</div>
+                </button>
+              ))}
+            </div>
+          )}
+          {searchFocused && searchQuery.trim().length >= 1 && results.length === 0 && (
+            <div style={{
+              position:'absolute', top:'calc(100% + 6px)', left:0, right:0,
+              background:'#2a1a08', border:'2px solid #8b6914', borderRadius:8,
+              padding:'14px', fontSize:12, color:'#78614a', zIndex:400,
+              boxShadow:'0 8px 30px rgba(0,0,0,0.6)', textAlign:'center',
+            }}>검색 결과가 없어요</div>
+          )}
         </div>
 
         {/* 버튼 */}
-        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+        <div style={{ display:'flex', gap:8, flexShrink:0 }}>
           <button
             onClick={onApplyClick}
             style={{
-              padding: '8px 18px', borderRadius: 8, cursor: 'pointer',
-              background: 'linear-gradient(180deg, #8b6914, #6b4c10)',
-              color: '#fdf6e3', fontSize: 13, fontWeight: 700,
-              border: '2px solid #c8a96e',
-              boxShadow: '0 3px 0 #3d2a08',
-              display: 'flex', alignItems: 'center', gap: 6,
+              padding:'8px 16px', borderRadius:8, cursor:'pointer',
+              background:'linear-gradient(180deg,#8b6914,#6b4c10)',
+              color:'#fdf6e3', fontSize:13, fontWeight:700,
+              border:'2px solid #c8a96e', boxShadow:'0 3px 0 #3d2a08',
+              whiteSpace:'nowrap',
             }}
-          >
-            ✏️ 입주 신청하기
-          </button>
-          <button style={{
-            width: 38, height: 38, borderRadius: 8,
-            border: '2px solid #4a3010', background: 'rgba(255,255,255,0.06)',
-            color: '#a08060', fontSize: 16, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>🔔</button>
+          >✏️ <span className="hide-on-mobile">입주 신청하기</span><span className="show-on-mobile">신청</span></button>
           {userId && (
-            <button
-              onClick={onMyHouseClick}
-              style={{
-                padding: '8px 16px', borderRadius: 8, cursor: 'pointer',
-                background: 'rgba(255,255,255,0.08)',
-                color: '#d4b483', fontSize: 13, fontWeight: 600,
-                border: '2px solid #4a3010',
-                display: 'flex', alignItems: 'center', gap: 6,
-              }}
-            >내 집 보기</button>
+            <button onClick={onMyHouseClick} style={{
+              padding:'8px 14px', borderRadius:8, cursor:'pointer',
+              background:'rgba(255,255,255,0.08)', color:'#d4b483',
+              fontSize:13, fontWeight:600, border:'2px solid #4a3010',
+              whiteSpace:'nowrap',
+            }}>내 집</button>
           )}
         </div>
       </div>
 
       {/* 구역 필터 줄 */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 6,
-        padding: '0 20px 8px',
-        borderTop: '1px solid #4a3010',
-      }}>
-        <span style={{ fontSize: 10, color: '#7a5c3a', marginRight: 6, flexShrink: 0, fontWeight: 600 }}>구역</span>
+      <div style={{ display:'flex', alignItems:'center', gap:6, padding:'0 16px 8px', borderTop:'1px solid #4a3010', overflowX:'auto' }}>
+        <span style={{ fontSize:10, color:'#7a5c3a', marginRight:4, flexShrink:0, fontWeight:600 }}>구역</span>
         {ZONE_FILTERS.map(({ key, label, color }) => {
           const active = activeZone === key
           return (
-            <button
-              key={String(key)}
-              onClick={() => onZoneFilter(key)}
-              style={{
-                padding: '3px 12px', borderRadius: 20, cursor: 'pointer',
-                border: `1.5px solid ${active ? color : '#4a3010'}`,
-                background: active ? color + '28' : 'transparent',
-                color: active ? color : '#7a5c3a',
-                fontSize: 11, fontWeight: active ? 700 : 500,
-                transition: 'all 0.12s',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {label}
-            </button>
+            <button key={String(key)} onClick={() => onZoneFilter(key)} style={{
+              padding:'3px 12px', borderRadius:20, cursor:'pointer', flexShrink:0,
+              border:`1.5px solid ${active ? color : '#4a3010'}`,
+              background: active ? color+'28' : 'transparent',
+              color: active ? color : '#7a5c3a',
+              fontSize:11, fontWeight: active ? 700 : 500, transition:'all 0.12s',
+              whiteSpace:'nowrap',
+            }}>{label}</button>
           )
         })}
       </div>
@@ -143,8 +203,8 @@ export default function FloatingHeader({
 function StatItem({ label, value, valueColor }: { label: string; value: string; valueColor: string }) {
   return (
     <div>
-      <div style={{ fontSize: 9, color: '#7a5c3a', fontWeight: 600, letterSpacing: '0.05em', marginBottom: 1 }}>{label}</div>
-      <div style={{ fontSize: 13, fontWeight: 800, color: valueColor, letterSpacing: '-0.01em' }}>{value}</div>
+      <div style={{ fontSize:9, color:'#7a5c3a', fontWeight:600, letterSpacing:'0.05em', marginBottom:1 }}>{label}</div>
+      <div style={{ fontSize:13, fontWeight:800, color:valueColor, letterSpacing:'-0.01em' }}>{value}</div>
     </div>
   )
 }

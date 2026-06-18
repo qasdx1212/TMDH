@@ -37,4 +37,13 @@ html, body {
 /* 스크롤바 숨김 */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+::-webkit-scrollbar-thumb { background: #8b6914; border-radius: 4px; }
+
+/* 모바일 반응형 */
+.hide-on-mobile { display: flex; }
+.show-on-mobile { display: none; }
+
+@media (max-width: 600px) {
+  .hide-on-mobile { display: none !important; }
+  .show-on-mobile { display: inline !important; }
+}
