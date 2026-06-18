@@ -281,9 +281,16 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
     selectEnd.current = null
   }, [toGrid, onCellClick, onAreaSelect])
 
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault()
-    setScale(s => Math.max(0.5, Math.min(6, s - e.deltaY * 0.002)))
+  // non-passive wheel listener — React onWheel은 passive라 preventDefault 불가
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const handler = (e: WheelEvent) => {
+      e.preventDefault()
+      setScale(s => Math.max(0.5, Math.min(6, s - e.deltaY * 0.002)))
+    }
+    canvas.addEventListener('wheel', handler, { passive: false })
+    return () => canvas.removeEventListener('wheel', handler)
   }, [])
 
   return (
@@ -303,7 +310,6 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
           ref={canvasRef}
           width={W * RS}
           height={H * RS}
-          onWheel={handleWheel}
           style={{ display: 'block', width: W, height: H }}
         />
       </div>
