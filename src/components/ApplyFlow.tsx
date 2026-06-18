@@ -21,6 +21,8 @@ interface FormData {
   nickname: string
   exteriorImage: File | null
   exteriorPreview: string | null
+  interiorImage: File | null
+  interiorPreview: string | null
   days: number
   borderEffect: 'none' | 'neon'
 }
@@ -32,6 +34,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
   const [form, setForm] = useState<FormData>({
     name: '', description: '', linkUrl: '', nickname: '',
     exteriorImage: null, exteriorPreview: null,
+    interiorImage: null, interiorPreview: null,
     days: 30, borderEffect: 'none',
   })
   const [loading, setLoading] = useState(false)
@@ -42,10 +45,12 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
   const cellCount = (selectedCell.width ?? 1) * (selectedCell.height ?? 1)
   const price = calcPrice(selectedCell.zone, cellCount, form.days)
 
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFile = (type: 'exterior' | 'interior') => (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    setForm(f => ({ ...f, exteriorImage: file, exteriorPreview: URL.createObjectURL(file) }))
+    const preview = URL.createObjectURL(file)
+    if (type === 'exterior') setForm(f => ({ ...f, exteriorImage: file, exteriorPreview: preview }))
+    else setForm(f => ({ ...f, interiorImage: file, interiorPreview: preview }))
   }
 
   const uploadImage = async (file: File, path: string): Promise<string | null> => {
@@ -67,6 +72,14 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
         )
       }
 
+      let interiorUrl: string | null = null
+      if (form.interiorImage) {
+        interiorUrl = await uploadImage(
+          form.interiorImage,
+          `${userId}/interior-${selectedCell.address}.${form.interiorImage.name.split('.').pop()}`
+        )
+      }
+
       const expiresAt = form.days === PERMANENT_DAYS
         ? null
         : new Date(Date.now() + form.days * 86400000).toISOString()
@@ -81,6 +94,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
         description: form.description || null,
         link_url: form.linkUrl || null,
         exterior_image_url: exteriorUrl,
+        interior_image_url: interiorUrl,
         border_effect: form.borderEffect,
         status: 'occupied',
         width, height,
@@ -241,41 +255,60 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
 
           {/* Step 3 */}
           {step === 3 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              <SectionTitle>건물 외관 이미지 등록</SectionTitle>
-              <p style={{ margin: 0, fontSize: 12, color: '#78614a', lineHeight: 1.6 }}>
-                지도에서 사람들이 가장 먼저 보게 되는 이미지예요. 선명할수록 더 좋게 표시돼요.
-              </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+              <SectionTitle>이미지 등록</SectionTitle>
 
-              <label style={{ display: 'block', cursor: 'pointer' }}>
-                <div style={{
-                  height: 160, borderRadius: 10, overflow: 'hidden',
-                  border: `2px dashed ${form.exteriorPreview ? zone.color : '#c8a96e'}`,
-                  background: '#f5ead5',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  transition: 'all 0.15s',
-                }}>
-                  {form.exteriorPreview ? (
-                    <img src={form.exteriorPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    <div style={{ textAlign: 'center', color: '#a08060' }}>
-                      <div style={{ fontSize: 36, marginBottom: 8 }}>☁️</div>
-                      <div style={{ fontSize: 13, fontWeight: 600 }}>클릭하여 이미지 업로드</div>
-                      <div style={{ fontSize: 11, marginTop: 4 }}>JPG, PNG, WEBP (최대 10MB)</div>
-                    </div>
-                  )}
-                </div>
-                <input type="file" accept="image/*" onChange={handleFile} style={{ display: 'none' }} />
-              </label>
-
-              {form.exteriorPreview && (
-                <div style={{ padding: 12, borderRadius: 8, background: '#f0fdf4', border: '1.5px solid #4ade80', fontSize: 12, color: '#166534' }}>
-                  ✅ 이미지가 선택됐어요. 지도에서 집 블록에 이 이미지가 표시됩니다.
-                </div>
-              )}
-
+              {/* 외관 이미지 */}
               <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#4a2e10', marginBottom: 10 }}>✨ 이펙트</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#4a2e10', marginBottom: 6 }}>🏠 외관 이미지 <span style={{ fontWeight: 400, color: '#a08060', fontSize: 11 }}>— 지도에 표시됨</span></div>
+                <label style={{ display: 'block', cursor: 'pointer' }}>
+                  <div style={{
+                    height: 130, borderRadius: 8, overflow: 'hidden',
+                    border: `2px dashed ${form.exteriorPreview ? zone.color : '#c8a96e'}`,
+                    background: '#f5ead5',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {form.exteriorPreview ? (
+                      <img src={form.exteriorPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ textAlign: 'center', color: '#a08060' }}>
+                        <div style={{ fontSize: 28, marginBottom: 6 }}>🏗️</div>
+                        <div style={{ fontSize: 12, fontWeight: 600 }}>클릭하여 업로드</div>
+                        <div style={{ fontSize: 10, marginTop: 3 }}>JPG, PNG, WEBP (최대 10MB)</div>
+                      </div>
+                    )}
+                  </div>
+                  <input type="file" accept="image/*" onChange={handleFile('exterior')} style={{ display: 'none' }} />
+                </label>
+              </div>
+
+              {/* 내부 이미지 */}
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#4a2e10', marginBottom: 6 }}>🛋️ 내부 이미지 <span style={{ fontWeight: 400, color: '#a08060', fontSize: 11 }}>— 팝업에서 크게 표시됨</span></div>
+                <label style={{ display: 'block', cursor: 'pointer' }}>
+                  <div style={{
+                    height: 130, borderRadius: 8, overflow: 'hidden',
+                    border: `2px dashed ${form.interiorPreview ? zone.color : '#c8a96e'}`,
+                    background: '#f5ead5',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {form.interiorPreview ? (
+                      <img src={form.interiorPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ textAlign: 'center', color: '#a08060' }}>
+                        <div style={{ fontSize: 28, marginBottom: 6 }}>🛋️</div>
+                        <div style={{ fontSize: 12, fontWeight: 600 }}>클릭하여 업로드</div>
+                        <div style={{ fontSize: 10, marginTop: 3 }}>JPG, PNG, WEBP (최대 10MB)</div>
+                      </div>
+                    )}
+                  </div>
+                  <input type="file" accept="image/*" onChange={handleFile('interior')} style={{ display: 'none' }} />
+                </label>
+              </div>
+
+              {/* 이펙트 */}
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#4a2e10', marginBottom: 10 }}>✨ 테두리 이펙트</div>
                 <div style={{ display: 'flex', gap: 10 }}>
                   {(['none', 'neon'] as const).map(effect => (
                     <button
@@ -306,7 +339,8 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
               <InfoRow label="닉네임" value={form.nickname || '(없음)'} />
               <InfoRow label="소개글" value={form.description || '(없음)'} />
               <InfoRow label="링크" value={form.linkUrl || '(없음)'} />
-              <InfoRow label="이미지" value={form.exteriorImage ? form.exteriorImage.name : '(없음)'} />
+              <InfoRow label="외관 이미지" value={form.exteriorImage ? form.exteriorImage.name : '(없음)'} />
+              <InfoRow label="내부 이미지" value={form.interiorImage ? form.interiorImage.name : '(없음)'} />
               <InfoRow label="이펙트" value={form.borderEffect === 'neon' ? '네온 테두리' : '기본'} />
 
               <div style={{ marginTop: 20 }}>

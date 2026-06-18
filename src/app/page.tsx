@@ -22,6 +22,20 @@ export default function Home() {
   const [activeZone, setActiveZone] = useState<string | null>(null)
   const [showMyHouses, setShowMyHouses] = useState(false)
 
+  // Escape키로 모든 팝업 닫기
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSelectedCell(null)
+        setShowApply(false)
+        setApplyCell(null)
+        setShowMyHouses(false)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   const occupiedCount = houses.filter(h => h.status === 'occupied').length
   const totalDonation = occupiedCount * 5000
 
@@ -42,7 +56,7 @@ export default function Home() {
   const fetchHouses = useCallback(async () => {
     const { data } = await supabase
       .from('houses')
-      .select('id, address, col, row, width, height, zone, status, name, nickname, description, link_url, exterior_image_url, border_effect, like_count, visit_count, occupied_at, expires_at, is_permanent, parent_address')
+      .select('id, address, col, row, width, height, zone, status, name, nickname, description, link_url, exterior_image_url, interior_image_url, border_effect, like_count, visit_count, occupied_at, expires_at, is_permanent, parent_address')
       .neq('status', 'available')
     setHouses((data ?? []) as CellData[])
     setLoading(false)
@@ -147,17 +161,22 @@ export default function Home() {
       )}
 
       {showApply && !userId && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.8)' }}>
-          <div style={{ background: '#fff', borderRadius: 16, padding: 32, textAlign: 'center', maxWidth: 320, fontFamily: '"Noto Sans KR", -apple-system, sans-serif' }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>🔑</div>
-            <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>로그인이 필요해요</div>
-            <div style={{ fontSize: 13, color: '#64748b', marginBottom: 20 }}>입주 신청을 위해 로그인해 주세요.</div>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(6px)' }}>
+          <div style={{
+            background: '#fdf6e3', borderRadius: 6, padding: '32px 28px', textAlign: 'center',
+            maxWidth: 340, width: '90vw',
+            fontFamily: '"Noto Sans KR", -apple-system, sans-serif',
+            boxShadow: '0 0 0 3px #8b6914, 0 0 0 6px #c8a96e, 0 0 0 8px #5a3e1a, 0 24px 60px rgba(0,0,0,0.7)',
+          }}>
+            <div style={{ fontSize: 52, marginBottom: 12 }}>🔑</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: '#3d2a18', marginBottom: 8 }}>로그인이 필요해요</div>
+            <div style={{ fontSize: 13, color: '#78614a', marginBottom: 24, lineHeight: 1.7 }}>입주 신청을 위해<br />구글 계정으로 로그인해 주세요.</div>
             <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => setShowApply(false)} style={{ flex: 1, padding: '10px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', fontSize: 13 }}>취소</button>
+              <button onClick={() => setShowApply(false)} style={{ flex: 1, padding: '11px', borderRadius: 8, border: '2px solid #c8a96e', background: '#f5ead5', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#78614a' }}>취소</button>
               <button
                 onClick={() => supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/auth/callback` } })}
-                style={{ flex: 2, padding: '10px', borderRadius: 8, border: 'none', background: '#6366f1', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
-              >구글로 로그인</button>
+                style={{ flex: 2, padding: '11px', borderRadius: 8, border: '2px solid #8b6914', background: 'linear-gradient(180deg,#8b6914,#6b4c10)', color: '#fdf6e3', cursor: 'pointer', fontSize: 13, fontWeight: 700, boxShadow: '0 3px 0 #3d2a08' }}
+              >🔍 구글로 로그인</button>
             </div>
           </div>
         </div>

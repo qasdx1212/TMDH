@@ -15,6 +15,7 @@ export interface CellData {
   description: string | null
   link_url: string | null
   exterior_image_url: string | null
+  interior_image_url?: string | null
   border_effect: 'none' | 'neon'
   like_count: number
   visit_count: number
