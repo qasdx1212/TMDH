@@ -23,7 +23,131 @@ const CELL = 10
 const W = GRID_COLS * CELL
 const H = GRID_ROWS * CELL
 const DRAG_THRESHOLD = 4
-const RS = 3 // 내부 렌더 배율 — 캔버스를 3배 해상도로 그려 확대 시 선명도 유지
+const RS = 3
+
+// seeded hash for deterministic terrain
+const rng = (x: number, y: number, s = 0) => {
+  const n = Math.sin(x * 127.1 + y * 311.7 + s * 74.3) * 43758.5453
+  return n - Math.floor(n)
+}
+
+function buildTerrainCanvas(): HTMLCanvasElement {
+  const tc = document.createElement('canvas')
+  tc.width = W * RS
+  tc.height = H * RS
+  const ctx = tc.getContext('2d')!
+  ctx.save()
+  ctx.scale(RS, RS)
+
+  // ── Per-cell base tiles ──
+  for (let c = 0; c < GRID_COLS; c++) {
+    for (let r = 0; r < GRID_ROWS; r++) {
+      const px = c * CELL, py = r * CELL
+      const n = rng(c, r)
+      let color: string
+
+      if (c < 50 && r < 50) {
+        // Neon: dark city grid
+        if (c % 9 === 0 || r % 9 === 0) {
+          color = '#150c20'
+        } else {
+          const bn = rng(Math.floor(c / 3), Math.floor(r / 3), 1)
+          color = bn < 0.33 ? '#2d1a3e' : bn < 0.67 ? '#261535' : '#322046'
+        }
+      } else if (c >= 50 && r < 50) {
+        // Riverside: grass + river on right
+        const riverX = 82 + Math.floor(Math.sin(r * 0.25) * 4)
+        if (c >= riverX) {
+          color = n < 0.4 ? '#154060' : n < 0.7 ? '#1a4e72' : '#122e4a'
+        } else if (c >= riverX - 3) {
+          color = n < 0.5 ? '#2a4a30' : '#233e28'
+        } else {
+          const path = (c - 50) % 14 === 7 || r % 12 === 6
+          color = path ? '#264430' : (n < 0.35 ? '#1a3028' : n < 0.7 ? '#1f3a2c' : '#243e30')
+        }
+      } else if (c < 50 && r >= 50) {
+        // Oldtown: cobblestone
+        const pathH = (r - 50) % 8 <= 1
+        const pathV = c % 8 === 0
+        if (pathH || pathV) {
+          color = n < 0.5 ? '#7a5a38' : '#8a6840'
+        } else {
+          const sn = rng(Math.floor(c / 2), Math.floor(r / 2), 2)
+          color = sn < 0.33 ? '#4a3520' : sn < 0.67 ? '#5a4228' : '#3e2c18'
+        }
+      } else {
+        // Art District: warm dark
+        const bn = rng(Math.floor(c / 4), Math.floor(r / 4), 3)
+        color = n < 0.04 ? '#5a2525' : (bn < 0.4 ? '#3d1a1a' : bn < 0.75 ? '#4a2020' : '#33181a')
+      }
+
+      ctx.fillStyle = color
+      ctx.fillRect(px, py, CELL, CELL)
+    }
+  }
+
+  // ── Grid lines ──
+  Object.entries(ZONES).forEach(([, zone]) => {
+    ctx.strokeStyle = zone.gridColor
+    ctx.lineWidth = 0.4
+    for (let c = zone.colMin; c <= zone.colMax + 1; c++) {
+      ctx.beginPath(); ctx.moveTo(c * CELL, zone.rowMin * CELL); ctx.lineTo(c * CELL, (zone.rowMax + 1) * CELL); ctx.stroke()
+    }
+    for (let r = zone.rowMin; r <= zone.rowMax + 1; r++) {
+      ctx.beginPath(); ctx.moveTo(zone.colMin * CELL, r * CELL); ctx.lineTo((zone.colMax + 1) * CELL, r * CELL); ctx.stroke()
+    }
+  })
+
+  // ── Trees (riverside grass) ──
+  for (let c = 50; c <= 78; c++) {
+    for (let r = 0; r < 50; r++) {
+      if (rng(c, r, 4) < 0.08) {
+        ctx.fillStyle = '#2a5235'
+        ctx.beginPath(); ctx.arc(c * CELL + 5, r * CELL + 5, 3.8, 0, Math.PI * 2); ctx.fill()
+        ctx.fillStyle = '#4a7050'
+        ctx.beginPath(); ctx.arc(c * CELL + 4, r * CELL + 4, 2.2, 0, Math.PI * 2); ctx.fill()
+      }
+    }
+  }
+
+  // ── River ripples ──
+  for (let c = 83; c < GRID_COLS; c++) {
+    for (let r = 0; r < 50; r++) {
+      const riverX = 82 + Math.floor(Math.sin(r * 0.25) * 4)
+      if (c >= riverX && rng(c, r, 5) < 0.12) {
+        ctx.fillStyle = 'rgba(255,255,255,0.07)'
+        ctx.fillRect(c * CELL + 2, r * CELL + 4, 5, 1)
+      }
+    }
+  }
+
+  // ── Neon street lights (small dots at road intersections) ──
+  for (let c = 0; c < 50; c += 9) {
+    for (let r = 0; r < 50; r += 9) {
+      ctx.fillStyle = '#c084fc55'
+      ctx.beginPath(); ctx.arc(c * CELL + 1, r * CELL + 1, 1.5, 0, Math.PI * 2); ctx.fill()
+    }
+  }
+
+  // ── Zone boundary lines ──
+  ctx.strokeStyle = '#6b4c2a'
+  ctx.lineWidth = 2
+  ctx.beginPath(); ctx.moveTo(50 * CELL, 0); ctx.lineTo(50 * CELL, H); ctx.stroke()
+  ctx.beginPath(); ctx.moveTo(0, 50 * CELL); ctx.lineTo(W, 50 * CELL); ctx.stroke()
+
+  // ── Zone labels ──
+  Object.entries(ZONES).forEach(([, zone]) => {
+    const cx = (zone.colMin + zone.colMax + 1) / 2 * CELL
+    const cy = (zone.rowMin + zone.rowMax + 1) / 2 * CELL
+    ctx.font = 'bold 13px sans-serif'
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+    ctx.fillStyle = '#00000066'; ctx.fillText(zone.label, cx + 1, cy + 1)
+    ctx.fillStyle = zone.color + 'aa'; ctx.fillText(zone.label, cx, cy)
+  })
+
+  ctx.restore()
+  return tc
+}
 
 export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds, activeZone }: MapGridProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -43,10 +167,13 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
   const isMouseDown = useRef(false)
   const [selection, setSelection] = useState<{ c1: number; r1: number; c2: number; r2: number } | null>(null)
   const [blockMsg, setBlockMsg] = useState('')
+  const [terrainReady, setTerrainReady] = useState(false)
 
   const houseMap = useRef<Map<string, CellData>>(new Map())
   const addressMap = useRef<Map<string, CellData>>(new Map())
   const imageCache = useRef<Map<string, HTMLImageElement>>(new Map())
+  const terrainCanvas = useRef<HTMLCanvasElement | null>(null)
+
   useEffect(() => {
     const m = new Map<string, CellData>()
     const am = new Map<string, CellData>()
@@ -58,11 +185,17 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
     addressMap.current = am
   }, [houses])
 
+  // Build terrain once on mount
+  useEffect(() => {
+    if (terrainCanvas.current) return
+    terrainCanvas.current = buildTerrainCanvas()
+    setTerrainReady(true)
+  }, [])
+
   const toGrid = useCallback((clientX: number, clientY: number) => {
     const canvas = canvasRef.current
     if (!canvas) return null
     const rect = canvas.getBoundingClientRect()
-    // rect는 CSS transform 이후 viewport 크기 — 그리드 비율로 나눠 좌표 계산
     const col = Math.floor((clientX - rect.left) * GRID_COLS / rect.width)
     const row = Math.floor((clientY - rect.top) * GRID_ROWS / rect.height)
     if (col < 0 || col >= GRID_COLS || row < 0 || row >= GRID_ROWS) return null
@@ -74,46 +207,19 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
     if (!canvas) return
     const ctx = canvas.getContext('2d')!
     ctx.clearRect(0, 0, W * RS, H * RS)
+
+    // Terrain layer (pre-rendered, RS-scale native)
+    if (terrainCanvas.current) {
+      ctx.drawImage(terrainCanvas.current, 0, 0)
+    } else {
+      ctx.fillStyle = '#2a1a0a'
+      ctx.fillRect(0, 0, W * RS, H * RS)
+    }
+
     ctx.save()
     ctx.scale(RS, RS)
 
-    ctx.fillStyle = '#2a1a0a'
-    ctx.fillRect(0, 0, W, H)
-
-    Object.entries(ZONES).forEach(([, zone]) => {
-      ctx.fillStyle = zone.bg
-      ctx.fillRect(zone.colMin * CELL, zone.rowMin * CELL, (zone.colMax - zone.colMin + 1) * CELL, (zone.rowMax - zone.rowMin + 1) * CELL)
-    })
-
-    // 그리드 선
-    Object.entries(ZONES).forEach(([, zone]) => {
-      ctx.strokeStyle = zone.gridColor
-      ctx.lineWidth = 0.5
-      for (let c = zone.colMin; c <= zone.colMax + 1; c++) {
-        ctx.beginPath(); ctx.moveTo(c * CELL, zone.rowMin * CELL); ctx.lineTo(c * CELL, (zone.rowMax + 1) * CELL); ctx.stroke()
-      }
-      for (let r = zone.rowMin; r <= zone.rowMax + 1; r++) {
-        ctx.beginPath(); ctx.moveTo(zone.colMin * CELL, r * CELL); ctx.lineTo((zone.colMax + 1) * CELL, r * CELL); ctx.stroke()
-      }
-    })
-
-    // 구역 경계선
-    ctx.strokeStyle = '#6b4c2a'
-    ctx.lineWidth = 2
-    ctx.beginPath(); ctx.moveTo(50 * CELL, 0); ctx.lineTo(50 * CELL, H); ctx.stroke()
-    ctx.beginPath(); ctx.moveTo(0, 50 * CELL); ctx.lineTo(W, 50 * CELL); ctx.stroke()
-
-    // 구역 레이블
-    Object.entries(ZONES).forEach(([, zone]) => {
-      const cx = (zone.colMin + zone.colMax + 1) / 2 * CELL
-      const cy = (zone.rowMin + zone.rowMax + 1) / 2 * CELL
-      ctx.font = 'bold 13px sans-serif'
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
-      ctx.fillStyle = '#00000066'; ctx.fillText(zone.label, cx + 1, cy + 1)
-      ctx.fillStyle = zone.color + 'aa'; ctx.fillText(zone.label, cx, cy)
-    })
-
-    // 입주된 집 (위성 칸 제외 — 대표 칸만 렌더링)
+    // Houses (primary cells only)
     houses.filter(h => !h.parent_address).forEach(h => {
       const x = h.col * CELL, y = h.row * CELL
       const w = (h.width ?? 1) * CELL, ht = (h.height ?? 1) * CELL
@@ -165,16 +271,16 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       }
     })
 
-    // 활성 구역 필터 — 나머지 구역 어둡게
+    // Active zone dimming
     if (activeZone) {
       Object.entries(ZONES).forEach(([key, zone]) => {
         if (key === activeZone) return
-        ctx.fillStyle = 'rgba(0,0,0,0.55)'
+        ctx.fillStyle = 'rgba(0,0,0,0.6)'
         ctx.fillRect(zone.colMin * CELL, zone.rowMin * CELL, (zone.colMax - zone.colMin + 1) * CELL, (zone.rowMax - zone.rowMin + 1) * CELL)
       })
     }
 
-    // 드래그 선택 영역
+    // Drag selection
     if (selection) {
       const { c1, r1, c2, r2 } = selection
       const sx = Math.min(c1, c2) * CELL
@@ -183,24 +289,21 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       const sh = (Math.abs(r2 - r1) + 1) * CELL
       ctx.fillStyle = '#ffffff22'
       ctx.fillRect(sx, sy, sw, sh)
-      ctx.strokeStyle = '#ffffff'
+      ctx.strokeStyle = '#fff'
       ctx.lineWidth = 1.5
       ctx.setLineDash([4, 3])
       ctx.strokeRect(sx, sy, sw, sh)
       ctx.setLineDash([])
-
-      const w = Math.abs(c2 - c1) + 1
-      const h = Math.abs(r2 - r1) + 1
       ctx.fillStyle = '#fff'
       ctx.font = 'bold 9px sans-serif'
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
-      ctx.fillText(`${w}×${h}`, sx + sw / 2, sy + sh / 2)
+      ctx.fillText(`${Math.abs(c2 - c1) + 1}×${Math.abs(r2 - r1) + 1}`, sx + sw / 2, sy + sh / 2)
     }
 
     ctx.restore()
-  }, [houses, myHouseIds, selection, activeZone])
+  }, [houses, myHouseIds, selection, activeZone, terrainReady])
 
-  // 외관 이미지 비동기 프리로드 — 로드 완료 시 재드로우
+  // Preload exterior images
   useEffect(() => {
     houses.forEach(h => {
       if (!h.exterior_image_url || h.parent_address) return
@@ -218,19 +321,14 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     mouseDownPos.current = { x: e.clientX, y: e.clientY }
     isMouseDown.current = true
-
     if (e.button === 1 || e.altKey) {
       isPanning.current = true
       setCursor('grabbing')
       panStart.current = { x: e.clientX - lastOffset.current.x, y: e.clientY - lastOffset.current.y }
       return
     }
-
     const grid = toGrid(e.clientX, e.clientY)
-    if (grid) {
-      selectStart.current = grid
-      selectEnd.current = grid
-    }
+    if (grid) { selectStart.current = grid; selectEnd.current = grid }
   }, [toGrid])
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
@@ -241,16 +339,13 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       setOffset({ x: nx, y: ny })
       return
     }
-
     if (!isMouseDown.current) return
-
     const dx = Math.abs(e.clientX - mouseDownPos.current.x)
     const dy = Math.abs(e.clientY - mouseDownPos.current.y)
     if (dx > DRAG_THRESHOLD || dy > DRAG_THRESHOLD) {
       isSelecting.current = true
       setCursor('crosshair')
     }
-
     if (isSelecting.current && selectStart.current) {
       const grid = toGrid(e.clientX, e.clientY)
       if (grid) {
@@ -276,7 +371,6 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       if (!grid) return
       const existing = houseMap.current.get(`${grid.col},${grid.row}`)
       if (existing) {
-        // 위성 칸 클릭 시 대표 칸으로 리다이렉트
         const cell = existing.parent_address
           ? (addressMap.current.get(existing.parent_address) ?? existing)
           : existing
@@ -298,7 +392,6 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       const r1 = Math.min(selectStart.current.row, selectEnd.current.row)
       const r2 = Math.max(selectStart.current.row, selectEnd.current.row)
 
-      // 겹침 방지: 이미 입주된 칸 체크
       let hasOccupied = false
       outer: for (let c = c1; c <= c2; c++) {
         for (let r = r1; r <= r2; r++) {
@@ -321,7 +414,7 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
     selectEnd.current = null
   }, [toGrid, onCellClick, onAreaSelect])
 
-  // non-passive wheel listener — React onWheel은 passive라 preventDefault 불가
+  // Non-passive wheel for zoom
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -342,10 +435,7 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       onMouseUp={handleMouseUp}
       onMouseLeave={() => { isPanning.current = false; isMouseDown.current = false; isSelecting.current = false; setSelection(null); setCursor('default') }}
     >
-      <div style={{
-        transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
-        transformOrigin: '0 0',
-      }}>
+      <div style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`, transformOrigin: '0 0' }}>
         <canvas
           ref={canvasRef}
           width={W * RS}
@@ -354,7 +444,6 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
         />
       </div>
 
-      {/* 겹침 경고 토스트 */}
       {blockMsg && (
         <div style={{
           position: 'absolute', bottom: 24, left: '50%', transform: 'translateX(-50%)',
