@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { ZONES, DURATIONS, PERMANENT_DAYS, calcPrice, formatKRW, getAddress } from '@/lib/constants'
 import type { CellData } from '@/types/cell'
@@ -38,8 +38,6 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
   const [loading, setLoading] = useState(false)
   const [payMethod, setPayMethod] = useState<string>('card')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
-  const extImgRef = useRef<HTMLInputElement>(null)
-  const intImgRef = useRef<HTMLInputElement>(null)
 
   const zone = ZONES[selectedCell.zone]
   const cellCount = (selectedCell.width ?? 1) * (selectedCell.height ?? 1)
@@ -48,14 +46,9 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
   const handleFile = (type: 'exterior' | 'interior') => (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = (ev) => {
-      const dataUrl = ev.target?.result as string
-      if (type === 'exterior') setForm(f => ({ ...f, exteriorImage: file, exteriorPreview: dataUrl }))
-      else setForm(f => ({ ...f, interiorImage: file, interiorPreview: dataUrl }))
-    }
-    reader.readAsDataURL(file)
-    e.target.value = ''
+    const previewUrl = URL.createObjectURL(file)
+    if (type === 'exterior') setForm(f => ({ ...f, exteriorImage: file, exteriorPreview: previewUrl }))
+    else setForm(f => ({ ...f, interiorImage: file, interiorPreview: previewUrl }))
   }
 
   const uploadImage = async (file: File, path: string): Promise<string | null> => {
@@ -274,43 +267,41 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
               <div>
                 <label style={{ ...labelStyle, fontSize: 14, color: '#0f172a' }}>🏠 건물 외관 이미지</label>
                 <p style={{ fontSize: 12, color: '#64748b', marginBottom: 10 }}>지도에서 사람들이 가장 먼저 보게 되는 이미지예요.</p>
-                <div
-                  onClick={() => extImgRef.current?.click()}
-                  style={{
+                <label style={{ display: 'block', cursor: 'pointer' }}>
+                  <div style={{
                     height: 120, borderRadius: 10, border: '2px dashed #cbd5e1',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    cursor: 'pointer', background: '#f8fafc', overflow: 'hidden',
-                  }}
-                >
-                  {form.exteriorPreview
-                    ? <img src={form.exteriorPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : <div style={{ textAlign: 'center', color: '#94a3b8' }}>
-                        <div style={{ fontSize: 28, marginBottom: 6 }}>☁️</div>
-                        <div style={{ fontSize: 12 }}>클릭하여 이미지 업로드</div>
-                        <div style={{ fontSize: 11 }}>JPG, PNG, WEBP (최대 10MB)</div>
-                      </div>
-                  }
-                </div>
-                <input ref={extImgRef} type="file" accept="image/*" onChange={handleFile('exterior')} style={{ display: 'none' }} />
+                    background: '#f8fafc', overflow: 'hidden',
+                  }}>
+                    {form.exteriorPreview
+                      ? <img src={form.exteriorPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : <div style={{ textAlign: 'center', color: '#94a3b8' }}>
+                          <div style={{ fontSize: 28, marginBottom: 6 }}>☁️</div>
+                          <div style={{ fontSize: 12 }}>클릭하여 이미지 업로드</div>
+                          <div style={{ fontSize: 11 }}>JPG, PNG, WEBP (최대 10MB)</div>
+                        </div>
+                    }
+                  </div>
+                  <input type="file" accept="image/*" onChange={handleFile('exterior')} style={{ display: 'none' }} />
+                </label>
               </div>
 
               <div>
                 <label style={{ ...labelStyle, fontSize: 14, color: '#0f172a' }}>🖼️ 내부 인테리어 이미지</label>
                 <p style={{ fontSize: 12, color: '#64748b', marginBottom: 10 }}>집을 클릭했을 때 팝업에 보이는 이미지예요.</p>
-                <div
-                  onClick={() => intImgRef.current?.click()}
-                  style={{
+                <label style={{ display: 'block', cursor: 'pointer' }}>
+                  <div style={{
                     height: 100, borderRadius: 10, border: '2px dashed #cbd5e1',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    cursor: 'pointer', background: '#f8fafc', overflow: 'hidden',
-                  }}
-                >
-                  {form.interiorPreview
-                    ? <img src={form.interiorPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : <span style={{ fontSize: 12, color: '#94a3b8' }}>클릭하여 이미지 업로드 (선택)</span>
-                  }
-                </div>
-                <input ref={intImgRef} type="file" accept="image/*" onChange={handleFile('interior')} style={{ display: 'none' }} />
+                    background: '#f8fafc', overflow: 'hidden',
+                  }}>
+                    {form.interiorPreview
+                      ? <img src={form.interiorPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : <span style={{ fontSize: 12, color: '#94a3b8' }}>클릭하여 이미지 업로드 (선택)</span>
+                    }
+                  </div>
+                  <input type="file" accept="image/*" onChange={handleFile('interior')} style={{ display: 'none' }} />
+                </label>
               </div>
 
               <div>
