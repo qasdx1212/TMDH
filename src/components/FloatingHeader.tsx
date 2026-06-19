@@ -23,13 +23,14 @@ interface FloatingHeaderProps {
   onSearchSelect: (house: CellData) => void
   onZoomIn?: () => void
   onZoomOut?: () => void
+  onFitView?: () => void
 }
 
 export default function FloatingHeader({
   occupiedCount, totalCells, totalDonation, userId,
   onApplyClick, onMyHouseClick,
   houses, onSearchSelect,
-  onZoomIn, onZoomOut,
+  onZoomIn, onZoomOut, onFitView,
 }: FloatingHeaderProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchFocused, setSearchFocused] = useState(false)
@@ -170,10 +171,10 @@ export default function FloatingHeader({
       {/* 하단 줄: 범례 + 줌 컨트롤 */}
       <div style={{
         display:'flex', alignItems:'center', justifyContent:'space-between',
-        padding:'0 16px 8px', borderTop:'1px solid #4a3010',
+        padding:'0 16px 8px', borderTop:'1px solid #4a3010', gap:12,
       }}>
         {/* 지도 범례 */}
-        <div style={{ display:'flex', alignItems:'center', gap:16 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:16 }} className="hide-on-mobile">
           {LEGEND.map(({ color, label }) => (
             <div key={label} style={{ display:'flex', alignItems:'center', gap:5 }}>
               <div style={{ width:10, height:10, borderRadius:3, background:color, flexShrink:0 }} />
@@ -182,12 +183,48 @@ export default function FloatingHeader({
           ))}
         </div>
 
+        {/* 모바일 검색 */}
+        <div ref={searchRef} style={{ position:'relative', flex:1 }} className="show-on-mobile">
+          <div style={{ position:'relative' }}>
+            <span style={{ position:'absolute', left:9, top:'50%', transform:'translateY(-50%)', fontSize:12, color:'#7a5c3a', pointerEvents:'none' }}>🔍</span>
+            <input
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              onFocus={() => setSearchFocused(true)}
+              placeholder="집 검색..."
+              style={{
+                width:'100%', padding:'5px 8px 5px 26px', borderRadius:6, boxSizing:'border-box' as const,
+                background:'rgba(255,255,255,0.08)', border:'1.5px solid #4a3010',
+                color:'#fdf6e3', fontSize:12, outline:'none', fontFamily:'inherit',
+              }}
+            />
+          </div>
+          {searchFocused && results.length > 0 && (
+            <div style={{
+              position:'absolute', top:'calc(100% + 4px)', left:0, right:0,
+              background:'#2a1a08', border:'2px solid #8b6914', borderRadius:8,
+              overflow:'hidden', zIndex:400, boxShadow:'0 8px 30px rgba(0,0,0,0.6)',
+            }}>
+              {results.map(h => (
+                <button key={h.id} onMouseDown={() => handleSelect(h)} style={{
+                  display:'block', width:'100%', padding:'8px 12px',
+                  background:'transparent', border:'none', borderBottom:'1px solid #3d2a1844',
+                  color:'#fdf6e3', cursor:'pointer', textAlign:'left', fontFamily:'inherit',
+                }}>
+                  <div style={{ fontSize:12, fontWeight:700 }}>{h.nickname ? `${h.name} (${h.nickname})` : (h.name ?? h.address)}</div>
+                  <div style={{ fontSize:10, color:'#8b6914', marginTop:2 }}>{h.address}</div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* 줌 컨트롤 */}
-        <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-          <span style={{ fontSize:10, color:'#7a5c3a', marginRight:4 }}>지도 확대/축소</span>
-          <button onClick={onZoomIn} style={zoomBtnStyle}>+</button>
-          <button onClick={onZoomOut} style={zoomBtnStyle}>−</button>
-          <button style={{ ...zoomBtnStyle, fontSize:14 }}>⤢</button>
+        <div style={{ display:'flex', alignItems:'center', gap:6, flexShrink:0 }}>
+          <span style={{ fontSize:10, color:'#7a5c3a', marginRight:4 }} className="hide-on-mobile">지도 확대/축소</span>
+          <button onClick={onZoomIn} style={zoomBtnStyle} title="확대">+</button>
+          <button onClick={onZoomOut} style={zoomBtnStyle} title="축소">−</button>
+          <button onClick={onFitView} style={{ ...zoomBtnStyle, fontSize:14 }} title="전체 보기">⤢</button>
         </div>
       </div>
     </div>

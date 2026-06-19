@@ -27,6 +27,8 @@ export default function Home() {
 
   const zoomInRef = useRef<(() => void) | null>(null)
   const zoomOutRef = useRef<(() => void) | null>(null)
+  const fitViewRef = useRef<(() => void) | null>(null)
+  const deepLinkProcessed = useRef(false)
 
   // Escape키로 모든 팝업 닫기
   useEffect(() => {
@@ -90,11 +92,13 @@ export default function Home() {
     return () => { supabase.removeChannel(channel) }
   }, [fetchHouses])
 
-  // URL 파라미터로 특정 집 자동 오픈
+  // URL 파라미터로 특정 집 자동 오픈 (최초 1회만)
   useEffect(() => {
+    if (loading || deepLinkProcessed.current) return
+    deepLinkProcessed.current = true
     const params = new URLSearchParams(window.location.search)
     const houseAddr = params.get('house')
-    if (!houseAddr || loading) return
+    if (!houseAddr) return
     const target = houses.find(h => h.address === houseAddr)
     if (target) setSelectedCell(target)
   }, [loading, houses])
@@ -146,6 +150,7 @@ export default function Home() {
         }}
         onZoomIn={() => zoomInRef.current?.()}
         onZoomOut={() => zoomOutRef.current?.()}
+        onFitView={() => fitViewRef.current?.()}
       />
 
       <div style={{ flex:1, marginTop:headerHeight, overflow:'hidden' }}>
@@ -163,6 +168,7 @@ export default function Home() {
             centerTarget={centerTarget}
             zoomInRef={zoomInRef}
             zoomOutRef={zoomOutRef}
+            fitViewRef={fitViewRef}
           />
         )}
       </div>
@@ -213,6 +219,7 @@ export default function Home() {
       {showMyHouses && userId && (
         <MyHousesDrawer
           userId={userId}
+          isAdmin={isAdmin}
           onClose={() => setShowMyHouses(false)}
           onEdit={(house) => { setShowMyHouses(false); openApply(house) }}
           onRefresh={fetchHouses}

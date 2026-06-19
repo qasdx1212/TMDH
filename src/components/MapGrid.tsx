@@ -15,6 +15,7 @@ interface MapGridProps {
   centerTarget?: { col: number; row: number } | null
   zoomInRef?: React.MutableRefObject<(() => void) | null>
   zoomOutRef?: React.MutableRefObject<(() => void) | null>
+  fitViewRef?: React.MutableRefObject<(() => void) | null>
 }
 
 const CELL = 10
@@ -96,7 +97,7 @@ function buildTerrainCanvas(): HTMLCanvasElement {
   return tc
 }
 
-export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds, activeZone, centerTarget, zoomInRef, zoomOutRef }: MapGridProps) {
+export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds, activeZone, centerTarget, zoomInRef, zoomOutRef, fitViewRef }: MapGridProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState(1)
@@ -147,7 +148,18 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
     }
     if (zoomInRef) zoomInRef.current = () => zoomTo(Math.min(6, scaleRef.current + 0.5))
     if (zoomOutRef) zoomOutRef.current = () => zoomTo(Math.max(0.4, scaleRef.current - 0.5))
-  }, [zoomInRef, zoomOutRef])
+    if (fitViewRef) fitViewRef.current = () => {
+      const container = containerRef.current
+      if (!container) return
+      const rect = container.getBoundingClientRect()
+      const fitScale = Math.max(0.4, Math.min(rect.width / W, rect.height / H))
+      const nx = (rect.width - W * fitScale) / 2
+      const ny = (rect.height - H * fitScale) / 2
+      scaleRef.current = fitScale
+      lastOffset.current = { x: nx, y: ny }
+      setScale(fitScale); setOffset({ x: nx, y: ny })
+    }
+  }, [zoomInRef, zoomOutRef, fitViewRef])
 
   // center map on target cell (e.g. from search)
   useEffect(() => {

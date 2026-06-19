@@ -7,12 +7,13 @@ import type { CellData } from '@/types/cell'
 
 interface MyHousesDrawerProps {
   userId: string
+  isAdmin?: boolean
   onClose: () => void
   onEdit: (house: CellData) => void
   onRefresh?: () => void
 }
 
-export default function MyHousesDrawer({ userId, onClose, onEdit, onRefresh }: MyHousesDrawerProps) {
+export default function MyHousesDrawer({ userId, isAdmin, onClose, onEdit, onRefresh }: MyHousesDrawerProps) {
   const [houses, setHouses] = useState<CellData[]>([])
   const [loading, setLoading] = useState(true)
   const [vacatingId, setVacatingId] = useState<string | null>(null)
@@ -174,7 +175,7 @@ export default function MyHousesDrawer({ userId, onClose, onEdit, onRefresh }: M
                   </div>
 
                   {/* 수정 가능 시간 표시 */}
-                  {canEdit(h) && (
+                  {!isAdmin && canEdit(h) && (
                     <div style={{ fontSize: 11, color: '#3b82f6', fontWeight: 600, marginBottom: 8 }}>
                       ✏️ 수정 가능 — {editTimeLeft(h)} 남음
                     </div>
@@ -182,12 +183,12 @@ export default function MyHousesDrawer({ userId, onClose, onEdit, onRefresh }: M
 
                   {/* 버튼 */}
                   <div style={{ display: 'flex', gap: 8 }}>
-                    {canEdit(h) ? (
+                    {(isAdmin || canEdit(h)) ? (
                       <button onClick={() => onEdit(h)} style={{
                         flex: 1, padding: '8px', borderRadius: 8,
                         border: `1.5px solid ${zone.color}66`, background: zone.color + '15',
                         color: zone.color, fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                      }}>✏️ 수정</button>
+                      }}>✏️ 수정{isAdmin ? ' (관리자)' : ''}</button>
                     ) : (
                       <button disabled style={{
                         flex: 1, padding: '8px', borderRadius: 8,

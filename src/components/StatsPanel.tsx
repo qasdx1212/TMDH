@@ -97,12 +97,12 @@ export default function StatsPanel({ houses }: StatsPanelProps) {
   }, [occupiedCount, pendingCount, availableCount, occupancyRate])
 
   return (
+    <div style={{ overflowX:'auto', borderTop:'3px solid #8b6914', boxShadow:'0 -4px 20px rgba(0,0,0,0.5)' }}>
     <div style={{
       display:'grid', gridTemplateColumns:'140px 200px 1fr 1fr',
       background:'linear-gradient(180deg,#2a1a08 0%,#1a0f05 100%)',
-      borderTop:'3px solid #8b6914', height:148,
+      height:148, minWidth:580,
       fontFamily:'"Noto Sans KR",-apple-system,sans-serif',
-      boxShadow:'0 -4px 20px rgba(0,0,0,0.5)',
     }}>
       {/* 미니맵 */}
       <div style={{ padding:'10px 12px', borderRight:'1px solid #8b691430', display:'flex', flexDirection:'column', gap:6 }}>
@@ -159,6 +159,7 @@ export default function StatsPanel({ houses }: StatsPanelProps) {
           </div>
         ))}
       </div>
+    </div>
     </div>
   )
 }

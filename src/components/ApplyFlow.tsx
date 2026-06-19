@@ -49,7 +49,9 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
   const [loading, setLoading] = useState(false)
   const [payMethod, setPayMethod] = useState('card')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [showSuccess, setShowSuccess] = useState(false)
   const miniMapRef = useRef<HTMLCanvasElement>(null)
+  const lastStep: Step = isEdit ? 4 : 5
 
   const zone = ZONES[selectedCell.zone]
   const cellCount = (selectedCell.width ?? 1) * (selectedCell.height ?? 1)
@@ -115,34 +117,47 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
       let interiorUrl: string | null = selectedCell.interior_image_url ?? null
       if (form.interiorImage) interiorUrl = await uploadImage(form.interiorImage, `${userId}/interior-${selectedCell.address}.${form.interiorImage.name.split('.').pop()}`)
 
-      const expiresAt = form.days === PERMANENT_DAYS ? null : new Date(Date.now() + form.days * 86400000).toISOString()
-      const occupiedAt = new Date().toISOString()
-      const col = selectedCell.col, row = selectedCell.row
-      const width = selectedCell.width ?? 1, height = selectedCell.height ?? 1
+      if (isEdit) {
+        // 수정: 콘텐츠만 업데이트, occupied_at / expires_at / is_permanent 유지
+        const { error } = await supabase.from('houses').update({
+          name: form.name || null, nickname: form.nickname || null,
+          description: form.description || null, link_url: form.linkUrl || null,
+          exterior_image_url: exteriorUrl, interior_image_url: interiorUrl,
+          border_effect: form.borderEffect,
+        }).eq('address', selectedCell.address)
+        if (error) { setErrorMsg(`저장 실패: ${error.message}`); return }
+      } else {
+        // 신규 입주
+        const expiresAt = form.days === PERMANENT_DAYS ? null : new Date(Date.now() + form.days * 86400000).toISOString()
+        const occupiedAt = new Date().toISOString()
+        const col = selectedCell.col, row = selectedCell.row
+        const width = selectedCell.width ?? 1, height = selectedCell.height ?? 1
 
-      const { error } = await supabase.from('houses').update({
-        user_id: userId, name: form.name || null, nickname: form.nickname || null,
-        description: form.description || null, link_url: form.linkUrl || null,
-        exterior_image_url: exteriorUrl, interior_image_url: interiorUrl,
-        border_effect: form.borderEffect, status: 'occupied',
-        width, height, occupied_at: occupiedAt, expires_at: expiresAt,
-        is_permanent: form.days === PERMANENT_DAYS,
-      }).eq('address', selectedCell.address)
+        const { error } = await supabase.from('houses').update({
+          user_id: userId, name: form.name || null, nickname: form.nickname || null,
+          description: form.description || null, link_url: form.linkUrl || null,
+          exterior_image_url: exteriorUrl, interior_image_url: interiorUrl,
+          border_effect: form.borderEffect, status: 'occupied',
+          width, height, occupied_at: occupiedAt, expires_at: expiresAt,
+          is_permanent: form.days === PERMANENT_DAYS,
+        }).eq('address', selectedCell.address)
+        if (error) { setErrorMsg(`저장 실패: ${error.message}`); return }
 
-      if (error) { setErrorMsg(`저장 실패: ${error.message}`); return }
-
-      if (width > 1 || height > 1) {
-        for (let c = col; c < col + width; c++) {
-          for (let r = row; r < row + height; r++) {
-            if (c === col && r === row) continue
-            await supabase.from('houses').update({
-              user_id: userId, status: 'occupied', parent_address: selectedCell.address,
-              occupied_at: occupiedAt, expires_at: expiresAt, is_permanent: form.days === PERMANENT_DAYS,
-            }).eq('address', getAddress(c, r))
+        if (width > 1 || height > 1) {
+          for (let c = col; c < col + width; c++) {
+            for (let r = row; r < row + height; r++) {
+              if (c === col && r === row) continue
+              await supabase.from('houses').update({
+                user_id: userId, status: 'occupied', parent_address: selectedCell.address,
+                occupied_at: occupiedAt, expires_at: expiresAt, is_permanent: form.days === PERMANENT_DAYS,
+              }).eq('address', getAddress(c, r))
+            }
           }
         }
       }
-      onSuccess()
+
+      setShowSuccess(true)
+      setTimeout(() => { setShowSuccess(false); onSuccess() }, 2200)
     } catch { setErrorMsg('오류가 발생했습니다. 다시 시도해주세요.') }
     finally { setLoading(false) }
   }
@@ -161,8 +176,28 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
         boxShadow:'0 0 0 2px #e8c97a, 0 0 0 5px #7a4f1a, 0 24px 80px rgba(0,0,0,0.7)',
         fontFamily:'"Noto Sans KR",-apple-system,sans-serif',
         display:'flex', flexDirection:'column', overflow:'hidden',
-        transition:'width 0.2s ease',
+        transition:'width 0.2s ease', position:'relative',
       }}>
+        {/* 성공 오버레이 */}
+        {showSuccess && (
+          <div style={{
+            position:'absolute', inset:0, zIndex:20,
+            background:'rgba(26,15,5,0.93)', backdropFilter:'blur(4px)',
+            display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+            borderRadius:8, gap:12,
+          }}>
+            <div style={{ fontSize:80 }}>🎉</div>
+            <div style={{ fontSize:28, fontWeight:900, color:'#fdf6e3' }}>
+              {isEdit ? '수정 완료!' : '입주 완료!'}
+            </div>
+            <div style={{ fontSize:14, color:'#c8a96e', textAlign:'center', lineHeight:1.8 }}>
+              {isEdit
+                ? '집 정보가 성공적으로 업데이트되었습니다.'
+                : '지도에 당신의 집이 생겼어요 🏠\n잠시 후 지도에 반영됩니다.'}
+            </div>
+          </div>
+        )}
+
         {/* 헤더 */}
         <div style={{ background:'linear-gradient(180deg,#f5ead5,#ecdcc0)', padding:'16px 20px', borderBottom:'3px solid #c8a96e', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
           <div style={{ display:'flex', alignItems:'center', gap:12 }}>
@@ -393,9 +428,9 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
 
                 {/* 이미지 수정 정책 */}
                 <div style={{ padding:12, borderRadius:8, background:'#f0e4cc', border:'1.5px solid #c8a96e', fontSize:12, color:'#6b4c2a' }}>
-                  <div style={{ fontWeight:700, marginBottom:4 }}>🗓 이미지 수정 정책</div>
-                  <div>· 무료 수정 기간: 업로드 후 7일간</div>
-                  <div>· 7일 이후에는 유료 수정 서비스가 적용됩니다.</div>
+                  <div style={{ fontWeight:700, marginBottom:4 }}>🗓 수정 정책</div>
+                  <div>· 무료 수정 기간: 입주 후 72시간 이내</div>
+                  <div>· 72시간 이후에는 수정이 제한됩니다.</div>
                 </div>
               </div>
 
@@ -464,19 +499,26 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                   </div>
                 )}
 
-                <div style={{ marginTop:20 }}>
-                  <div style={{ fontSize:13, fontWeight:700, color:'#4a2e10', marginBottom:10 }}>입주 기간 선택</div>
-                  <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
-                    {DURATIONS.map(({ days: d, label }) => (
-                      <PeriodBtn key={d} active={form.days === d} color={zone.color} onClick={() => setForm(f => ({ ...f, days: d }))}>
-                        {label}<br /><span style={{ fontSize:10, opacity:0.8 }}>{formatKRW(calcPrice(selectedCell.zone, cellCount, d))}</span>
+                {!isEdit && (
+                  <div style={{ marginTop:20 }}>
+                    <div style={{ fontSize:13, fontWeight:700, color:'#4a2e10', marginBottom:10 }}>입주 기간 선택</div>
+                    <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
+                      {DURATIONS.map(({ days: d, label }) => (
+                        <PeriodBtn key={d} active={form.days === d} color={zone.color} onClick={() => setForm(f => ({ ...f, days: d }))}>
+                          {label}<br /><span style={{ fontSize:10, opacity:0.8 }}>{formatKRW(calcPrice(selectedCell.zone, cellCount, d))}</span>
+                        </PeriodBtn>
+                      ))}
+                      <PeriodBtn active={form.days === PERMANENT_DAYS} color={zone.color} onClick={() => setForm(f => ({ ...f, days: PERMANENT_DAYS }))}>
+                        영구 보존<br /><span style={{ fontSize:10, opacity:0.8 }}>{formatKRW(calcPrice(selectedCell.zone, cellCount, PERMANENT_DAYS))}</span>
                       </PeriodBtn>
-                    ))}
-                    <PeriodBtn active={form.days === PERMANENT_DAYS} color={zone.color} onClick={() => setForm(f => ({ ...f, days: PERMANENT_DAYS }))}>
-                      영구 보존<br /><span style={{ fontSize:10, opacity:0.8 }}>{formatKRW(calcPrice(selectedCell.zone, cellCount, PERMANENT_DAYS))}</span>
-                    </PeriodBtn>
+                    </div>
                   </div>
-                </div>
+                )}
+                {isEdit && (
+                  <div style={{ marginTop:16, padding:12, borderRadius:8, background:'#f0fff4', border:'1.5px solid #86efac', fontSize:12, color:'#166534' }}>
+                    ℹ️ 수정 모드에서는 입주 기간이 변경되지 않습니다. 기존 기간이 유지됩니다.
+                  </div>
+                )}
               </div>
 
               {/* 유의사항 */}
@@ -543,13 +585,13 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
 
         {/* 하단 버튼 */}
         <div style={{ padding:'14px 20px', borderTop:'2px solid #c8a96e', background:'#f0e4cc', display:'flex', gap:10, flexShrink:0 }}>
-          {step > 1 && (
+          {step > (isEdit ? 2 : 1) && (
             <button onClick={() => setStep(s => (s - 1) as Step)} style={{ flex:1, padding:'12px', borderRadius:8, cursor:'pointer', border:'2px solid #c8a96e', background:'#fdf6e3', color:'#78614a', fontSize:14, fontWeight:600 }}>
               ← 이전 단계
             </button>
           )}
           <button
-            onClick={() => { if (step < 5) setStep(s => (s + 1) as Step); else handleSubmit() }}
+            onClick={() => { if (step < lastStep) setStep(s => (s + 1) as Step); else handleSubmit() }}
             disabled={loading || !canNext()}
             style={{
               flex:2, padding:'12px', borderRadius:8, cursor:'pointer',
@@ -559,7 +601,9 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
               boxShadow: loading || !canNext() ? 'none' : `0 4px 0 ${zone.color}88`,
             }}
           >
-            {loading ? '처리 중...' : step === 5 ? `결제하기 ${formatKRW(price)} →` : '다음 단계로 →'}
+            {loading ? '처리 중...' : step === lastStep
+              ? (isEdit ? '저장하기 ✓' : `결제하기 ${formatKRW(price)} →`)
+              : '다음 단계로 →'}
           </button>
         </div>
 
