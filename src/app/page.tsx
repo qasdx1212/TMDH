@@ -138,6 +138,7 @@ export default function Home() {
         totalCells={10000}
         totalDonation={totalDonation}
         userId={userId}
+        isAdmin={isAdmin}
         activeZone={activeZone}
         onZoneFilter={setActiveZone}
         onApplyClick={() => setShowApply(true)}

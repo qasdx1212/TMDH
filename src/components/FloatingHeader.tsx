@@ -15,6 +15,7 @@ interface FloatingHeaderProps {
   totalCells: number
   totalDonation: number
   userId?: string
+  isAdmin?: boolean
   activeZone: string | null
   onZoneFilter: (zone: string | null) => void
   onApplyClick: () => void
@@ -27,7 +28,7 @@ interface FloatingHeaderProps {
 }
 
 export default function FloatingHeader({
-  occupiedCount, totalCells, totalDonation, userId,
+  occupiedCount, totalCells, totalDonation, userId, isAdmin,
   onApplyClick, onMyHouseClick,
   houses, onSearchSelect,
   onZoomIn, onZoomOut, onFitView,
@@ -164,6 +165,14 @@ export default function FloatingHeader({
               fontSize:13, fontWeight:600, border:'2px solid #4a3010',
               whiteSpace:'nowrap',
             }}>내 집 보기</button>
+          )}
+          {isAdmin && (
+            <a href="/admin" style={{
+              padding:'9px 14px', borderRadius:8, cursor:'pointer',
+              background:'rgba(239,68,68,0.12)', color:'#f87171',
+              fontSize:12, fontWeight:700, border:'2px solid #ef444444',
+              whiteSpace:'nowrap', textDecoration:'none', display:'flex', alignItems:'center',
+            }}>🔑 관리</a>
           )}
         </div>
       </div>
