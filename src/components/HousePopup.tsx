@@ -8,11 +8,13 @@ import type { CellData } from '@/types/cell'
 interface HousePopupProps {
   house: CellData
   currentUserId?: string
+  isAdmin?: boolean
   onClose: () => void
   onBuy: (house: CellData) => void
+  onAdminDelete?: () => void
 }
 
-export default function HousePopup({ house, currentUserId, onClose, onBuy }: HousePopupProps) {
+export default function HousePopup({ house, currentUserId, isAdmin, onClose, onBuy, onAdminDelete }: HousePopupProps) {
   const [liked, setLiked] = useState(false)
   const [likeCount, setLikeCount] = useState(house.like_count)
   const [likeLoading, setLikeLoading] = useState(false)
@@ -44,6 +46,24 @@ export default function HousePopup({ house, currentUserId, onClose, onBuy }: Hou
       if (!error) { setLiked(true); const n = likeCount + 1; setLikeCount(n); supabase.from('houses').update({ like_count: n }).eq('id', house.id) }
     }
     setLikeLoading(false)
+  }
+
+  const handleAdminDelete = async () => {
+    if (!confirm(`"${house.name ?? house.address}"을 삭제하시겠어요?\n이 작업은 되돌릴 수 없습니다.`)) return
+    await supabase.from('houses').update({
+      user_id: null, name: null, nickname: null, description: null,
+      link_url: null, exterior_image_url: null, interior_image_url: null,
+      border_effect: 'none', status: 'available', width: 1, height: 1,
+      parent_address: null, occupied_at: null, expires_at: null,
+      is_permanent: false, like_count: 0, visit_count: 0,
+    }).eq('id', house.id)
+    if ((house.width ?? 1) > 1 || (house.height ?? 1) > 1) {
+      await supabase.from('houses').update({
+        user_id: null, status: 'available', parent_address: null,
+        occupied_at: null, expires_at: null, is_permanent: false,
+      }).eq('parent_address', house.address)
+    }
+    onAdminDelete?.()
   }
 
   const handleShare = () => {
@@ -209,6 +229,23 @@ export default function HousePopup({ house, currentUserId, onClose, onBuy }: Hou
                 }}>{copied?'✅ 복사됨':'🔗 공유'}</button>
               </div>
             </StatCell>
+          </div>
+        )}
+
+        {/* 관리자 삭제 바 */}
+        {isAdmin && !isAvailable && (
+          <div style={{
+            padding: '8px 16px', background: '#3d0a0a',
+            borderTop: '2px solid #7f1d1d',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          }}>
+            <span style={{ fontSize: 11, color: '#f87171', fontWeight: 600 }}>🔑 관리자 모드</span>
+            <button onClick={handleAdminDelete} style={{
+              padding: '6px 16px', borderRadius: 6,
+              background: '#ef4444', border: '2px solid #b91c1c',
+              color: '#fff', fontSize: 12, fontWeight: 800, cursor: 'pointer',
+              boxShadow: '0 2px 0 #991b1b',
+            }}>🗑️ 강제 퇴거</button>
           </div>
         )}
 

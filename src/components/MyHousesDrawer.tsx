@@ -45,6 +45,20 @@ export default function MyHousesDrawer({ userId, onClose, onEdit, onRefresh }: M
       .then(({ data }) => { setHouses((data ?? []) as CellData[]); setLoading(false) })
   }, [userId])
 
+  const canEdit = (house: CellData) => {
+    if (!house.occupied_at) return false
+    return Date.now() < new Date(house.occupied_at).getTime() + 72 * 3600000
+  }
+
+  const editTimeLeft = (house: CellData) => {
+    if (!house.occupied_at) return ''
+    const ms = new Date(house.occupied_at).getTime() + 72 * 3600000 - Date.now()
+    if (ms <= 0) return ''
+    const h = Math.floor(ms / 3600000)
+    const m = Math.floor((ms % 3600000) / 60000)
+    return `${h}시간 ${m}분`
+  }
+
   const getDaysLeft = (expiresAt: string | null, isPermanent: boolean) => {
     if (isPermanent || !expiresAt) return null
     return Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 86400000)
@@ -159,13 +173,28 @@ export default function MyHousesDrawer({ userId, onClose, onEdit, onRefresh }: M
                       : ''}
                   </div>
 
+                  {/* 수정 가능 시간 표시 */}
+                  {canEdit(h) && (
+                    <div style={{ fontSize: 11, color: '#3b82f6', fontWeight: 600, marginBottom: 8 }}>
+                      ✏️ 수정 가능 — {editTimeLeft(h)} 남음
+                    </div>
+                  )}
+
                   {/* 버튼 */}
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={() => onEdit(h)} style={{
-                      flex: 1, padding: '8px', borderRadius: 8,
-                      border: `1.5px solid ${zone.color}66`, background: zone.color + '15',
-                      color: zone.color, fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                    }}>✏️ 수정</button>
+                    {canEdit(h) ? (
+                      <button onClick={() => onEdit(h)} style={{
+                        flex: 1, padding: '8px', borderRadius: 8,
+                        border: `1.5px solid ${zone.color}66`, background: zone.color + '15',
+                        color: zone.color, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                      }}>✏️ 수정</button>
+                    ) : (
+                      <button disabled style={{
+                        flex: 1, padding: '8px', borderRadius: 8,
+                        border: '1.5px solid #d4b48366', background: '#f5f5f5',
+                        color: '#aaa', fontSize: 12, fontWeight: 700, cursor: 'not-allowed',
+                      }}>✏️ 수정 마감</button>
+                    )}
                     {h.link_url && (
                       <a href={h.link_url} target="_blank" rel="noopener noreferrer" style={{
                         flex: 1, padding: '8px', borderRadius: 8,

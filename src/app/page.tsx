@@ -14,6 +14,8 @@ import MyHousesDrawer from '@/components/MyHousesDrawer'
 export default function Home() {
   const [houses, setHouses] = useState<CellData[]>([])
   const [userId, setUserId] = useState<string | undefined>()
+  const [userEmail, setUserEmail] = useState<string | undefined>()
+  const isAdmin = userEmail === 'qasdx1212@gmail.com'
   const [myHouseIds, setMyHouseIds] = useState<Set<string>>(new Set())
   const [selectedCell, setSelectedCell] = useState<CellData | null>(null)
   const [showApply, setShowApply] = useState(false)
@@ -54,9 +56,13 @@ export default function Home() {
   const totalDonation = occupiedCount * 5000
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id))
+    supabase.auth.getUser().then(({ data }) => {
+      setUserId(data.user?.id)
+      setUserEmail(data.user?.email ?? undefined)
+    })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
       setUserId(session?.user?.id)
+      setUserEmail(session?.user?.email ?? undefined)
     })
     return () => subscription.unsubscribe()
   }, [])
@@ -167,8 +173,10 @@ export default function Home() {
         <HousePopup
           house={selectedCell}
           currentUserId={userId}
+          isAdmin={isAdmin}
           onClose={() => setSelectedCell(null)}
           onBuy={(cell) => { setSelectedCell(null); openApply(cell) }}
+          onAdminDelete={() => { setSelectedCell(null); fetchHouses() }}
         />
       )}
 
