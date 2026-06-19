@@ -9,11 +9,35 @@ interface MyHousesDrawerProps {
   userId: string
   onClose: () => void
   onEdit: (house: CellData) => void
+  onRefresh?: () => void
 }
 
-export default function MyHousesDrawer({ userId, onClose, onEdit }: MyHousesDrawerProps) {
+export default function MyHousesDrawer({ userId, onClose, onEdit, onRefresh }: MyHousesDrawerProps) {
   const [houses, setHouses] = useState<CellData[]>([])
   const [loading, setLoading] = useState(true)
+  const [vacatingId, setVacatingId] = useState<string | null>(null)
+
+  const handleVacate = async (house: CellData) => {
+    if (!confirm(`"${house.name ?? house.address}" 에서 퇴거하시겠어요?\n이 작업은 되돌릴 수 없습니다.`)) return
+    setVacatingId(house.id)
+    await supabase.from('houses').update({
+      user_id: null, name: null, nickname: null, description: null,
+      link_url: null, exterior_image_url: null, interior_image_url: null,
+      border_effect: 'none', status: 'available', width: 1, height: 1,
+      parent_address: null, occupied_at: null, expires_at: null,
+      is_permanent: false, like_count: 0, visit_count: 0,
+    }).eq('id', house.id)
+    // 위성 셀 초기화
+    if ((house.width ?? 1) > 1 || (house.height ?? 1) > 1) {
+      await supabase.from('houses').update({
+        user_id: null, status: 'available', parent_address: null,
+        occupied_at: null, expires_at: null, is_permanent: false,
+      }).eq('parent_address', house.address)
+    }
+    setVacatingId(null)
+    setHouses(prev => prev.filter(h => h.id !== house.id))
+    onRefresh?.()
+  }
 
   useEffect(() => {
     supabase.from('houses').select('*').eq('user_id', userId).eq('status', 'occupied')
@@ -151,6 +175,15 @@ export default function MyHousesDrawer({ userId, onClose, onEdit }: MyHousesDraw
                         alignItems: 'center', justifyContent: 'center', gap: 4,
                       }}>🌐 방문</a>
                     )}
+                    <button
+                      onClick={() => handleVacate(h)}
+                      disabled={vacatingId === h.id}
+                      style={{
+                        padding: '8px 10px', borderRadius: 8,
+                        border: '1.5px solid #ef444466', background: '#fef2f2',
+                        color: '#ef4444', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                      }}
+                    >{vacatingId === h.id ? '...' : '퇴거'}</button>
                   </div>
                 </div>
               </div>

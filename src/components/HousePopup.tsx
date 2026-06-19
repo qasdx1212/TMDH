@@ -12,10 +12,6 @@ interface HousePopupProps {
   onBuy: (house: CellData) => void
 }
 
-const ZONE_BADGE: Record<string, string> = {
-  neon: '🌃', riverside: '🌿', oldtown: '🏮', artdistrict: '🎨',
-}
-
 export default function HousePopup({ house, currentUserId, onClose, onBuy }: HousePopupProps) {
   const [liked, setLiked] = useState(false)
   const [likeCount, setLikeCount] = useState(house.like_count)
@@ -26,21 +22,12 @@ export default function HousePopup({ house, currentUserId, onClose, onBuy }: Hou
   const isAvailable = house.status === 'available'
   const displayImage = house.interior_image_url || house.exterior_image_url
 
-  const handleShare = () => {
-    navigator.clipboard.writeText(`${window.location.origin}?house=${house.address}`).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    })
-  }
-
-  // 좋아요 상태 확인
   useEffect(() => {
     if (!currentUserId || !house.id) return
     supabase.from('likes').select('id').eq('user_id', currentUserId).eq('house_id', house.id).maybeSingle()
       .then(({ data }) => setLiked(!!data))
   }, [currentUserId, house.id])
 
-  // 방문수 증가 (직접 업데이트)
   useEffect(() => {
     if (!house.id || isAvailable) return
     supabase.from('houses').update({ visit_count: house.visit_count + 1 }).eq('id', house.id)
@@ -50,203 +37,201 @@ export default function HousePopup({ house, currentUserId, onClose, onBuy }: Hou
     if (!currentUserId || !house.id) return
     setLikeLoading(true)
     if (liked) {
-      const { error } = await supabase.from('likes').delete()
-        .eq('user_id', currentUserId).eq('house_id', house.id)
-      if (!error) {
-        setLiked(false)
-        const newCount = Math.max(0, likeCount - 1)
-        setLikeCount(newCount)
-        supabase.from('houses').update({ like_count: newCount }).eq('id', house.id)
-      }
+      const { error } = await supabase.from('likes').delete().eq('user_id', currentUserId).eq('house_id', house.id)
+      if (!error) { setLiked(false); const n = Math.max(0, likeCount - 1); setLikeCount(n); supabase.from('houses').update({ like_count: n }).eq('id', house.id) }
     } else {
       const { error } = await supabase.from('likes').insert({ user_id: currentUserId, house_id: house.id })
-      if (!error) {
-        setLiked(true)
-        const newCount = likeCount + 1
-        setLikeCount(newCount)
-        supabase.from('houses').update({ like_count: newCount }).eq('id', house.id)
-      }
+      if (!error) { setLiked(true); const n = likeCount + 1; setLikeCount(n); supabase.from('houses').update({ like_count: n }).eq('id', house.id) }
     }
     setLikeLoading(false)
   }
 
+  const handleShare = () => {
+    navigator.clipboard.writeText(`${window.location.origin}?house=${house.address}`)
+      .then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) })
+  }
+
   return (
     <div
-      style={{
-        position: 'fixed', inset: 0, zIndex: 500,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: 'rgba(0,0,0,0.78)', backdropFilter: 'blur(6px)',
-      }}
+      style={{ position:'fixed', inset:0, zIndex:500, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.78)', backdropFilter:'blur(6px)' }}
       onClick={onClose}
     >
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          width: 560, maxWidth: '96vw',
+          width: 660, maxWidth: '96vw',
           background: '#fdf6e3',
-          borderRadius: 6,
-          boxShadow: `0 0 0 3px #8b6914, 0 0 0 6px #c8a96e, 0 0 0 8px #5a3e1a, 0 20px 60px rgba(0,0,0,0.65), 0 0 60px ${zone.color}33`,
-          fontFamily: '"Noto Sans KR", -apple-system, sans-serif',
+          borderRadius: 12,
+          border: '4px solid #7a4f1a',
+          boxShadow: '0 0 0 2px #e8c97a, 0 0 0 5px #7a4f1a, 0 0 0 7px #e8c97a, 0 24px 70px rgba(0,0,0,0.7)',
+          fontFamily: '"Noto Sans KR", sans-serif',
           overflow: 'hidden',
+          position: 'relative',
         }}
       >
         {/* 닫기 */}
         <button onClick={onClose} style={{
-          position: 'absolute', top: 12, right: 12, zIndex: 10,
-          width: 30, height: 30, borderRadius: '50%',
-          background: '#ef4444', border: '2px solid #b91c1c',
-          color: '#fff', fontSize: 18, fontWeight: 700, cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
+          position:'absolute', top:12, right:12, zIndex:10,
+          width:32, height:32, borderRadius:'50%',
+          background:'#ef4444', border:'3px solid #b91c1c',
+          color:'#fff', fontSize:20, fontWeight:900, cursor:'pointer',
+          display:'flex', alignItems:'center', justifyContent:'center',
+          boxShadow:'0 2px 0 #991b1b', lineHeight:1,
         }}>×</button>
 
-        {/* 헤더 */}
+        {/* 헤더 — 크림 배경 */}
         <div style={{
-          background: 'linear-gradient(135deg, #4a2e10, #2e1a08)',
-          padding: '16px 56px 16px 20px',
-          borderBottom: '3px solid #8b6914',
-          display: 'flex', alignItems: 'center', gap: 14,
+          background: 'linear-gradient(180deg, #f5ead5 0%, #ecdcc0 100%)',
+          padding: '18px 56px 18px 20px',
+          borderBottom: '3px solid #c8a96e',
+          display: 'flex', alignItems: 'center', gap: 16,
         }}>
-          <div style={{ fontSize: 40, lineHeight: 1, flexShrink: 0 }}>🏠</div>
+          <div style={{ fontSize: 64, lineHeight: 1, flexShrink: 0 }}>🏠</div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 5 }}>
-              <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 3, background: '#ffffff18', color: '#d4b47a', border: '1px solid #8b691444' }}>
-                {house.address}
-              </span>
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8, flexWrap:'wrap' }}>
+              <span style={{
+                fontSize:11, fontWeight:700, padding:'3px 10px', borderRadius:20,
+                background:'#e8d5b0', color:'#6b3d0f', border:'1.5px solid #c8a96e',
+              }}>{house.address}</span>
               {house.nickname && (
-                <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 3, background: zone.color + '30', color: zone.color, border: `1px solid ${zone.color}55` }}>
-                  {house.nickname}
-                </span>
+                <span style={{
+                  fontSize:13, fontWeight:800, padding:'4px 14px', borderRadius:6,
+                  background:'#3d2008', color:'#fdf6e3', letterSpacing:'0.02em',
+                }}>문패  {house.nickname}</span>
               )}
-              <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 3, background: '#ffffff12', color: '#a08060' }}>
-                {ZONE_BADGE[house.zone]} {zone.label}
-              </span>
             </div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div style={{ fontSize:26, fontWeight:900, color:'#2a1505', letterSpacing:'-0.02em', lineHeight:1.2 }}>
               {isAvailable ? '빈 공간' : (house.name ?? '이름 없는 집')}
+              {!isAvailable && likeCount > 50 && ' ✨ 💛'}
             </div>
           </div>
         </div>
 
         {/* 바디 */}
-        <div style={{ maxHeight: '65vh', overflowY: 'auto' }}>
-          {isAvailable ? (
-            <div style={{ textAlign: 'center', padding: '40px 24px' }}>
-              <div style={{ fontSize: 56, marginBottom: 16 }}>🏗️</div>
-              <div style={{ fontSize: 14, color: '#78614a', lineHeight: 1.8, marginBottom: 24 }}>
-                아직 아무도 살지 않는 빈 공간이에요.<br />당신만의 공간으로 꾸며보세요!
-              </div>
-              <button
-                onClick={() => onBuy(house)}
-                style={{
-                  padding: '12px 36px', borderRadius: 8,
-                  background: 'linear-gradient(180deg,#8b6914,#6b4c10)',
-                  color: '#fdf6e3', border: '2px solid #c8a96e',
-                  boxShadow: '0 4px 0 #3d2a08', fontSize: 15, fontWeight: 700, cursor: 'pointer',
-                }}
-              >입주 신청하기 →</button>
+        {isAvailable ? (
+          <div style={{ textAlign:'center', padding:'48px 24px' }}>
+            <div style={{ fontSize:64, marginBottom:16 }}>🏗️</div>
+            <div style={{ fontSize:14, color:'#78614a', lineHeight:1.8, marginBottom:28 }}>
+              아직 아무도 살지 않는 빈 공간이에요.<br />당신만의 공간으로 꾸며보세요!
             </div>
-          ) : (
-            <>
-              {/* 내부/외관 이미지 — 크게 */}
-              {displayImage && (
-                <div style={{ width: '100%', height: 200, overflow: 'hidden', borderBottom: '2px solid #d4b483' }}>
-                  <img
-                    src={displayImage}
-                    alt={house.name ?? ''}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
+            <button onClick={() => onBuy(house)} style={{
+              padding:'14px 40px', borderRadius:10, cursor:'pointer',
+              background:'linear-gradient(180deg,#8b6914,#6b4c10)', color:'#fdf6e3',
+              border:'2px solid #c8a96e', boxShadow:'0 4px 0 #3d2a08',
+              fontSize:16, fontWeight:800,
+            }}>입주 신청하기 →</button>
+          </div>
+        ) : (
+          <div style={{ display:'flex', minHeight:180 }}>
+            {/* 왼쪽: 소개글 + 링크 */}
+            <div style={{ flex:1, padding:'22px 20px', minWidth:0 }}>
+              {house.description && (
+                <div style={{ marginBottom:20 }}>
+                  <span style={{
+                    display:'inline-block', fontSize:12, fontWeight:800, padding:'4px 12px',
+                    borderRadius:6, background:'#3b5bdb', color:'#fff', marginBottom:12,
+                  }}>소개글</span>
+                  <div style={{ fontSize:14, color:'#3d2a18', lineHeight:1.9 }}>
+                    {house.description}
+                  </div>
                 </div>
               )}
-
-              <div style={{ padding: '20px' }}>
-                {/* 소개글 */}
-                {house.description && (
-                  <div style={{ marginBottom: 16 }}>
-                    <Tag label="소개글" />
-                    <div style={{ fontSize: 14, color: '#3d2a18', lineHeight: 1.8, marginTop: 8 }}>
-                      {house.description}
-                    </div>
+              {house.link_url && (
+                <div>
+                  <span style={{
+                    display:'inline-block', fontSize:12, fontWeight:800, padding:'4px 12px',
+                    borderRadius:6, background:'#2f9e44', color:'#fff', marginBottom:12,
+                  }}>링크</span>
+                  <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                    <a href={house.link_url} target="_blank" rel="noopener noreferrer" style={{
+                      display:'inline-flex', alignItems:'center', gap:6,
+                      padding:'8px 16px', borderRadius:8,
+                      background:'#e03131', color:'#fff',
+                      fontSize:12, fontWeight:700, textDecoration:'none',
+                      boxShadow:'0 3px 0 #b91c1c',
+                    }}>🌐 공식 홈페이지 ↗</a>
                   </div>
-                )}
-
-                {/* 링크 */}
-                {house.link_url && (
-                  <div style={{ marginBottom: 16 }}>
-                    <Tag label="링크" />
-                    <div style={{ marginTop: 8 }}>
-                      <a
-                        href={house.link_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 6,
-                          padding: '7px 16px', borderRadius: 6,
-                          background: zone.color, color: '#fff',
-                          fontSize: 12, fontWeight: 700, textDecoration: 'none',
-                          border: `2px solid ${zone.color}`,
-                          boxShadow: `0 3px 0 ${zone.color}88`,
-                        }}
-                      >🌐 공식 홈페이지 ↗</a>
-                    </div>
-                  </div>
-                )}
-
-                {/* 통계 바 */}
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
-                  padding: '10px 14px', background: '#f5ead5',
-                  border: '1.5px solid #d4b483', borderRadius: 8,
-                }}>
-                  <StatBtn onClick={toggleLike} disabled={likeLoading || !currentUserId} active={liked} color="#ef4444">
-                    {liked ? '❤️' : '🤍'} {likeCount.toLocaleString()}
-                  </StatBtn>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#78614a', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    👣 {(house.visit_count + 1).toLocaleString()}
-                  </div>
-                  {house.occupied_at && (
-                    <div style={{ fontSize: 12, color: '#a08060', display: 'flex', alignItems: 'center', gap: 4 }}>
-                      📅 {house.occupied_at.slice(0, 10)}
-                    </div>
-                  )}
-                  <StatBtn onClick={handleShare} active={copied} color="#22c55e" style={{ marginLeft: 'auto' }}>
-                    {copied ? '✅ 복사됨!' : '🔗 공유'}
-                  </StatBtn>
                 </div>
-              </div>
-            </>
-          )}
-        </div>
+              )}
+              {!house.description && !house.link_url && (
+                <div style={{ color:'#a08060', fontSize:13, marginTop:8 }}>소개글이 아직 없어요.</div>
+              )}
+            </div>
 
-        {/* 잔디 하단 */}
-        <div style={{ height: 10, background: 'repeating-linear-gradient(90deg,#4a7c3f 0px,#4a7c3f 5px,#3d6b34 5px,#3d6b34 10px)', borderTop: '2px solid #2d5226' }} />
+            {/* 오른쪽: 이미지 */}
+            {displayImage && (
+              <div style={{ width:210, flexShrink:0, padding:'16px 16px 16px 0', display:'flex', alignItems:'center' }}>
+                <img
+                  src={displayImage}
+                  alt={house.name ?? ''}
+                  style={{ width:'100%', height:180, objectFit:'cover', borderRadius:12, border:'2.5px solid #c8a96e', boxShadow:'0 4px 12px rgba(0,0,0,0.2)' }}
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 통계 바 */}
+        {!isAvailable && (
+          <div style={{
+            display:'flex', background:'#f0e4cc',
+            borderTop:'2.5px solid #c8a96e',
+          }}>
+            <StatCell>
+              <button
+                onClick={toggleLike}
+                disabled={likeLoading || !currentUserId}
+                style={{ background:'none', border:'none', cursor:currentUserId?'pointer':'default', display:'flex', alignItems:'center', gap:6, padding:0, fontSize:16, fontWeight:800, color:liked?'#e03131':'#5a3e1a' }}
+              >
+                {liked?'❤️':'🤍'} {likeCount.toLocaleString()}
+              </button>
+            </StatCell>
+            <div style={{ width:1.5, background:'#c8a96e', margin:'10px 0' }} />
+            <StatCell>
+              <span style={{ fontSize:16, fontWeight:800, color:'#5a3e1a', display:'flex', alignItems:'center', gap:6 }}>
+                👣 {(house.visit_count + 1).toLocaleString()}
+              </span>
+            </StatCell>
+            <div style={{ width:1.5, background:'#c8a96e', margin:'10px 0' }} />
+            <StatCell>
+              <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap', justifyContent:'center' }}>
+                {house.occupied_at && (
+                  <span style={{ fontSize:13, color:'#78614a', fontWeight:600, display:'flex', alignItems:'center', gap:4 }}>
+                    📅 입주일 {house.occupied_at.slice(0,10)}
+                  </span>
+                )}
+                <button onClick={handleShare} style={{
+                  padding:'4px 10px', borderRadius:6,
+                  border:`1.5px solid ${copied?'#22c55e':'#c8a96e'}`,
+                  background: copied?'#22c55e18':'#fdf6e3',
+                  color: copied?'#22c55e':'#78614a',
+                  fontSize:11, fontWeight:700, cursor:'pointer',
+                }}>{copied?'✅ 복사됨':'🔗 공유'}</button>
+              </div>
+            </StatCell>
+          </div>
+        )}
+
+        {/* 잔디 + 꽃 하단 */}
+        <div style={{
+          height:28,
+          background:'repeating-linear-gradient(90deg,#4a7c3f 0px,#4a7c3f 4px,#3d6b34 4px,#3d6b34 8px)',
+          borderTop:'3px solid #2d5226',
+          position:'relative', overflow:'visible',
+        }}>
+          {['🌸','🌼','🌺','🌻','🌷','🌸','🌼','🌺'].map((f, i) => (
+            <span key={i} style={{ position:'absolute', top:-10, left:`${4 + i * 13}%`, fontSize:16, lineHeight:1, pointerEvents:'none' }}>{f}</span>
+          ))}
+        </div>
       </div>
     </div>
   )
 }
 
-function Tag({ label }: { label: string }) {
+function StatCell({ children }: { children: React.ReactNode }) {
   return (
-    <span style={{ display: 'inline-block', fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: '#e8d8bb', color: '#6b4c2a', border: '1px solid #c8a96e' }}>
-      {label}
-    </span>
-  )
-}
-
-function StatBtn({ children, onClick, disabled, active, color, style }: {
-  children: React.ReactNode; onClick: () => void
-  disabled?: boolean; active?: boolean; color: string; style?: React.CSSProperties
-}) {
-  return (
-    <button
-      onClick={onClick} disabled={disabled}
-      style={{
-        display: 'flex', alignItems: 'center', gap: 4,
-        padding: '5px 12px', borderRadius: 6, cursor: disabled ? 'default' : 'pointer',
-        background: active ? color + '18' : '#fff',
-        border: `1.5px solid ${active ? color : '#d4b483'}`,
-        fontSize: 13, fontWeight: 700, color: active ? color : '#78614a',
-        ...style,
-      }}
-    >{children}</button>
+    <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', padding:'14px 12px' }}>
+      {children}
+    </div>
   )
 }

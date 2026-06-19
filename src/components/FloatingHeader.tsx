@@ -3,12 +3,11 @@
 import { useState, useRef, useEffect } from 'react'
 import type { CellData } from '@/types/cell'
 
-const ZONE_FILTERS = [
-  { key: null,          label: '전체',     color: '#d4b483' },
-  { key: 'neon',        label: '🌃 네온',  color: '#c084fc' },
-  { key: 'riverside',   label: '🌿 강변',  color: '#34d399' },
-  { key: 'oldtown',     label: '🏮 구시가', color: '#fbbf24' },
-  { key: 'artdistrict', label: '🎨 예술구', color: '#f87171' },
+const LEGEND = [
+  { color: '#22c55e', label: '내 집' },
+  { color: '#f97316', label: '관심 지역' },
+  { color: '#3b82f6', label: '판매중' },
+  { color: '#6366f1', label: '분양 완료' },
 ]
 
 interface FloatingHeaderProps {
@@ -22,12 +21,15 @@ interface FloatingHeaderProps {
   onMyHouseClick: () => void
   houses: CellData[]
   onSearchSelect: (house: CellData) => void
+  onZoomIn?: () => void
+  onZoomOut?: () => void
 }
 
 export default function FloatingHeader({
   occupiedCount, totalCells, totalDonation, userId,
-  activeZone, onZoneFilter, onApplyClick, onMyHouseClick,
+  onApplyClick, onMyHouseClick,
   houses, onSearchSelect,
+  onZoomIn, onZoomOut,
 }: FloatingHeaderProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchFocused, setSearchFocused] = useState(false)
@@ -44,12 +46,9 @@ export default function FloatingHeader({
       ).slice(0, 6)
     : []
 
-  // 외부 클릭으로 드롭다운 닫기
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
-        setSearchFocused(false)
-      }
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) setSearchFocused(false)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
@@ -57,154 +56,157 @@ export default function FloatingHeader({
 
   const handleSelect = (house: CellData) => {
     onSearchSelect(house)
-    setSearchQuery('')
-    setSearchFocused(false)
+    setSearchQuery(''); setSearchFocused(false)
   }
 
   return (
     <div style={{
-      position: 'fixed', top: 0, left: 0, right: 0, zIndex: 300,
-      background: 'linear-gradient(180deg, #2c1a08 0%, #1e1005 100%)',
-      borderBottom: '3px solid #6b4c2a',
-      boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
-      fontFamily: '"Noto Sans KR", -apple-system, sans-serif',
+      position:'fixed', top:0, left:0, right:0, zIndex:300,
+      background:'linear-gradient(180deg,#2c1a08 0%,#1e1005 100%)',
+      borderBottom:'3px solid #6b4c2a',
+      boxShadow:'0 4px 20px rgba(0,0,0,0.5)',
+      fontFamily:'"Noto Sans KR",-apple-system,sans-serif',
     }}>
       {/* 메인 줄 */}
-      <div style={{ display:'flex', alignItems:'center', padding:'0 16px', height:56, gap:16 }}>
+      <div style={{ display:'flex', alignItems:'center', padding:'0 16px', height:58, gap:16 }}>
         {/* 로고 */}
-        <div style={{ display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:10, flexShrink:0, marginRight:4 }}>
           <div style={{
-            width:38, height:38, borderRadius:8,
+            width:40, height:40, borderRadius:8,
             background:'linear-gradient(135deg,#8b6914,#5a3e10)',
             border:'2px solid #c8a96e',
             display:'flex', alignItems:'center', justifyContent:'center',
-            fontSize:20, boxShadow:'0 2px 0 #3d2a08', flexShrink:0,
+            fontSize:22, boxShadow:'0 2px 0 #3d2a08', flexShrink:0,
           }}>🏠</div>
           <div className="hide-on-mobile">
             <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-              <span style={{ fontSize:16, fontWeight:900, color:'#fdf6e3', letterSpacing:'-0.03em' }}>집.zip</span>
+              <span style={{ fontSize:17, fontWeight:900, color:'#fdf6e3', letterSpacing:'-0.03em' }}>집.zip</span>
               <span style={{ fontSize:9, fontWeight:700, color:'#c084fc', background:'#c084fc20', padding:'1px 5px', borderRadius:3, border:'1px solid #c084fc44' }}>BETA</span>
             </div>
             <div style={{ fontSize:9, color:'#7a5c3a' }}>당신만의 공간, 집.zip</div>
           </div>
         </div>
 
-        {/* 통계 — 태블릿 이상 */}
-        <div style={{ display:'flex', gap:20, flex:1 }} className="hide-on-mobile">
-          <StatItem label="전체 면적" value="1,000,000 px" valueColor="#d4b483" />
+        {/* 통계 */}
+        <div style={{ display:'flex', gap:24 }} className="hide-on-mobile">
+          <StatItem label="전체 면적" value="1,000,000 pixels" valueColor="#d4b483" />
           <StatItem label="분양률" value={`${occupancyRate}%`} valueColor="#4ade80" />
-          <StatItem label="누적 기부금" value={`₩${totalDonation.toLocaleString()}`} valueColor="#f87171" />
+          <StatItem label="누적 기부금" value={`₩ ${totalDonation.toLocaleString()}`} valueColor="#f87171" />
         </div>
 
+        <div style={{ flex:1 }} />
+
         {/* 검색 */}
-        <div ref={searchRef} style={{ position:'relative', flex:1, maxWidth:240, minWidth:120 }}>
+        <div ref={searchRef} style={{ position:'relative', width:220 }} className="hide-on-mobile">
           <div style={{ position:'relative' }}>
-            <span style={{
-              position:'absolute', left:10, top:'50%', transform:'translateY(-50%)',
-              fontSize:13, pointerEvents:'none', color:'#7a5c3a',
-            }}>🔍</span>
+            <span style={{ position:'absolute', left:9, top:'50%', transform:'translateY(-50%)', fontSize:13, color:'#7a5c3a', pointerEvents:'none' }}>🔍</span>
             <input
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               onFocus={() => setSearchFocused(true)}
-              placeholder="집 이름, 닉네임 검색..."
+              placeholder="집 검색..."
               style={{
-                width:'100%', padding:'7px 10px 7px 30px', borderRadius:8, boxSizing:'border-box',
+                width:'100%', padding:'7px 10px 7px 28px', borderRadius:8, boxSizing:'border-box' as const,
                 background:'rgba(255,255,255,0.08)', border:'1.5px solid #4a3010',
-                color:'#fdf6e3', fontSize:12, outline:'none',
-                fontFamily:'"Noto Sans KR", sans-serif',
+                color:'#fdf6e3', fontSize:12, outline:'none', fontFamily:'inherit',
               }}
             />
           </div>
-          {/* 검색 결과 드롭다운 */}
           {searchFocused && results.length > 0 && (
             <div style={{
               position:'absolute', top:'calc(100% + 6px)', left:0, right:0,
-              background:'#2a1a08', border:'2px solid #8b6914',
-              borderRadius:8, overflow:'hidden', zIndex:400,
-              boxShadow:'0 8px 30px rgba(0,0,0,0.6)',
+              background:'#2a1a08', border:'2px solid #8b6914', borderRadius:8,
+              overflow:'hidden', zIndex:400, boxShadow:'0 8px 30px rgba(0,0,0,0.6)',
             }}>
               {results.map(h => (
-                <button
-                  key={h.id}
-                  onMouseDown={() => handleSelect(h)}
-                  style={{
-                    display:'block', width:'100%', padding:'10px 14px',
-                    background:'transparent', border:'none',
-                    borderBottom:'1px solid #3d2a1844',
-                    color:'#fdf6e3', cursor:'pointer', textAlign:'left',
-                    fontFamily:'"Noto Sans KR", sans-serif',
-                  }}
-                  onMouseEnter={e => (e.currentTarget.style.background = '#3d2a18')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                <button key={h.id} onMouseDown={() => handleSelect(h)} style={{
+                  display:'block', width:'100%', padding:'10px 14px',
+                  background:'transparent', border:'none', borderBottom:'1px solid #3d2a1844',
+                  color:'#fdf6e3', cursor:'pointer', textAlign:'left', fontFamily:'inherit',
+                }}
+                  onMouseEnter={e => (e.currentTarget.style.background='#3d2a18')}
+                  onMouseLeave={e => (e.currentTarget.style.background='transparent')}
                 >
-                  <div style={{ fontSize:12, fontWeight:700, marginBottom:2 }}>
-                    {h.nickname ? `${h.name} (${h.nickname})` : (h.name ?? h.address)}
-                  </div>
-                  <div style={{ fontSize:10, color:'#8b6914' }}>{h.address}</div>
+                  <div style={{ fontSize:12, fontWeight:700 }}>{h.nickname ? `${h.name} (${h.nickname})` : (h.name ?? h.address)}</div>
+                  <div style={{ fontSize:10, color:'#8b6914', marginTop:2 }}>{h.address}</div>
                 </button>
               ))}
             </div>
           )}
           {searchFocused && searchQuery.trim().length >= 1 && results.length === 0 && (
-            <div style={{
-              position:'absolute', top:'calc(100% + 6px)', left:0, right:0,
-              background:'#2a1a08', border:'2px solid #8b6914', borderRadius:8,
-              padding:'14px', fontSize:12, color:'#78614a', zIndex:400,
-              boxShadow:'0 8px 30px rgba(0,0,0,0.6)', textAlign:'center',
-            }}>검색 결과가 없어요</div>
+            <div style={{ position:'absolute', top:'calc(100% + 6px)', left:0, right:0, background:'#2a1a08', border:'2px solid #8b6914', borderRadius:8, padding:'14px', fontSize:12, color:'#78614a', zIndex:400, textAlign:'center' }}>
+              검색 결과가 없어요
+            </div>
           )}
         </div>
 
-        {/* 버튼 */}
+        {/* 버튼 그룹 */}
         <div style={{ display:'flex', gap:8, flexShrink:0 }}>
-          <button
-            onClick={onApplyClick}
-            style={{
-              padding:'8px 16px', borderRadius:8, cursor:'pointer',
-              background:'linear-gradient(180deg,#8b6914,#6b4c10)',
-              color:'#fdf6e3', fontSize:13, fontWeight:700,
-              border:'2px solid #c8a96e', boxShadow:'0 3px 0 #3d2a08',
-              whiteSpace:'nowrap',
-            }}
-          >✏️ <span className="hide-on-mobile">입주 신청하기</span><span className="show-on-mobile">신청</span></button>
+          <button onClick={onApplyClick} style={{
+            padding:'9px 20px', borderRadius:8, cursor:'pointer',
+            background:'linear-gradient(180deg,#8b6914,#6b4c10)',
+            color:'#fdf6e3', fontSize:13, fontWeight:700,
+            border:'2px solid #c8a96e', boxShadow:'0 3px 0 #3d2a08',
+            display:'flex', alignItems:'center', gap:6, whiteSpace:'nowrap',
+          }}>✏️ 입주 신청하기</button>
+
+          <button style={{
+            width:40, height:40, borderRadius:8, border:'2px solid #4a3010',
+            background:'rgba(255,255,255,0.06)', color:'#a08060', fontSize:18, cursor:'pointer',
+            display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
+          }}>🔔</button>
+
           {userId && (
             <button onClick={onMyHouseClick} style={{
-              padding:'8px 14px', borderRadius:8, cursor:'pointer',
+              padding:'9px 16px', borderRadius:8, cursor:'pointer',
               background:'rgba(255,255,255,0.08)', color:'#d4b483',
               fontSize:13, fontWeight:600, border:'2px solid #4a3010',
               whiteSpace:'nowrap',
-            }}>내 집</button>
+            }}>내 집 보기</button>
           )}
         </div>
       </div>
 
-      {/* 구역 필터 줄 */}
-      <div style={{ display:'flex', alignItems:'center', gap:6, padding:'0 16px 8px', borderTop:'1px solid #4a3010', overflowX:'auto' }}>
-        <span style={{ fontSize:10, color:'#7a5c3a', marginRight:4, flexShrink:0, fontWeight:600 }}>구역</span>
-        {ZONE_FILTERS.map(({ key, label, color }) => {
-          const active = activeZone === key
-          return (
-            <button key={String(key)} onClick={() => onZoneFilter(key)} style={{
-              padding:'3px 12px', borderRadius:20, cursor:'pointer', flexShrink:0,
-              border:`1.5px solid ${active ? color : '#4a3010'}`,
-              background: active ? color+'28' : 'transparent',
-              color: active ? color : '#7a5c3a',
-              fontSize:11, fontWeight: active ? 700 : 500, transition:'all 0.12s',
-              whiteSpace:'nowrap',
-            }}>{label}</button>
-          )
-        })}
+      {/* 하단 줄: 범례 + 줌 컨트롤 */}
+      <div style={{
+        display:'flex', alignItems:'center', justifyContent:'space-between',
+        padding:'0 16px 8px', borderTop:'1px solid #4a3010',
+      }}>
+        {/* 지도 범례 */}
+        <div style={{ display:'flex', alignItems:'center', gap:16 }}>
+          {LEGEND.map(({ color, label }) => (
+            <div key={label} style={{ display:'flex', alignItems:'center', gap:5 }}>
+              <div style={{ width:10, height:10, borderRadius:3, background:color, flexShrink:0 }} />
+              <span style={{ fontSize:11, color:'#a08060', whiteSpace:'nowrap' }}>{label}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* 줌 컨트롤 */}
+        <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+          <span style={{ fontSize:10, color:'#7a5c3a', marginRight:4 }}>지도 확대/축소</span>
+          <button onClick={onZoomIn} style={zoomBtnStyle}>+</button>
+          <button onClick={onZoomOut} style={zoomBtnStyle}>−</button>
+          <button style={{ ...zoomBtnStyle, fontSize:14 }}>⤢</button>
+        </div>
       </div>
     </div>
   )
+}
+
+const zoomBtnStyle: React.CSSProperties = {
+  width:28, height:28, borderRadius:6, border:'1.5px solid #4a3010',
+  background:'rgba(255,255,255,0.06)', color:'#d4b483',
+  fontSize:16, fontWeight:700, cursor:'pointer',
+  display:'flex', alignItems:'center', justifyContent:'center', lineHeight:1,
+  padding:0,
 }
 
 function StatItem({ label, value, valueColor }: { label: string; value: string; valueColor: string }) {
   return (
     <div>
       <div style={{ fontSize:9, color:'#7a5c3a', fontWeight:600, letterSpacing:'0.05em', marginBottom:1 }}>{label}</div>
-      <div style={{ fontSize:13, fontWeight:800, color:valueColor, letterSpacing:'-0.01em' }}>{value}</div>
+      <div style={{ fontSize:14, fontWeight:800, color:valueColor, letterSpacing:'-0.01em' }}>{value}</div>
     </div>
   )
 }

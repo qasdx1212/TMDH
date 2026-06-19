@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { ZONES, DURATIONS, PERMANENT_DAYS, calcPrice, formatKRW, getAddress } from '@/lib/constants'
 import type { CellData } from '@/types/cell'
@@ -21,13 +21,14 @@ interface FormData {
   nickname: string
   exteriorImage: File | null
   exteriorPreview: string | null
+  exteriorFit: 'cover' | 'contain'
   interiorImage: File | null
   interiorPreview: string | null
   days: number
   borderEffect: 'none' | 'neon'
 }
 
-const STEPS = ['위치 확인', '집 정보', '이미지', '확인', '결제']
+const STEPS = ['위치 확인', '집 정보', '외관 이미지', '신청 확인', '결제']
 
 export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: ApplyFlowProps) {
   const isEdit = selectedCell.status === 'occupied'
@@ -39,6 +40,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
     nickname: isEdit ? (selectedCell.nickname ?? '') : '',
     exteriorImage: null,
     exteriorPreview: isEdit ? (selectedCell.exterior_image_url ?? null) : null,
+    exteriorFit: 'cover',
     interiorImage: null,
     interiorPreview: isEdit ? (selectedCell.interior_image_url ?? null) : null,
     days: 30,
@@ -47,10 +49,48 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
   const [loading, setLoading] = useState(false)
   const [payMethod, setPayMethod] = useState('card')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const miniMapRef = useRef<HTMLCanvasElement>(null)
 
   const zone = ZONES[selectedCell.zone]
   const cellCount = (selectedCell.width ?? 1) * (selectedCell.height ?? 1)
   const price = calcPrice(selectedCell.zone, cellCount, form.days)
+
+  // 미니맵 (Step 1) — 4구역 + 선택 셀 표시
+  useEffect(() => {
+    if (step !== 1) return
+    const canvas = miniMapRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')!
+    const S = 2 // 2px per cell
+    ctx.clearRect(0, 0, 200, 200)
+    // 구역 배경
+    const zoneBgs: Record<string, string> = { neon:'#2d1a3e', riverside:'#1a3028', oldtown:'#3d2a0a', artdistrict:'#3d1a1a' }
+    Object.entries(ZONES).forEach(([key, z]) => {
+      ctx.fillStyle = zoneBgs[key] ?? '#111'
+      ctx.fillRect(z.colMin*S, z.rowMin*S, (z.colMax-z.colMin+1)*S, (z.rowMax-z.rowMin+1)*S)
+    })
+    // 구역 경계
+    ctx.strokeStyle = '#8b6914'; ctx.lineWidth = 1
+    ctx.beginPath(); ctx.moveTo(100, 0); ctx.lineTo(100, 200); ctx.stroke()
+    ctx.beginPath(); ctx.moveTo(0, 100); ctx.lineTo(200, 100); ctx.stroke()
+    // 구역 라벨
+    const zoneLabels: Record<string, { x:number; y:number; label:string; color:string }> = {
+      neon:       { x:25, y:12, label:'네온', color:'#c084fc' },
+      riverside:  { x:150, y:12, label:'리버사이드', color:'#34d399' },
+      oldtown:    { x:25, y:112, label:'올드타운', color:'#fbbf24' },
+      artdistrict:{ x:150, y:112, label:'아트', color:'#f87171' },
+    }
+    Object.entries(zoneLabels).forEach(([, { x, y, label, color }]) => {
+      ctx.font = 'bold 9px sans-serif'; ctx.fillStyle = color; ctx.textAlign = 'center'
+      ctx.fillText(label, x, y)
+    })
+    // 선택된 셀
+    ctx.fillStyle = '#ffd700'
+    ctx.fillRect(selectedCell.col * S, selectedCell.row * S, Math.max(2, (selectedCell.width ?? 1) * S), Math.max(2, (selectedCell.height ?? 1) * S))
+    // 빛나는 테두리
+    ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 1.5
+    ctx.strokeRect(selectedCell.col * S - 1, selectedCell.row * S - 1, Math.max(4, (selectedCell.width ?? 1) * S + 2), Math.max(4, (selectedCell.height ?? 1) * S + 2))
+  }, [step, selectedCell])
 
   const handleFile = (type: 'exterior' | 'interior') => (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -68,46 +108,24 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
   }
 
   const handleSubmit = async () => {
-    setLoading(true)
-    setErrorMsg(null)
+    setLoading(true); setErrorMsg(null)
     try {
-      // 새 파일이 없으면 기존 URL 유지
       let exteriorUrl: string | null = selectedCell.exterior_image_url ?? null
-      if (form.exteriorImage) {
-        exteriorUrl = await uploadImage(
-          form.exteriorImage,
-          `${userId}/exterior-${selectedCell.address}.${form.exteriorImage.name.split('.').pop()}`
-        )
-      }
-
+      if (form.exteriorImage) exteriorUrl = await uploadImage(form.exteriorImage, `${userId}/exterior-${selectedCell.address}.${form.exteriorImage.name.split('.').pop()}`)
       let interiorUrl: string | null = selectedCell.interior_image_url ?? null
-      if (form.interiorImage) {
-        interiorUrl = await uploadImage(
-          form.interiorImage,
-          `${userId}/interior-${selectedCell.address}.${form.interiorImage.name.split('.').pop()}`
-        )
-      }
+      if (form.interiorImage) interiorUrl = await uploadImage(form.interiorImage, `${userId}/interior-${selectedCell.address}.${form.interiorImage.name.split('.').pop()}`)
 
-      const expiresAt = form.days === PERMANENT_DAYS
-        ? null
-        : new Date(Date.now() + form.days * 86400000).toISOString()
+      const expiresAt = form.days === PERMANENT_DAYS ? null : new Date(Date.now() + form.days * 86400000).toISOString()
       const occupiedAt = new Date().toISOString()
       const col = selectedCell.col, row = selectedCell.row
       const width = selectedCell.width ?? 1, height = selectedCell.height ?? 1
 
       const { error } = await supabase.from('houses').update({
-        user_id: userId,
-        name: form.name || null,
-        nickname: form.nickname || null,
-        description: form.description || null,
-        link_url: form.linkUrl || null,
-        exterior_image_url: exteriorUrl,
-        interior_image_url: interiorUrl,
-        border_effect: form.borderEffect,
-        status: 'occupied',
-        width, height,
-        occupied_at: occupiedAt,
-        expires_at: expiresAt,
+        user_id: userId, name: form.name || null, nickname: form.nickname || null,
+        description: form.description || null, link_url: form.linkUrl || null,
+        exterior_image_url: exteriorUrl, interior_image_url: interiorUrl,
+        border_effect: form.borderEffect, status: 'occupied',
+        width, height, occupied_at: occupiedAt, expires_at: expiresAt,
         is_permanent: form.days === PERMANENT_DAYS,
       }).eq('address', selectedCell.address)
 
@@ -118,21 +136,15 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
           for (let r = row; r < row + height; r++) {
             if (c === col && r === row) continue
             await supabase.from('houses').update({
-              user_id: userId, status: 'occupied',
-              parent_address: selectedCell.address,
-              occupied_at: occupiedAt, expires_at: expiresAt,
-              is_permanent: form.days === PERMANENT_DAYS,
+              user_id: userId, status: 'occupied', parent_address: selectedCell.address,
+              occupied_at: occupiedAt, expires_at: expiresAt, is_permanent: form.days === PERMANENT_DAYS,
             }).eq('address', getAddress(c, r))
           }
         }
       }
-
       onSuccess()
-    } catch {
-      setErrorMsg('오류가 발생했습니다. 다시 시도해주세요.')
-    } finally {
-      setLoading(false)
-    }
+    } catch { setErrorMsg('오류가 발생했습니다. 다시 시도해주세요.') }
+    finally { setLoading(false) }
   }
 
   const canNext = () => {
@@ -141,57 +153,35 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
   }
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 600,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(6px)',
-    }}>
+    <div style={{ position:'fixed', inset:0, zIndex:600, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.82)', backdropFilter:'blur(6px)' }}>
       <div style={{
-        width: 600, maxWidth: '96vw', maxHeight: '92vh',
-        background: '#fdf6e3',
-        borderRadius: 6,
-        boxShadow: '0 0 0 3px #8b6914, 0 0 0 6px #c8a96e, 0 0 0 8px #5a3e1a, 0 24px 80px rgba(0,0,0,0.7)',
-        fontFamily: '"Noto Sans KR", -apple-system, sans-serif',
-        display: 'flex', flexDirection: 'column', overflow: 'hidden',
+        width: step === 3 ? 860 : 700, maxWidth:'96vw', maxHeight:'92vh',
+        background:'#fdf6e3', borderRadius:12,
+        border:'4px solid #7a4f1a',
+        boxShadow:'0 0 0 2px #e8c97a, 0 0 0 5px #7a4f1a, 0 24px 80px rgba(0,0,0,0.7)',
+        fontFamily:'"Noto Sans KR",-apple-system,sans-serif',
+        display:'flex', flexDirection:'column', overflow:'hidden',
+        transition:'width 0.2s ease',
       }}>
         {/* 헤더 */}
-        <div style={{
-          background: 'linear-gradient(135deg, #4a2e10, #2e1a08)',
-          padding: '16px 20px',
-          borderBottom: '3px solid #8b6914',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        }}>
-          <div>
-            <div style={{ fontSize: 17, fontWeight: 800, color: '#fdf6e3' }}>{isEdit ? '✏️ 집 정보 수정' : '🏠 입주 신청'}</div>
-            <div style={{ fontSize: 11, color: zone.color, marginTop: 2, fontWeight: 600 }}>
-              {zone.label} · {selectedCell.address} · {cellCount}칸
+        <div style={{ background:'linear-gradient(180deg,#f5ead5,#ecdcc0)', padding:'16px 20px', borderBottom:'3px solid #c8a96e', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+            <div style={{ width:36, height:36, borderRadius:8, background:'linear-gradient(135deg,#8b6914,#5a3e10)', border:'2px solid #c8a96e', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18 }}>🏠</div>
+            <div>
+              <div style={{ fontSize:17, fontWeight:900, color:'#2a1505' }}>{isEdit ? '✏️ 집 정보 수정' : '🏠 입주 신청'}</div>
+              <div style={{ fontSize:11, color:zone.color, fontWeight:600 }}>{zone.label} · {selectedCell.address} · {cellCount}칸</div>
             </div>
           </div>
-          <button onClick={onClose} style={{
-            width: 30, height: 30, borderRadius: '50%',
-            background: '#ef4444', border: '2px solid #b91c1c',
-            color: '#fff', fontSize: 18, fontWeight: 700, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>×</button>
+          <button onClick={onClose} style={{ width:32, height:32, borderRadius:'50%', background:'#ef4444', border:'3px solid #b91c1c', color:'#fff', fontSize:20, fontWeight:900, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>×</button>
         </div>
 
         {/* 스텝 인디케이터 */}
-        <div style={{
-          display: 'flex', background: '#f5ead5',
-          borderBottom: '2px solid #d4b483',
-        }}>
+        <div style={{ display:'flex', background:'#f0e4cc', borderBottom:'2px solid #c8a96e', flexShrink:0 }}>
           {STEPS.map((label, i) => {
             const s = (i + 1) as Step
-            const isDone = step > s
-            const isActive = step === s
+            const isDone = step > s, isActive = step === s
             return (
-              <div key={i} style={{
-                flex: 1, padding: '10px 4px', textAlign: 'center',
-                fontSize: 11, fontWeight: isActive ? 800 : isDone ? 600 : 400,
-                color: isActive ? zone.color : isDone ? '#4a7c3f' : '#a08060',
-                borderBottom: isActive ? `3px solid ${zone.color}` : '3px solid transparent',
-                transition: 'all 0.12s',
-              }}>
+              <div key={i} style={{ flex:1, padding:'10px 4px', textAlign:'center', fontSize:11, fontWeight:isActive?800:isDone?600:400, color:isActive?zone.color:isDone?'#2f9e44':'#a08060', borderBottom:isActive?`3px solid ${zone.color}`:'3px solid transparent', transition:'all 0.12s' }}>
                 {isDone ? '✓ ' : ''}{label}
               </div>
             )
@@ -199,258 +189,373 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
         </div>
 
         {/* 본문 */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
+        <div style={{ flex:1, overflowY:'auto' }}>
 
-          {/* Step 1 */}
+          {/* ── STEP 1: 위치 확인 ── */}
           {step === 1 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-              <SectionTitle>선택한 위치 정보</SectionTitle>
-              <InfoRow label="주소" value={selectedCell.address} highlight />
-              <InfoRow label="구역" value={`${zone.label}`} />
-              <InfoRow label="선택 크기" value={`${selectedCell.width ?? 1} × ${selectedCell.height ?? 1} 칸 (총 ${cellCount}칸)`} />
-              <InfoRow label="기본 가격" value={`${formatKRW(calcPrice(selectedCell.zone, cellCount, 30))} / 1개월`} highlight />
-              <div style={{ marginTop: 16, padding: 14, borderRadius: 8, background: '#fff8e8', border: '1.5px solid #d4b483', fontSize: 12, color: '#78614a', lineHeight: 1.7 }}>
-                💡 선택한 위치와 면적은 이후 변경할 수 없어요. 확인 후 다음 단계로 이동해주세요.
+            <div style={{ display:'flex', gap:0, height:'100%' }}>
+              {/* 왼쪽: 미니맵 */}
+              <div style={{ width:220, flexShrink:0, padding:'20px', borderRight:'1px solid #d4b483', display:'flex', flexDirection:'column', gap:12 }}>
+                <div style={{ fontSize:13, fontWeight:800, color:'#3d2a18' }}>지도에서 선택한 위치</div>
+                <div style={{ position:'relative', borderRadius:8, overflow:'hidden', border:'2px solid #8b6914' }}>
+                  <canvas ref={miniMapRef} width={200} height={200} style={{ display:'block', width:'100%', imageRendering:'pixelated' }} />
+                  {/* 주소 라벨 */}
+                  <div style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-60%)', background:'rgba(0,0,0,0.85)', color:'#ffd700', fontSize:10, fontWeight:800, padding:'3px 8px', borderRadius:4, border:'1px solid #ffd700', whiteSpace:'nowrap' }}>
+                    {selectedCell.address}
+                  </div>
+                </div>
+                <button onClick={onClose} style={{ padding:'8px', borderRadius:8, border:'1.5px solid #c8a96e', background:'#f5ead5', color:'#6b4c2a', fontSize:12, fontWeight:600, cursor:'pointer' }}>
+                  다른 위치 선택
+                </button>
+              </div>
+
+              {/* 오른쪽: 위치 정보 */}
+              <div style={{ flex:1, padding:'20px' }}>
+                <div style={{ fontSize:13, fontWeight:800, color:'#3d2a18', marginBottom:14, paddingBottom:10, borderBottom:'2px solid #e8d8bb' }}>선택한 위치 정보</div>
+                {[
+                  { label:'구역', value: zone.label, color: zone.color },
+                  { label:'등급', value: '일반 구역' },
+                  { label:'인접 특징', value: '메인 거리 인접' },
+                  { label:'현재 가격', value: `💰 ${formatKRW(calcPrice(selectedCell.zone, 1, 30))} / 1칸·1개월` },
+                  { label:'선택 면적', value: `${selectedCell.width ?? 1} × ${selectedCell.height ?? 1} 칸 (${cellCount}칸)` },
+                  { label:'최소 구매 면적', value: '1칸 (10×10px)' },
+                ].map(({ label, value, color }) => (
+                  <div key={label} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 0', borderBottom:'1px solid #e8d8bb' }}>
+                    <span style={{ fontSize:13, color:'#78614a' }}>{label}</span>
+                    <span style={{ fontSize:13, fontWeight:700, color: color ?? '#3d2a18' }}>{value}</span>
+                  </div>
+                ))}
+                <div style={{ marginTop:16, padding:14, borderRadius:8, background:'#fffbeb', border:'1.5px solid #fde68a', fontSize:12, color:'#92400e', lineHeight:1.7 }}>
+                  ℹ️ 선택한 위치와 면적은 이후 변경할 수 없습니다.
+                </div>
               </div>
             </div>
           )}
 
-          {/* Step 2 */}
+          {/* ── STEP 2: 집 정보 + 라이브 미리보기 ── */}
           {step === 2 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-              <SectionTitle>집 정보를 입력해주세요</SectionTitle>
-              <Field label="집 이름 *" hint="최대 20자">
-                <input
-                  style={inputStyle}
-                  placeholder="예) 토토의 작은 집"
-                  maxLength={20}
-                  value={form.name}
-                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                />
-                <CharCount cur={form.name.length} max={20} />
-              </Field>
-              <Field label="소개글" hint="최대 80자">
-                <textarea
-                  style={{ ...inputStyle, height: 84, resize: 'none' }}
-                  placeholder="당신의 집을 소개해주세요!"
-                  maxLength={80}
-                  value={form.description}
-                  onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                />
-                <CharCount cur={form.description.length} max={80} />
-              </Field>
-              <Field label="집 놀러가기 링크" hint="선택">
-                <input
-                  style={inputStyle}
-                  placeholder="https://"
-                  type="url"
-                  value={form.linkUrl}
-                  onChange={e => setForm(f => ({ ...f, linkUrl: e.target.value }))}
-                />
-              </Field>
-              <Field label="닉네임" hint="최대 7자 · 지도에 표시됨">
-                <input
-                  style={inputStyle}
-                  placeholder="사용할 닉네임"
-                  maxLength={7}
-                  value={form.nickname}
-                  onChange={e => setForm(f => ({ ...f, nickname: e.target.value }))}
-                />
-                <CharCount cur={form.nickname.length} max={7} />
-              </Field>
+            <div style={{ display:'flex', gap:0 }}>
+              {/* 왼쪽: 폼 */}
+              <div style={{ flex:1, padding:'24px 20px', borderRight:'1px solid #d4b483', overflowY:'auto', maxHeight:'calc(92vh - 160px)' }}>
+                <SectionTitle>집 정보를 입력해주세요</SectionTitle>
+                <Field label="집 이름 *" hint="최대 20자">
+                  <input style={inputStyle} placeholder="예) 토토의 작은 집" maxLength={20} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+                  <CharCount cur={form.name.length} max={20} />
+                </Field>
+                <Field label="소개글" hint="최대 80자">
+                  <textarea style={{ ...inputStyle, height:84, resize:'none' }} placeholder="당신의 집을 소개해주세요!" maxLength={80} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
+                  <CharCount cur={form.description.length} max={80} />
+                </Field>
+
+                <div style={{ marginTop:4, marginBottom:16 }}>
+                  <div style={{ fontSize:14, fontWeight:800, color:'#3d2a18', marginBottom:4 }}>링크 설정</div>
+                  <div style={{ fontSize:11, color:'#a08060', marginBottom:8 }}>집에 연결할 링크를 설정해주세요. (최대 1개)</div>
+                  <Field label="집 놀러가기 링크" hint="">
+                    <input style={inputStyle} placeholder="https://" type="url" value={form.linkUrl} onChange={e => setForm(f => ({ ...f, linkUrl: e.target.value }))} />
+                  </Field>
+                  <div style={{ fontSize:11, color:'#a08060', marginTop:4 }}>방문객이 클릭하면 이 링크로 이동해요!</div>
+                </div>
+
+                <div style={{ marginTop:4, marginBottom:16 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
+                    <span style={{ fontSize:14, fontWeight:800, color:'#3d2a18' }}>🛋️ 내부 인테리어 이미지 등록</span>
+                    <span style={{ fontSize:11, color:'#a08060', background:'#f0e4cc', padding:'2px 8px', borderRadius:12, border:'1px solid #d4b483' }}>집을 열었을 때 가장 크게 보이는 사진이에요.</span>
+                  </div>
+                  <label style={{ display:'block', cursor:'pointer' }}>
+                    <div style={{ height:120, borderRadius:8, border:`2px dashed ${form.interiorPreview ? zone.color : '#c8a96e'}`, background:'#f5ead5', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden' }}>
+                      {form.interiorPreview ? <img src={form.interiorPreview} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} /> : (
+                        <div style={{ textAlign:'center', color:'#a08060' }}>
+                          <div style={{ fontSize:28, marginBottom:6 }}>☁️</div>
+                          <div style={{ fontSize:12, fontWeight:600 }}>이미지 선택 또는 드래그</div>
+                          <div style={{ fontSize:10, marginTop:3 }}>JPG, PNG, WEBP (최대 10MB)</div>
+                        </div>
+                      )}
+                    </div>
+                    <input type="file" accept="image/*" onChange={handleFile('interior')} style={{ display:'none' }} />
+                  </label>
+                </div>
+
+                <Field label="닉네임" hint="최대 7자 · 지도에 표시됨">
+                  <input style={inputStyle} placeholder="사용할 닉네임" maxLength={7} value={form.nickname} onChange={e => setForm(f => ({ ...f, nickname: e.target.value }))} />
+                  <CharCount cur={form.nickname.length} max={7} />
+                </Field>
+              </div>
+
+              {/* 오른쪽: 라이브 미리보기 */}
+              <div style={{ width:280, flexShrink:0, padding:'16px', background:'#f0e4cc', display:'flex', flexDirection:'column', gap:8 }}>
+                <div style={{ fontSize:11, fontWeight:700, color:'#78614a', textAlign:'center' }}>집을 클릭하면 이렇게 보여요!</div>
+                <div style={{ background:'#fdf6e3', borderRadius:8, border:'3px solid #7a4f1a', overflow:'hidden', boxShadow:'0 0 0 1px #e8c97a, 0 4px 12px rgba(0,0,0,0.3)', fontSize:12, position:'relative' }}>
+                  {/* 닫기 */}
+                  <div style={{ position:'absolute', top:6, right:6, width:18, height:18, borderRadius:'50%', background:'#ef4444', display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontSize:12, fontWeight:900 }}>×</div>
+                  {/* 미리보기 헤더 */}
+                  <div style={{ background:'linear-gradient(180deg,#f5ead5,#ecdcc0)', padding:'10px 28px 10px 10px', borderBottom:'2px solid #c8a96e', display:'flex', alignItems:'center', gap:8 }}>
+                    <div style={{ fontSize:28 }}>🏠</div>
+                    <div>
+                      <div style={{ display:'flex', gap:4, marginBottom:3, flexWrap:'wrap' }}>
+                        <span style={{ fontSize:9, padding:'1px 6px', borderRadius:10, background:'#e8d5b0', color:'#6b3d0f', border:'1px solid #c8a96e' }}>{selectedCell.address}</span>
+                        {form.nickname && <span style={{ fontSize:9, padding:'2px 6px', borderRadius:4, background:'#3d2008', color:'#fdf6e3' }}>{form.nickname}</span>}
+                      </div>
+                      <div style={{ fontSize:13, fontWeight:900, color:'#2a1505' }}>{form.name || '집 이름'}</div>
+                    </div>
+                  </div>
+                  {/* 미리보기 바디 */}
+                  <div style={{ display:'flex', gap:0 }}>
+                    <div style={{ flex:1, padding:'10px' }}>
+                      {form.description && (
+                        <div style={{ marginBottom:8 }}>
+                          <span style={{ fontSize:9, fontWeight:800, padding:'2px 6px', borderRadius:4, background:'#3b5bdb', color:'#fff', marginBottom:4, display:'inline-block' }}>소개글</span>
+                          <div style={{ fontSize:11, color:'#3d2a18', lineHeight:1.6, marginTop:4 }}>{form.description}</div>
+                        </div>
+                      )}
+                      {form.linkUrl && (
+                        <div>
+                          <span style={{ fontSize:9, fontWeight:800, padding:'2px 6px', borderRadius:4, background:'#2f9e44', color:'#fff', marginBottom:4, display:'inline-block' }}>링크</span>
+                          <div style={{ marginTop:4 }}><span style={{ fontSize:10, padding:'4px 8px', borderRadius:6, background:'#e03131', color:'#fff', fontWeight:700 }}>🌐 홈페이지 ↗</span></div>
+                        </div>
+                      )}
+                    </div>
+                    {form.interiorPreview && (
+                      <div style={{ width:80, padding:'8px 8px 8px 0', flexShrink:0 }}>
+                        <img src={form.interiorPreview} alt="" style={{ width:'100%', height:70, objectFit:'cover', borderRadius:6, border:'1px solid #c8a96e' }} />
+                      </div>
+                    )}
+                  </div>
+                  {/* 미리보기 통계 */}
+                  <div style={{ display:'flex', borderTop:'1.5px solid #c8a96e', background:'#f0e4cc' }}>
+                    <div style={{ flex:1, padding:'8px', textAlign:'center', fontSize:11, fontWeight:700, color:'#5a3e1a' }}>🤍 0</div>
+                    <div style={{ width:1, background:'#c8a96e' }} />
+                    <div style={{ flex:1, padding:'8px', textAlign:'center', fontSize:11, fontWeight:700, color:'#5a3e1a' }}>👣 0</div>
+                    <div style={{ width:1, background:'#c8a96e' }} />
+                    <div style={{ flex:1, padding:'8px', textAlign:'center', fontSize:10, color:'#78614a' }}>📅 오늘</div>
+                  </div>
+                  <div style={{ height:14, background:'repeating-linear-gradient(90deg,#4a7c3f 0,#4a7c3f 4px,#3d6b34 4px,#3d6b34 8px)', borderTop:'2px solid #2d5226' }} />
+                </div>
+                <div style={{ fontSize:10, color:'#a08060', textAlign:'center', lineHeight:1.6 }}>
+                  *예시이미지
+                </div>
+              </div>
             </div>
           )}
 
-          {/* Step 3 */}
+          {/* ── STEP 3: 외관 이미지 ── */}
           {step === 3 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-              <SectionTitle>이미지 등록</SectionTitle>
+            <div style={{ display:'flex', gap:0 }}>
+              {/* 왼쪽 */}
+              <div style={{ flex:1, padding:'20px', borderRight:'1px solid #d4b483', overflowY:'auto', maxHeight:'calc(92vh - 160px)' }}>
+                <SectionTitle>건물 외관 이미지 등록</SectionTitle>
+                <div style={{ fontSize:12, color:'#78614a', marginBottom:16, lineHeight:1.6 }}>
+                  사람들이 지도에서 가장 먼저 보게 되는 이미지예요.
+                </div>
 
-              {/* 외관 이미지 */}
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#4a2e10', marginBottom: 6 }}>🏠 외관 이미지 <span style={{ fontWeight: 400, color: '#a08060', fontSize: 11 }}>— 지도에 표시됨</span></div>
-                <label style={{ display: 'block', cursor: 'pointer' }}>
-                  <div style={{
-                    height: 130, borderRadius: 8, overflow: 'hidden',
-                    border: `2px dashed ${form.exteriorPreview ? zone.color : '#c8a96e'}`,
-                    background: '#f5ead5',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    {form.exteriorPreview ? (
-                      <img src={form.exteriorPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      <div style={{ textAlign: 'center', color: '#a08060' }}>
-                        <div style={{ fontSize: 28, marginBottom: 6 }}>🏗️</div>
-                        <div style={{ fontSize: 12, fontWeight: 600 }}>클릭하여 업로드</div>
-                        <div style={{ fontSize: 10, marginTop: 3 }}>JPG, PNG, WEBP (최대 10MB)</div>
+                <label style={{ display:'block', cursor:'pointer', marginBottom:16 }}>
+                  <div style={{ height:160, borderRadius:10, border:`2px dashed ${form.exteriorPreview ? zone.color : '#c8a96e'}`, background:'#f5ead5', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden' }}>
+                    {form.exteriorPreview ? <img src={form.exteriorPreview} alt="" style={{ width:'100%', height:'100%', objectFit: form.exteriorFit }} /> : (
+                      <div style={{ textAlign:'center', color:'#a08060' }}>
+                        <div style={{ fontSize:36, marginBottom:8 }}>☁️</div>
+                        <div style={{ fontSize:13, fontWeight:600 }}>이미지 업로드</div>
+                        <div style={{ fontSize:11, marginTop:4 }}>JPG, PNG, WEBP (최대 10MB)</div>
                       </div>
                     )}
                   </div>
-                  <input type="file" accept="image/*" onChange={handleFile('exterior')} style={{ display: 'none' }} />
+                  <input type="file" accept="image/*" onChange={handleFile('exterior')} style={{ display:'none' }} />
                 </label>
-              </div>
 
-              {/* 내부 이미지 */}
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#4a2e10', marginBottom: 6 }}>🛋️ 내부 이미지 <span style={{ fontWeight: 400, color: '#a08060', fontSize: 11 }}>— 팝업에서 크게 표시됨</span></div>
-                <label style={{ display: 'block', cursor: 'pointer' }}>
-                  <div style={{
-                    height: 130, borderRadius: 8, overflow: 'hidden',
-                    border: `2px dashed ${form.interiorPreview ? zone.color : '#c8a96e'}`,
-                    background: '#f5ead5',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    {form.interiorPreview ? (
-                      <img src={form.interiorPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      <div style={{ textAlign: 'center', color: '#a08060' }}>
-                        <div style={{ fontSize: 28, marginBottom: 6 }}>🛋️</div>
-                        <div style={{ fontSize: 12, fontWeight: 600 }}>클릭하여 업로드</div>
-                        <div style={{ fontSize: 10, marginTop: 3 }}>JPG, PNG, WEBP (최대 10MB)</div>
-                      </div>
-                    )}
-                  </div>
-                  <input type="file" accept="image/*" onChange={handleFile('interior')} style={{ display: 'none' }} />
-                </label>
-              </div>
-
-              {/* 이펙트 */}
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#4a2e10', marginBottom: 10 }}>✨ 테두리 이펙트</div>
-                <div style={{ display: 'flex', gap: 10 }}>
-                  {(['none', 'neon'] as const).map(effect => (
-                    <button
-                      key={effect}
-                      onClick={() => setForm(f => ({ ...f, borderEffect: effect }))}
-                      style={{
-                        flex: 1, padding: '10px', borderRadius: 8, cursor: 'pointer',
-                        border: `2px solid ${form.borderEffect === effect ? zone.color : '#c8a96e'}`,
-                        background: form.borderEffect === effect ? zone.color + '15' : '#f5ead5',
-                        color: form.borderEffect === effect ? zone.color : '#78614a',
-                        fontSize: 12, fontWeight: 600,
-                      }}
-                    >
-                      {effect === 'none' ? '기본 (없음)' : '🌟 네온 테두리'}
-                    </button>
-                  ))}
+                {/* 권장 가이드 */}
+                <div style={{ padding:12, borderRadius:8, background:'#fffbeb', border:'1.5px solid #fde68a', fontSize:12, color:'#92400e', marginBottom:16 }}>
+                  <div style={{ fontWeight:700, marginBottom:6 }}>ℹ️ 권장 가이드</div>
+                  <div>· 권장 비율: 선택한 영역 비율과 비슷하게</div>
+                  <div>· 권장 해상도: 1000px 이상</div>
+                  <div>· 파일 크기: 최대 10MB</div>
                 </div>
-              </div>
-            </div>
-          )}
 
-          {/* Step 4 */}
-          {step === 4 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-              <SectionTitle>입력 내용 확인</SectionTitle>
-              <InfoRow label="위치" value={`${selectedCell.address} (${zone.label})`} />
-              <InfoRow label="집 이름" value={form.name || '(없음)'} highlight={!!form.name} />
-              <InfoRow label="닉네임" value={form.nickname || '(없음)'} />
-              <InfoRow label="소개글" value={form.description || '(없음)'} />
-              <InfoRow label="링크" value={form.linkUrl || '(없음)'} />
-              <InfoRow label="외관 이미지" value={form.exteriorImage ? form.exteriorImage.name : '(없음)'} />
-              <InfoRow label="내부 이미지" value={form.interiorImage ? form.interiorImage.name : '(없음)'} />
-              <InfoRow label="이펙트" value={form.borderEffect === 'neon' ? '네온 테두리' : '기본'} />
-
-              <div style={{ marginTop: 20 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#4a2e10', marginBottom: 10 }}>입주 기간 선택</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {DURATIONS.map(({ days: d, label }) => (
-                    <PeriodBtn key={d} active={form.days === d} color={zone.color} onClick={() => setForm(f => ({ ...f, days: d }))}>
-                      {label}<br /><span style={{ fontSize: 10, opacity: 0.8 }}>{formatKRW(calcPrice(selectedCell.zone, cellCount, d))}</span>
-                    </PeriodBtn>
-                  ))}
-                  <PeriodBtn active={form.days === PERMANENT_DAYS} color={zone.color} onClick={() => setForm(f => ({ ...f, days: PERMANENT_DAYS }))}>
-                    영구 보존<br /><span style={{ fontSize: 10, opacity: 0.8 }}>{formatKRW(calcPrice(selectedCell.zone, cellCount, PERMANENT_DAYS))}</span>
-                  </PeriodBtn>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Step 5 */}
-          {step === 5 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              <SectionTitle>결제</SectionTitle>
-              <div style={{
-                padding: '20px', borderRadius: 10,
-                background: 'linear-gradient(135deg, #4a2e10, #2e1a08)',
-                border: '2px solid #8b6914',
-              }}>
-                <div style={{ fontSize: 12, color: '#a08060', marginBottom: 6 }}>
-                  {selectedCell.address} · {zone.label} · {form.days === PERMANENT_DAYS ? '영구보존' : `${form.days}일`}
-                </div>
-                <div style={{ fontSize: 36, fontWeight: 900, color: '#fdf6e3', letterSpacing: '-0.04em' }}>
-                  {formatKRW(price)}
-                </div>
-              </div>
-
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#4a2e10', marginBottom: 10 }}>결제 수단</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {/* 표시 방식 */}
+                <div style={{ marginBottom:16 }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:'#3d2a18', marginBottom:10 }}>표시 방식 선택</div>
                   {[
-                    { id: 'card', label: '💳 신용/체크카드' },
-                    { id: 'kakaopay', label: '💛 카카오페이' },
-                    { id: 'tosspay', label: '🔵 토스페이' },
-                  ].map(m => (
-                    <div
-                      key={m.id}
-                      onClick={() => setPayMethod(m.id)}
-                      style={{
-                        padding: '12px 16px', borderRadius: 8, cursor: 'pointer',
-                        border: `2px solid ${payMethod === m.id ? zone.color : '#c8a96e'}`,
-                        background: payMethod === m.id ? zone.color + '12' : '#f5ead5',
-                        color: payMethod === m.id ? zone.color : '#78614a',
-                        fontSize: 14, fontWeight: payMethod === m.id ? 700 : 500,
-                        display: 'flex', alignItems: 'center', gap: 10,
-                      }}
-                    >
-                      {payMethod === m.id && '✓ '}{m.label}
+                    { value:'cover', label:'자동 맞춤 (추천)', desc:'영역을 꽉 채우도록 자동으로 맞춰요. 일부가 잘릴 수 있어요.' },
+                    { value:'contain', label:'전체 보기', desc:'이미지 전체가 보이도록 여백을 추가해요.' },
+                  ].map(({ value, label, desc }) => (
+                    <div key={value} onClick={() => setForm(f => ({ ...f, exteriorFit: value as 'cover'|'contain' }))} style={{
+                      display:'flex', alignItems:'center', gap:12, padding:'12px 14px', borderRadius:8, cursor:'pointer', marginBottom:8,
+                      border:`2px solid ${form.exteriorFit === value ? zone.color : '#c8a96e'}`,
+                      background: form.exteriorFit === value ? zone.color + '15' : '#f5ead5',
+                    }}>
+                      <div style={{ width:20, height:20, borderRadius:'50%', border:`2px solid ${form.exteriorFit === value ? zone.color : '#c8a96e'}`, background: form.exteriorFit === value ? zone.color : 'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                        {form.exteriorFit === value && <div style={{ width:8, height:8, borderRadius:'50%', background:'#fff' }} />}
+                      </div>
+                      <div>
+                        <div style={{ fontSize:13, fontWeight:700, color: form.exteriorFit === value ? zone.color : '#3d2a18' }}>{label}</div>
+                        <div style={{ fontSize:11, color:'#a08060', marginTop:2 }}>{desc}</div>
+                      </div>
                     </div>
                   ))}
                 </div>
+
+                {/* 이미지 수정 정책 */}
+                <div style={{ padding:12, borderRadius:8, background:'#f0e4cc', border:'1.5px solid #c8a96e', fontSize:12, color:'#6b4c2a' }}>
+                  <div style={{ fontWeight:700, marginBottom:4 }}>🗓 이미지 수정 정책</div>
+                  <div>· 무료 수정 기간: 업로드 후 7일간</div>
+                  <div>· 7일 이후에는 유료 수정 서비스가 적용됩니다.</div>
+                </div>
               </div>
 
-              {errorMsg && (
-                <div style={{ padding: 12, borderRadius: 8, background: '#fef2f2', border: '1.5px solid #fca5a5', fontSize: 12, color: '#991b1b' }}>
-                  ❌ {errorMsg}
+              {/* 오른쪽: 지도 미리보기 */}
+              <div style={{ width:300, flexShrink:0, padding:'20px', background:'#f0e4cc' }}>
+                <div style={{ fontSize:12, fontWeight:700, color:'#78614a', marginBottom:10 }}>지도 미리보기</div>
+                <div style={{ height:160, borderRadius:8, border:'2px solid #8b6914', background:'#2a1a08', overflow:'hidden', marginBottom:12, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  {form.exteriorPreview ? (
+                    <img src={form.exteriorPreview} alt="" style={{ maxWidth:'80%', maxHeight:'80%', objectFit: form.exteriorFit, borderRadius:4, border:`2px solid ${zone.color}` }} />
+                  ) : (
+                    <div style={{ textAlign:'center', color:'#5a3e1a', fontSize:12 }}>이미지를 업로드하면<br/>미리보기가 표시됩니다</div>
+                  )}
                 </div>
-              )}
 
-              <div style={{ padding: 12, borderRadius: 8, background: '#fffbeb', border: '1.5px solid #fde68a', fontSize: 12, color: '#92400e', lineHeight: 1.6 }}>
-                ⚠️ 현재 결제는 테스트 모드입니다. 실제 결제 없이 입주 처리됩니다.
+                {/* 이펙트 */}
+                <div style={{ marginBottom:12 }}>
+                  <div style={{ fontSize:12, fontWeight:700, color:'#3d2a18', marginBottom:8 }}>이펙트 추가 (선택)</div>
+                  <div style={{ display:'flex', gap:8 }}>
+                    {(['none','neon'] as const).map(effect => (
+                      <button key={effect} onClick={() => setForm(f => ({ ...f, borderEffect: effect }))} style={{
+                        flex:1, padding:'10px 8px', borderRadius:8, cursor:'pointer',
+                        border:`2px solid ${form.borderEffect === effect ? zone.color : '#c8a96e'}`,
+                        background: form.borderEffect === effect ? zone.color + '15' : '#fdf6e3',
+                        color: form.borderEffect === effect ? zone.color : '#78614a',
+                        fontSize:11, fontWeight:600, position:'relative',
+                      }}>
+                        {effect === 'none' ? '기본 (이펙트 없음)' : '🌟 네온 테두리'}
+                        {effect === 'neon' && <span style={{ position:'absolute', top:-6, right:-4, fontSize:8, background:'#a855f7', color:'#fff', padding:'1px 4px', borderRadius:8, fontWeight:800 }}>NEW</span>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── STEP 4: 신청 확인 ── */}
+          {step === 4 && (
+            <div style={{ display:'flex', gap:0, padding:0 }}>
+              <div style={{ flex:1, padding:'24px 20px' }}>
+                <SectionTitle>입력 내용 확인</SectionTitle>
+                {[
+                  { label:'위치', value:`${selectedCell.address} (${zone.label})` },
+                  { label:'크기', value:`${selectedCell.width??1} × ${selectedCell.height??1} (${cellCount}칸)` },
+                  { label:'집 이름', value: form.name || '(없음)', highlight: !!form.name },
+                  { label:'닉네임', value: form.nickname || '(없음)' },
+                  { label:'소개글', value: form.description || '(없음)' },
+                  { label:'링크', value: form.linkUrl || '(없음)' },
+                ].map(({ label, value, highlight }) => (
+                  <InfoRow key={label} label={label} value={value} highlight={highlight} />
+                ))}
+
+                {/* 대표 이미지 썸네일 */}
+                {(form.exteriorPreview || form.interiorPreview) && (
+                  <div style={{ marginTop:16 }}>
+                    <div style={{ fontSize:12, color:'#78614a', marginBottom:8, fontWeight:600 }}>대표 이미지</div>
+                    <div style={{ display:'flex', gap:10 }}>
+                      {form.interiorPreview && <img src={form.interiorPreview} alt="내부" style={{ width:80, height:80, objectFit:'cover', borderRadius:8, border:'2px solid #c8a96e' }} />}
+                      {form.exteriorPreview && (
+                        <div style={{ position:'relative' }}>
+                          <img src={form.exteriorPreview} alt="외관" style={{ width:80, height:80, objectFit:'cover', borderRadius:8, border:`2px solid ${zone.color}` }} />
+                          {form.nickname && <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center' }}><span style={{ fontSize:10, fontWeight:800, color:'#fdf6e3', background:'rgba(0,0,0,0.6)', padding:'2px 6px', borderRadius:4 }}>{form.nickname}</span></div>}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ marginTop:20 }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:'#4a2e10', marginBottom:10 }}>입주 기간 선택</div>
+                  <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
+                    {DURATIONS.map(({ days: d, label }) => (
+                      <PeriodBtn key={d} active={form.days === d} color={zone.color} onClick={() => setForm(f => ({ ...f, days: d }))}>
+                        {label}<br /><span style={{ fontSize:10, opacity:0.8 }}>{formatKRW(calcPrice(selectedCell.zone, cellCount, d))}</span>
+                      </PeriodBtn>
+                    ))}
+                    <PeriodBtn active={form.days === PERMANENT_DAYS} color={zone.color} onClick={() => setForm(f => ({ ...f, days: PERMANENT_DAYS }))}>
+                      영구 보존<br /><span style={{ fontSize:10, opacity:0.8 }}>{formatKRW(calcPrice(selectedCell.zone, cellCount, PERMANENT_DAYS))}</span>
+                    </PeriodBtn>
+                  </div>
+                </div>
+              </div>
+
+              {/* 유의사항 */}
+              <div style={{ width:220, flexShrink:0, padding:'24px 16px', background:'#f5ead5', borderLeft:'1px solid #d4b483' }}>
+                <div style={{ fontSize:13, fontWeight:800, color:'#3d2a18', marginBottom:12 }}>유의사항</div>
+                <div style={{ fontSize:12, color:'#78614a', lineHeight:1.8 }}>
+                  · 반드시 마지막 단계에서 결제를 완료해야 신청이 정상적으로 접수됩니다.<br /><br />
+                  · 결제 완료 후 즉시 입주 처리됩니다.<br /><br />
+                  · 3개월 이내 미결제 시 자동 취소됩니다.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── STEP 5: 결제 ── */}
+          {step === 5 && (
+            <div style={{ display:'flex', gap:0 }}>
+              <div style={{ flex:1, padding:'24px 20px', borderRight:'1px solid #d4b483' }}>
+                <SectionTitle>주문 정보</SectionTitle>
+                {[
+                  { label:'위치', value:`${selectedCell.address} (${zone.label})` },
+                  { label:'크기', value:`${selectedCell.width??1} × ${selectedCell.height??1} (${cellCount}칸)` },
+                  { label:'금액', value: formatKRW(price), highlight: true },
+                ].map(({ label, value, highlight }) => (
+                  <InfoRow key={label} label={label} value={value} highlight={highlight} />
+                ))}
+                <div style={{ marginTop:16, fontSize:12, color:'#78614a', lineHeight:1.8 }}>
+                  · 결제 완료 후 입주가 확정됩니다.<br />
+                  · 3개월 이내 미결제 시 자동 취소됩니다.<br />
+                  · 결제 대상 정보는 반드시 유지해주세요.
+                </div>
+
+                {errorMsg && (
+                  <div style={{ marginTop:16, padding:12, borderRadius:8, background:'#fef2f2', border:'1.5px solid #fca5a5', fontSize:12, color:'#991b1b' }}>❌ {errorMsg}</div>
+                )}
+
+                <div style={{ marginTop:16, padding:12, borderRadius:8, background:'#fffbeb', border:'1.5px solid #fde68a', fontSize:12, color:'#92400e' }}>
+                  ⚠️ 현재 결제는 테스트 모드입니다. 실제 결제 없이 입주 처리됩니다.
+                </div>
+              </div>
+
+              <div style={{ width:240, flexShrink:0, padding:'24px 16px', background:'#f5ead5' }}>
+                <div style={{ fontSize:13, fontWeight:800, color:'#3d2a18', marginBottom:12 }}>결제 수단 선택</div>
+                {[
+                  { id:'card', label:'💳 신용/체크카드' },
+                  { id:'kakaopay', label:'💛 카카오페이' },
+                  { id:'tosspay', label:'🔵 토스페이' },
+                ].map(m => (
+                  <div key={m.id} onClick={() => setPayMethod(m.id)} style={{
+                    padding:'12px 14px', borderRadius:8, cursor:'pointer', marginBottom:8,
+                    border:`2px solid ${payMethod === m.id ? zone.color : '#c8a96e'}`,
+                    background: payMethod === m.id ? zone.color + '12' : '#fdf6e3',
+                    color: payMethod === m.id ? zone.color : '#78614a',
+                    fontSize:13, fontWeight: payMethod === m.id ? 700 : 500,
+                    display:'flex', alignItems:'center', gap:8,
+                  }}>
+                    {payMethod === m.id && <span>✓</span>}{m.label}
+                  </div>
+                ))}
               </div>
             </div>
           )}
         </div>
 
         {/* 하단 버튼 */}
-        <div style={{
-          padding: '14px 24px', borderTop: '2px solid #d4b483',
-          background: '#f5ead5', display: 'flex', gap: 10,
-        }}>
+        <div style={{ padding:'14px 20px', borderTop:'2px solid #c8a96e', background:'#f0e4cc', display:'flex', gap:10, flexShrink:0 }}>
           {step > 1 && (
-            <button
-              onClick={() => setStep(s => (s - 1) as Step)}
-              style={{
-                flex: 1, padding: '12px', borderRadius: 8, cursor: 'pointer',
-                border: '2px solid #c8a96e', background: '#fdf6e3',
-                color: '#78614a', fontSize: 14, fontWeight: 600,
-              }}
-            >← 이전</button>
+            <button onClick={() => setStep(s => (s - 1) as Step)} style={{ flex:1, padding:'12px', borderRadius:8, cursor:'pointer', border:'2px solid #c8a96e', background:'#fdf6e3', color:'#78614a', fontSize:14, fontWeight:600 }}>
+              ← 이전 단계
+            </button>
           )}
           <button
-            onClick={() => {
-              if (step < 5) setStep(s => (s + 1) as Step)
-              else handleSubmit()
-            }}
+            onClick={() => { if (step < 5) setStep(s => (s + 1) as Step); else handleSubmit() }}
             disabled={loading || !canNext()}
             style={{
-              flex: 2, padding: '12px', borderRadius: 8, cursor: 'pointer',
-              background: loading || !canNext()
-                ? '#c8a96e'
-                : `linear-gradient(180deg, ${zone.color}, ${zone.color}cc)`,
-              color: '#fff', fontSize: 14, fontWeight: 800,
-              border: `2px solid ${zone.color}`,
+              flex:2, padding:'12px', borderRadius:8, cursor:'pointer',
+              background: loading || !canNext() ? '#c8a96e' : `linear-gradient(180deg, ${zone.color}, ${zone.color}cc)`,
+              color:'#fff', fontSize:14, fontWeight:800,
+              border:`2px solid ${zone.color}`,
               boxShadow: loading || !canNext() ? 'none' : `0 4px 0 ${zone.color}88`,
             }}
           >
@@ -458,37 +563,29 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
           </button>
         </div>
 
-        {/* 픽셀 잔디 하단 */}
-        <div style={{
-          height: 8,
-          background: 'repeating-linear-gradient(90deg, #4a7c3f 0px, #4a7c3f 5px, #3d6b34 5px, #3d6b34 10px)',
-          borderTop: '2px solid #2d5226',
-        }} />
+        {/* 잔디 */}
+        <div style={{ height:8, background:'repeating-linear-gradient(90deg,#4a7c3f 0,#4a7c3f 5px,#3d6b34 5px,#3d6b34 10px)', borderTop:'2px solid #2d5226', flexShrink:0 }} />
       </div>
     </div>
   )
 }
 
 const inputStyle: React.CSSProperties = {
-  width: '100%', padding: '10px 12px', borderRadius: 8, boxSizing: 'border-box',
-  border: '2px solid #d4b483', background: '#fdf6e3', color: '#3d2a18',
-  fontSize: 14, outline: 'none', fontFamily: 'inherit',
+  width:'100%', padding:'10px 12px', borderRadius:8, boxSizing:'border-box',
+  border:'2px solid #d4b483', background:'#fdf6e3', color:'#3d2a18',
+  fontSize:14, outline:'none', fontFamily:'inherit',
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ fontSize: 15, fontWeight: 800, color: '#3d2a18', marginBottom: 16, paddingBottom: 10, borderBottom: '2px solid #e8d8bb' }}>
-      {children}
-    </div>
-  )
+  return <div style={{ fontSize:15, fontWeight:800, color:'#3d2a18', marginBottom:16, paddingBottom:10, borderBottom:'2px solid #e8d8bb' }}>{children}</div>
 }
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
-    <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-        <span style={{ fontSize: 13, fontWeight: 700, color: '#4a2e10' }}>{label}</span>
-        {hint && <span style={{ fontSize: 11, color: '#a08060' }}>{hint}</span>}
+    <div style={{ marginBottom:16 }}>
+      <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
+        <span style={{ fontSize:13, fontWeight:700, color:'#4a2e10' }}>{label}</span>
+        {hint && <span style={{ fontSize:11, color:'#a08060' }}>{hint}</span>}
       </div>
       {children}
     </div>
@@ -496,38 +593,26 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 }
 
 function CharCount({ cur, max }: { cur: number; max: number }) {
-  return (
-    <div style={{ fontSize: 11, color: cur >= max ? '#ef4444' : '#a08060', textAlign: 'right', marginTop: 4 }}>
-      {cur}/{max}
-    </div>
-  )
+  return <div style={{ fontSize:11, color: cur >= max ? '#ef4444' : '#a08060', textAlign:'right', marginTop:4 }}>{cur}/{max}</div>
 }
 
 function InfoRow({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   return (
-    <div style={{
-      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      padding: '10px 0', borderBottom: '1px solid #e8d8bb',
-    }}>
-      <span style={{ fontSize: 13, color: '#78614a' }}>{label}</span>
-      <span style={{ fontSize: 13, fontWeight: highlight ? 800 : 600, color: highlight ? '#3d2a18' : '#78614a' }}>{value}</span>
+    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 0', borderBottom:'1px solid #e8d8bb' }}>
+      <span style={{ fontSize:13, color:'#78614a' }}>{label}</span>
+      <span style={{ fontSize:13, fontWeight: highlight ? 800 : 600, color: highlight ? '#3d2a18' : '#78614a' }}>{value}</span>
     </div>
   )
 }
 
 function PeriodBtn({ children, active, color, onClick }: { children: React.ReactNode; active: boolean; color: string; onClick: () => void }) {
   return (
-    <button
-      onClick={onClick}
-      style={{
-        padding: '10px 16px', borderRadius: 8, cursor: 'pointer', textAlign: 'center', lineHeight: 1.5,
-        border: `2px solid ${active ? color : '#c8a96e'}`,
-        background: active ? color + '18' : '#f5ead5',
-        color: active ? color : '#78614a',
-        fontSize: 13, fontWeight: active ? 700 : 500,
-      }}
-    >
-      {children}
-    </button>
+    <button onClick={onClick} style={{
+      padding:'10px 16px', borderRadius:8, cursor:'pointer', textAlign:'center', lineHeight:1.5,
+      border:`2px solid ${active ? color : '#c8a96e'}`,
+      background: active ? color + '18' : '#f5ead5',
+      color: active ? color : '#78614a',
+      fontSize:13, fontWeight: active ? 700 : 500,
+    }}>{children}</button>
   )
 }
