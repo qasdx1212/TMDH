@@ -381,6 +381,7 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
   }, [toGrid, onCellClick])
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (e.button === 2) return // 우클릭은 onContextMenu에서 처리
     mouseDownPos.current = { x: e.clientX, y: e.clientY }
     isMouseDown.current = true
     setTooltip(null)
@@ -427,6 +428,7 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
   }, [toGrid])
 
   const handleMouseUp = useCallback((e: React.MouseEvent) => {
+    if (e.button === 2) return // 우클릭은 onContextMenu에서 처리
     isPanning.current = false; isMouseDown.current = false; setCursor('default')
     const dx = Math.abs(e.clientX - mouseDownPos.current.x)
     const dy = Math.abs(e.clientY - mouseDownPos.current.y)
