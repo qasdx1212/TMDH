@@ -129,6 +129,25 @@ export default function Home() {
     setShowApply(false); setApplyCell(null); fetchHouses()
   }, [fetchHouses])
 
+  const handleVacate = useCallback(async (cell: CellData) => {
+    if (!confirm(`"${cell.name ?? cell.address}"에서 퇴거하시겠어요?\n이 작업은 되돌릴 수 없습니다.`)) return
+    await supabase.from('houses').update({
+      user_id: null, name: null, nickname: null, description: null,
+      link_url: null, exterior_image_url: null, interior_image_url: null,
+      border_effect: 'none', status: 'available', width: 1, height: 1,
+      parent_address: null, occupied_at: null, expires_at: null,
+      is_permanent: false, like_count: 0, visit_count: 0,
+    }).eq('id', cell.id)
+    if ((cell.width ?? 1) > 1 || (cell.height ?? 1) > 1) {
+      await supabase.from('houses').update({
+        user_id: null, status: 'available', parent_address: null,
+        occupied_at: null, expires_at: null, is_permanent: false,
+      }).eq('parent_address', cell.address)
+    }
+    setSelectedCell(null)
+    fetchHouses()
+  }, [fetchHouses])
+
   const headerHeight = 58 + 36
 
   return (
@@ -170,6 +189,10 @@ export default function Home() {
             zoomInRef={zoomInRef}
             zoomOutRef={zoomOutRef}
             fitViewRef={fitViewRef}
+            isAdmin={isAdmin}
+            onViewCell={setSelectedCell}
+            onEditCell={(cell) => { setSelectedCell(null); openApply(cell) }}
+            onVacateCell={handleVacate}
           />
         )}
       </div>
@@ -181,8 +204,11 @@ export default function Home() {
           house={selectedCell}
           currentUserId={userId}
           isAdmin={isAdmin}
+          isOwnHouse={myHouseIds.has(selectedCell.id)}
           onClose={() => setSelectedCell(null)}
           onBuy={(cell) => { setSelectedCell(null); openApply(cell) }}
+          onEdit={(cell) => { setSelectedCell(null); openApply(cell) }}
+          onVacate={handleVacate}
           onAdminDelete={() => { setSelectedCell(null); fetchHouses() }}
         />
       )}

@@ -183,19 +183,11 @@ export default function MyHousesDrawer({ userId, isAdmin, onClose, onEdit, onRef
 
                   {/* 버튼 */}
                   <div style={{ display: 'flex', gap: 8 }}>
-                    {(isAdmin || canEdit(h)) ? (
-                      <button onClick={() => onEdit(h)} style={{
-                        flex: 1, padding: '8px', borderRadius: 8,
-                        border: `1.5px solid ${zone.color}66`, background: zone.color + '15',
-                        color: zone.color, fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                      }}>✏️ 수정{isAdmin ? ' (관리자)' : ''}</button>
-                    ) : (
-                      <button disabled style={{
-                        flex: 1, padding: '8px', borderRadius: 8,
-                        border: '1.5px solid #d4b48366', background: '#f5f5f5',
-                        color: '#aaa', fontSize: 12, fontWeight: 700, cursor: 'not-allowed',
-                      }}>✏️ 수정 마감</button>
-                    )}
+                    <button onClick={() => onEdit(h)} style={{
+                      flex: 1, padding: '8px', borderRadius: 8,
+                      border: `1.5px solid ${zone.color}66`, background: zone.color + '15',
+                      color: zone.color, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                    }}>✏️ 수정</button>
                     {h.link_url && (
                       <a href={h.link_url} target="_blank" rel="noopener noreferrer" style={{
                         flex: 1, padding: '8px', borderRadius: 8,

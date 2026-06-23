@@ -9,12 +9,15 @@ interface HousePopupProps {
   house: CellData
   currentUserId?: string
   isAdmin?: boolean
+  isOwnHouse?: boolean
   onClose: () => void
   onBuy: (house: CellData) => void
+  onEdit?: (house: CellData) => void
+  onVacate?: (house: CellData) => void
   onAdminDelete?: () => void
 }
 
-export default function HousePopup({ house, currentUserId, isAdmin, onClose, onBuy, onAdminDelete }: HousePopupProps) {
+export default function HousePopup({ house, currentUserId, isAdmin, isOwnHouse, onClose, onBuy, onEdit, onVacate, onAdminDelete }: HousePopupProps) {
   const [liked, setLiked] = useState(false)
   const [likeCount, setLikeCount] = useState(house.like_count)
   const [likeLoading, setLikeLoading] = useState(false)
@@ -229,6 +232,27 @@ export default function HousePopup({ house, currentUserId, isAdmin, onClose, onB
                 }}>{copied?'✅ 복사됨':'🔗 공유'}</button>
               </div>
             </StatCell>
+          </div>
+        )}
+
+        {/* 내 집 관리 바 */}
+        {isOwnHouse && !isAvailable && (
+          <div style={{
+            padding: '8px 16px', background: '#0f2a1a',
+            borderTop: '2px solid #2f9e44',
+            display: 'flex', alignItems: 'center', gap: 8,
+          }}>
+            <span style={{ fontSize: 11, color: '#34d399', fontWeight: 700, flex: 1 }}>🏠 내 집</span>
+            <button onClick={() => { onEdit?.(house); onClose() }} style={{
+              padding: '6px 16px', borderRadius: 6,
+              background: '#1a4a30', border: '1.5px solid #2f9e44',
+              color: '#34d399', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+            }}>✏️ 수정</button>
+            <button onClick={() => onVacate?.(house)} style={{
+              padding: '6px 14px', borderRadius: 6,
+              background: '#fef2f2', border: '1.5px solid #ef444466',
+              color: '#ef4444', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+            }}>🗑️ 퇴거</button>
           </div>
         )}
 

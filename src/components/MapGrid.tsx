@@ -16,6 +16,11 @@ interface MapGridProps {
   zoomInRef?: React.MutableRefObject<(() => void) | null>
   zoomOutRef?: React.MutableRefObject<(() => void) | null>
   fitViewRef?: React.MutableRefObject<(() => void) | null>
+  userId?: string
+  isAdmin?: boolean
+  onViewCell?: (cell: CellData) => void
+  onEditCell?: (cell: CellData) => void
+  onVacateCell?: (cell: CellData) => void
 }
 
 const CELL = 10
@@ -97,7 +102,7 @@ function buildTerrainCanvas(): HTMLCanvasElement {
   return tc
 }
 
-export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds, activeZone, centerTarget, zoomInRef, zoomOutRef, fitViewRef }: MapGridProps) {
+export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds, activeZone, centerTarget, zoomInRef, zoomOutRef, fitViewRef, isAdmin, onViewCell, onEditCell, onVacateCell }: MapGridProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState(1)
@@ -118,6 +123,7 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
   const [blockMsg, setBlockMsg] = useState('')
   const [terrainReady, setTerrainReady] = useState(false)
   const [tooltip, setTooltip] = useState<{ x: number; y: number; text: string } | null>(null)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; cell: CellData } | null>(null)
 
   const houseMap = useRef<Map<string, CellData>>(new Map())
   const addressMap = useRef<Map<string, CellData>>(new Map())
@@ -452,6 +458,27 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
     selectStart.current = null; selectEnd.current = null
   }, [toGrid, onCellClick, onAreaSelect])
 
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    setTooltip(null)
+    const grid = toGrid(e.clientX, e.clientY)
+    if (!grid) { setContextMenu(null); return }
+    const existing = houseMap.current.get(`${grid.col},${grid.row}`)
+    const primary = existing
+      ? (existing.parent_address ? (addressMap.current.get(existing.parent_address) ?? existing) : existing)
+      : null
+    const zone = getZone(grid.col, grid.row)
+    const prefix = { neon:'N', riverside:'R', oldtown:'O', artdistrict:'A' }[zone]
+    const cell: CellData = primary ?? {
+      id: '', address: `${prefix}-${String(grid.row*100+grid.col).padStart(4,'0')}`,
+      col: grid.col, row: grid.row, zone, status: 'available',
+      name: null, nickname: null, description: null, link_url: null,
+      exterior_image_url: null, border_effect: 'none',
+      like_count: 0, visit_count: 0, occupied_at: null, expires_at: null, is_permanent: false,
+    }
+    setContextMenu({ x: e.clientX, y: e.clientY, cell })
+  }, [toGrid])
+
   return (
     <div
       ref={containerRef}
@@ -460,6 +487,7 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={() => { isPanning.current=false; isMouseDown.current=false; isSelecting.current=false; setSelection(null); setCursor('default'); setTooltip(null) }}
+      onContextMenu={handleContextMenu}
     >
       <div style={{ transform:`translate(${offset.x}px,${offset.y}px) scale(${scale})`, transformOrigin:'0 0' }}>
         <canvas ref={canvasRef} width={W*RS} height={H*RS} style={{ display:'block', width:W, height:H }} />
@@ -487,6 +515,75 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
           boxShadow:'0 4px 20px rgba(0,0,0,0.4)',
         }}>{blockMsg}</div>
       )}
+
+      {/* 우클릭 컨텍스트 메뉴 */}
+      {contextMenu && (
+        <div
+          onClick={() => setContextMenu(null)}
+          style={{ position:'fixed', inset:0, zIndex:490 }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              position:'fixed',
+              left: Math.min(contextMenu.x + 4, window.innerWidth - 200),
+              top: Math.min(contextMenu.y + 4, window.innerHeight - 220),
+              background:'#2a1a08',
+              border:'2px solid #8b6914',
+              borderRadius:10,
+              overflow:'hidden',
+              boxShadow:'0 8px 32px rgba(0,0,0,0.75)',
+              minWidth:180,
+              zIndex:491,
+              fontFamily:'"Noto Sans KR", -apple-system, sans-serif',
+            }}
+          >
+            <div style={{ padding:'8px 14px 7px', borderBottom:'1px solid #4a3010', fontSize:11, color:'#8b6914', fontWeight:700, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+              {contextMenu.cell.status === 'available'
+                ? `📍 빈 공간 · ${contextMenu.cell.address}`
+                : `🏠 ${contextMenu.cell.name ?? contextMenu.cell.address}`}
+            </div>
+
+            {contextMenu.cell.status === 'available' ? (
+              <CtxItem emoji="🏠" label="입주 신청" onClick={() => { onCellClick(contextMenu.cell); setContextMenu(null) }} />
+            ) : (
+              <>
+                <CtxItem emoji="👁" label="집 보기" onClick={() => { onViewCell?.(contextMenu.cell); setContextMenu(null) }} />
+                {(isAdmin || myHouseIds?.has(contextMenu.cell.id)) && <>
+                  <div style={{ height:1, background:'#4a3010', margin:'2px 0' }} />
+                  <CtxItem emoji="✏️" label="수정하기" onClick={() => { onEditCell?.(contextMenu.cell); setContextMenu(null) }} />
+                  <CtxItem
+                    emoji="🗑️"
+                    label={isAdmin && !myHouseIds?.has(contextMenu.cell.id) ? '강제 퇴거 (관리자)' : '퇴거하기'}
+                    color="#ef4444"
+                    onClick={() => { onVacateCell?.(contextMenu.cell); setContextMenu(null) }}
+                  />
+                </>}
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
+  )
+}
+
+function CtxItem({ emoji, label, color, onClick }: { emoji: string; label: string; color?: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display:'flex', alignItems:'center', gap:10,
+        width:'100%', padding:'10px 14px',
+        background:'transparent', border:'none', borderBottom:'1px solid #3d2a1820',
+        color: color ?? '#fdf6e3', fontSize:13, fontWeight:600,
+        cursor:'pointer', textAlign:'left', fontFamily:'inherit', whiteSpace:'nowrap',
+      }}
+      onMouseEnter={e => (e.currentTarget.style.background='#3d2a18')}
+      onMouseLeave={e => (e.currentTarget.style.background='transparent')}
+    >
+      <span style={{ width:20, textAlign:'center' }}>{emoji}</span>
+      <span>{label}</span>
+    </button>
   )
 }
