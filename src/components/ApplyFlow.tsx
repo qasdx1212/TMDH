@@ -50,6 +50,8 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
   const [payMethod, setPayMethod] = useState('card')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [showSuccess, setShowSuccess] = useState(false)
+  const [paymentDone, setPaymentDone] = useState(false)
+  const [contentChecking, setContentChecking] = useState(false)
   const miniMapRef = useRef<HTMLCanvasElement>(null)
   const lastStep: Step = isEdit ? 4 : 5
 
@@ -109,57 +111,91 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
     return data.publicUrl
   }
 
-  const handleSubmit = async () => {
+  // 수정 모드 저장
+  const handleEditSave = async () => {
     setLoading(true); setErrorMsg(null)
     try {
       let exteriorUrl: string | null = selectedCell.exterior_image_url ?? null
       if (form.exteriorImage) exteriorUrl = await uploadImage(form.exteriorImage, `${userId}/exterior-${selectedCell.address}.${form.exteriorImage.name.split('.').pop()}`)
       let interiorUrl: string | null = selectedCell.interior_image_url ?? null
       if (form.interiorImage) interiorUrl = await uploadImage(form.interiorImage, `${userId}/interior-${selectedCell.address}.${form.interiorImage.name.split('.').pop()}`)
+      const { error } = await supabase.from('houses').update({
+        name: form.name || null, nickname: form.nickname || null,
+        description: form.description || null, link_url: form.linkUrl || null,
+        exterior_image_url: exteriorUrl, interior_image_url: interiorUrl,
+        border_effect: form.borderEffect,
+      }).eq('address', selectedCell.address)
+      if (error) { setErrorMsg(`저장 실패: ${error.message}`); return }
+      setShowSuccess(true)
+      setTimeout(() => { setShowSuccess(false); onSuccess() }, 2200)
+    } catch { setErrorMsg('오류가 발생했습니다.') }
+    finally { setLoading(false) }
+  }
 
-      if (isEdit) {
-        // 수정: 콘텐츠만 업데이트, occupied_at / expires_at / is_permanent 유지
-        const { error } = await supabase.from('houses').update({
-          name: form.name || null, nickname: form.nickname || null,
-          description: form.description || null, link_url: form.linkUrl || null,
-          exterior_image_url: exteriorUrl, interior_image_url: interiorUrl,
-          border_effect: form.borderEffect,
-        }).eq('address', selectedCell.address)
-        if (error) { setErrorMsg(`저장 실패: ${error.message}`); return }
-      } else {
-        // 신규 입주
-        const expiresAt = form.days === PERMANENT_DAYS ? null : new Date(Date.now() + form.days * 86400000).toISOString()
-        const occupiedAt = new Date().toISOString()
-        const col = selectedCell.col, row = selectedCell.row
-        const width = selectedCell.width ?? 1, height = selectedCell.height ?? 1
+  // 1단계: 결제 시뮬레이션 (2초)
+  const handlePayment = async () => {
+    setLoading(true); setErrorMsg(null)
+    await new Promise(r => setTimeout(r, 2000))
+    setLoading(false)
+    setPaymentDone(true)
+  }
 
-        const { error } = await supabase.from('houses').update({
-          user_id: userId, name: form.name || null, nickname: form.nickname || null,
-          description: form.description || null, link_url: form.linkUrl || null,
-          exterior_image_url: exteriorUrl, interior_image_url: interiorUrl,
-          border_effect: form.borderEffect, status: 'occupied',
-          width, height, occupied_at: occupiedAt, expires_at: expiresAt,
-          is_permanent: form.days === PERMANENT_DAYS,
-        }).eq('address', selectedCell.address)
-        if (error) { setErrorMsg(`저장 실패: ${error.message}`); return }
+  // 2단계: AI 콘텐츠 검사 + 실제 입주 처리
+  const handleMoveIn = async () => {
+    setLoading(true); setContentChecking(true); setErrorMsg(null)
+    try {
+      // AI 콘텐츠 검사 시뮬레이션 (2.5s)
+      await new Promise(r => setTimeout(r, 2500))
+      setContentChecking(false)
 
-        if (width > 1 || height > 1) {
-          for (let c = col; c < col + width; c++) {
-            for (let r = row; r < row + height; r++) {
-              if (c === col && r === row) continue
-              await supabase.from('houses').update({
-                user_id: userId, status: 'occupied', parent_address: selectedCell.address,
-                occupied_at: occupiedAt, expires_at: expiresAt, is_permanent: form.days === PERMANENT_DAYS,
-              }).eq('address', getAddress(c, r))
-            }
+      // 이미지 업로드
+      let exteriorUrl: string | null = selectedCell.exterior_image_url ?? null
+      if (form.exteriorImage) exteriorUrl = await uploadImage(form.exteriorImage, `${userId}/exterior-${selectedCell.address}.${form.exteriorImage.name.split('.').pop()}`)
+      let interiorUrl: string | null = selectedCell.interior_image_url ?? null
+      if (form.interiorImage) interiorUrl = await uploadImage(form.interiorImage, `${userId}/interior-${selectedCell.address}.${form.interiorImage.name.split('.').pop()}`)
+
+      // 신규 입주 DB 업데이트
+      const expiresAt = form.days === PERMANENT_DAYS ? null : new Date(Date.now() + form.days * 86400000).toISOString()
+      const occupiedAt = new Date().toISOString()
+      const col = selectedCell.col, row = selectedCell.row
+      const width = selectedCell.width ?? 1, height = selectedCell.height ?? 1
+
+      const { error } = await supabase.from('houses').update({
+        user_id: userId, name: form.name || null, nickname: form.nickname || null,
+        description: form.description || null, link_url: form.linkUrl || null,
+        exterior_image_url: exteriorUrl, interior_image_url: interiorUrl,
+        border_effect: form.borderEffect, status: 'occupied',
+        width, height, occupied_at: occupiedAt, expires_at: expiresAt,
+        is_permanent: form.days === PERMANENT_DAYS,
+      }).eq('address', selectedCell.address)
+      if (error) { setErrorMsg(`저장 실패: ${error.message}`); return }
+
+      if (width > 1 || height > 1) {
+        for (let c = col; c < col + width; c++) {
+          for (let r = row; r < row + height; r++) {
+            if (c === col && r === row) continue
+            await supabase.from('houses').update({
+              user_id: userId, status: 'occupied', parent_address: selectedCell.address,
+              occupied_at: occupiedAt, expires_at: expiresAt, is_permanent: form.days === PERMANENT_DAYS,
+            }).eq('address', getAddress(c, r))
           }
         }
       }
 
+      // 결제 내역 기록
+      await supabase.from('payments').insert({
+        user_id: userId,
+        house_address: selectedCell.address,
+        amount: price,
+        type: 'move_in',
+        method: payMethod,
+        status: 'completed',
+      })
+
       setShowSuccess(true)
       setTimeout(() => { setShowSuccess(false); onSuccess() }, 2200)
     } catch { setErrorMsg('오류가 발생했습니다. 다시 시도해주세요.') }
-    finally { setLoading(false) }
+    finally { setLoading(false); setContentChecking(false) }
   }
 
   const canNext = () => {
@@ -178,6 +214,26 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
         display:'flex', flexDirection:'column', overflow:'hidden',
         transition:'width 0.2s ease', position:'relative',
       }}>
+        {/* AI 검사 오버레이 */}
+        {contentChecking && (
+          <div style={{
+            position:'absolute', inset:0, zIndex:20,
+            background:'rgba(10,6,2,0.95)', backdropFilter:'blur(4px)',
+            display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+            borderRadius:8, gap:14,
+          }}>
+            <div style={{ fontSize:56 }}>🤖</div>
+            <div style={{ fontSize:18, fontWeight:800, color:'#fdf6e3' }}>AI 콘텐츠 검사 중...</div>
+            <div style={{ fontSize:13, color:'#c8a96e', textAlign:'center', lineHeight:1.8 }}>
+              업로드된 이미지와 텍스트를<br />AI가 검토하고 있어요.
+            </div>
+            <div style={{ width:200, height:6, borderRadius:3, background:'#2a1a08', overflow:'hidden', marginTop:4 }}>
+              <div style={{ height:'100%', background:'linear-gradient(90deg,#8b6914,#c8a96e)', borderRadius:3, animation:'ai-progress 2.5s linear forwards' }} />
+            </div>
+            <style>{`@keyframes ai-progress { from { width:0% } to { width:100% } }`}</style>
+          </div>
+        )}
+
         {/* 성공 오버레이 */}
         {showSuccess && (
           <div style={{
@@ -562,23 +618,38 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
               </div>
 
               <div style={{ width:240, flexShrink:0, padding:'24px 16px', background:'#f5ead5' }}>
-                <div style={{ fontSize:13, fontWeight:800, color:'#3d2a18', marginBottom:12 }}>결제 수단 선택</div>
-                {[
-                  { id:'card', label:'💳 신용/체크카드' },
-                  { id:'kakaopay', label:'💛 카카오페이' },
-                  { id:'tosspay', label:'🔵 토스페이' },
-                ].map(m => (
-                  <div key={m.id} onClick={() => setPayMethod(m.id)} style={{
-                    padding:'12px 14px', borderRadius:8, cursor:'pointer', marginBottom:8,
-                    border:`2px solid ${payMethod === m.id ? zone.color : '#c8a96e'}`,
-                    background: payMethod === m.id ? zone.color + '12' : '#fdf6e3',
-                    color: payMethod === m.id ? zone.color : '#78614a',
-                    fontSize:13, fontWeight: payMethod === m.id ? 700 : 500,
-                    display:'flex', alignItems:'center', gap:8,
-                  }}>
-                    {payMethod === m.id && <span>✓</span>}{m.label}
-                  </div>
-                ))}
+                {paymentDone ? (
+                  <>
+                    <div style={{ textAlign:'center', marginBottom:16 }}>
+                      <div style={{ fontSize:36, marginBottom:8 }}>✅</div>
+                      <div style={{ fontSize:14, fontWeight:800, color:'#166534' }}>결제 완료!</div>
+                      <div style={{ fontSize:11, color:'#78614a', marginTop:4 }}>이제 입주하기 버튼을 눌러주세요.</div>
+                    </div>
+                    <div style={{ padding:'10px 12px', borderRadius:8, background:'#fffbeb', border:'1.5px solid #fde68a', fontSize:11, color:'#92400e', lineHeight:1.7 }}>
+                      🤖 입주하기 클릭 시 AI 콘텐츠 검사 후<br />지도에 반영됩니다.
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ fontSize:13, fontWeight:800, color:'#3d2a18', marginBottom:12 }}>결제 수단 선택</div>
+                    {[
+                      { id:'card', label:'💳 신용/체크카드' },
+                      { id:'kakaopay', label:'💛 카카오페이' },
+                      { id:'tosspay', label:'🔵 토스페이' },
+                    ].map(m => (
+                      <div key={m.id} onClick={() => setPayMethod(m.id)} style={{
+                        padding:'12px 14px', borderRadius:8, cursor:'pointer', marginBottom:8,
+                        border:`2px solid ${payMethod === m.id ? zone.color : '#c8a96e'}`,
+                        background: payMethod === m.id ? zone.color + '12' : '#fdf6e3',
+                        color: payMethod === m.id ? zone.color : '#78614a',
+                        fontSize:13, fontWeight: payMethod === m.id ? 700 : 500,
+                        display:'flex', alignItems:'center', gap:8,
+                      }}>
+                        {payMethod === m.id && <span>✓</span>}{m.label}
+                      </div>
+                    ))}
+                  </>
+                )}
               </div>
             </div>
           )}
@@ -586,25 +657,36 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
 
         {/* 하단 버튼 */}
         <div style={{ padding:'14px 20px', borderTop:'2px solid #c8a96e', background:'#f0e4cc', display:'flex', gap:10, flexShrink:0 }}>
-          {step > (isEdit ? 2 : 1) && (
+          {step > (isEdit ? 2 : 1) && !paymentDone && (
             <button onClick={() => setStep(s => (s - 1) as Step)} style={{ flex:1, padding:'12px', borderRadius:8, cursor:'pointer', border:'2px solid #c8a96e', background:'#fdf6e3', color:'#78614a', fontSize:14, fontWeight:600 }}>
               ← 이전 단계
             </button>
           )}
           <button
-            onClick={() => { if (step < lastStep) setStep(s => (s + 1) as Step); else handleSubmit() }}
+            onClick={() => {
+              if (step < lastStep) { setStep(s => (s + 1) as Step) }
+              else if (isEdit) { handleEditSave() }
+              else if (!paymentDone) { handlePayment() }
+              else { handleMoveIn() }
+            }}
             disabled={loading || !canNext()}
             style={{
-              flex:2, padding:'12px', borderRadius:8, cursor:'pointer',
-              background: loading || !canNext() ? '#c8a96e' : `linear-gradient(180deg, ${zone.color}, ${zone.color}cc)`,
+              flex:2, padding:'12px', borderRadius:8, cursor: loading || !canNext() ? 'default' : 'pointer',
+              background: loading || !canNext() ? '#c8a96e' : paymentDone ? 'linear-gradient(180deg,#2f9e44,#1a6b28)' : `linear-gradient(180deg, ${zone.color}, ${zone.color}cc)`,
               color:'#fff', fontSize:14, fontWeight:800,
-              border:`2px solid ${zone.color}`,
-              boxShadow: loading || !canNext() ? 'none' : `0 4px 0 ${zone.color}88`,
+              border:`2px solid ${paymentDone ? '#2f9e44' : zone.color}`,
+              boxShadow: loading || !canNext() ? 'none' : `0 4px 0 ${paymentDone ? '#1a6b2888' : zone.color + '88'}`,
             }}
           >
-            {loading ? '처리 중...' : step === lastStep
-              ? (isEdit ? '저장하기 ✓' : `결제하기 ${formatKRW(price)} →`)
-              : '다음 단계로 →'}
+            {loading
+              ? (contentChecking ? '🤖 AI 검사 중...' : '결제 처리 중...')
+              : step < lastStep
+              ? '다음 단계로 →'
+              : isEdit
+              ? '저장하기 ✓'
+              : paymentDone
+              ? '🏠 입주하기 →'
+              : `💳 결제하기 ${formatKRW(price)} →`}
           </button>
         </div>
 

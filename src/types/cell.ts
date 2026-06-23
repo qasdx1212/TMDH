@@ -23,4 +23,5 @@ export interface CellData {
   expires_at: string | null
   is_permanent: boolean
   parent_address?: string | null
+  is_visible?: boolean
 }

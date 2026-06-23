@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { ZONES } from '@/lib/constants'
 import type { CellData } from '@/types/cell'
+import CertificateModal from './CertificateModal'
 
 interface MyHousesDrawerProps {
   userId: string
@@ -17,6 +18,8 @@ export default function MyHousesDrawer({ userId, isAdmin, onClose, onEdit, onRef
   const [houses, setHouses] = useState<CellData[]>([])
   const [loading, setLoading] = useState(true)
   const [vacatingId, setVacatingId] = useState<string | null>(null)
+  const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [certHouse, setCertHouse] = useState<CellData | null>(null)
 
   const handleVacate = async (house: CellData) => {
     if (!confirm(`"${house.name ?? house.address}" 에서 퇴거하시겠어요?\n이 작업은 되돌릴 수 없습니다.`)) return
@@ -26,9 +29,8 @@ export default function MyHousesDrawer({ userId, isAdmin, onClose, onEdit, onRef
       link_url: null, exterior_image_url: null, interior_image_url: null,
       border_effect: 'none', status: 'available', width: 1, height: 1,
       parent_address: null, occupied_at: null, expires_at: null,
-      is_permanent: false, like_count: 0, visit_count: 0,
+      is_permanent: false, like_count: 0, visit_count: 0, is_visible: true,
     }).eq('id', house.id)
-    // 위성 셀 초기화
     if ((house.width ?? 1) > 1 || (house.height ?? 1) > 1) {
       await supabase.from('houses').update({
         user_id: null, status: 'available', parent_address: null,
@@ -40,25 +42,19 @@ export default function MyHousesDrawer({ userId, isAdmin, onClose, onEdit, onRef
     onRefresh?.()
   }
 
+  const handleToggleVisible = async (house: CellData) => {
+    setTogglingId(house.id)
+    const newVal = house.is_visible === false ? true : false
+    await supabase.from('houses').update({ is_visible: newVal }).eq('id', house.id)
+    setHouses(prev => prev.map(h => h.id === house.id ? { ...h, is_visible: newVal } : h))
+    setTogglingId(null)
+  }
+
   useEffect(() => {
     supabase.from('houses').select('*').eq('user_id', userId).eq('status', 'occupied')
       .order('occupied_at', { ascending: false })
       .then(({ data }) => { setHouses((data ?? []) as CellData[]); setLoading(false) })
   }, [userId])
-
-  const canEdit = (house: CellData) => {
-    if (!house.occupied_at) return false
-    return Date.now() < new Date(house.occupied_at).getTime() + 72 * 3600000
-  }
-
-  const editTimeLeft = (house: CellData) => {
-    if (!house.occupied_at) return ''
-    const ms = new Date(house.occupied_at).getTime() + 72 * 3600000 - Date.now()
-    if (ms <= 0) return ''
-    const h = Math.floor(ms / 3600000)
-    const m = Math.floor((ms % 3600000) / 60000)
-    return `${h}시간 ${m}분`
-  }
 
   const getDaysLeft = (expiresAt: string | null, isPermanent: boolean) => {
     if (isPermanent || !expiresAt) return null
@@ -112,6 +108,7 @@ export default function MyHousesDrawer({ userId, isAdmin, onClose, onEdit, onRef
             const isExpiringSoon = daysLeft !== null && daysLeft <= 7
             const isExpired = daysLeft !== null && daysLeft <= 0
             const statusColor = isExpired ? '#ef4444' : isExpiringSoon ? '#f59e0b' : '#22c55e'
+            const isVisible = h.is_visible !== false
 
             return (
               <div key={h.id} style={{
@@ -123,12 +120,17 @@ export default function MyHousesDrawer({ userId, isAdmin, onClose, onEdit, onRef
               }}>
                 {/* 썸네일 */}
                 {(h.exterior_image_url || h.interior_image_url) && (
-                  <div style={{ height: 80, overflow: 'hidden', borderBottom: '1px solid #e8d8bb' }}>
+                  <div style={{ height: 80, overflow: 'hidden', borderBottom: '1px solid #e8d8bb', position: 'relative' }}>
                     <img
                       src={h.interior_image_url ?? h.exterior_image_url ?? ''}
                       alt=""
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: isVisible ? 1 : 0.45 }}
                     />
+                    {!isVisible && (
+                      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.42)' }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: '#fff', background: 'rgba(0,0,0,0.55)', padding: '3px 10px', borderRadius: 6 }}>🔒 비공개</span>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -174,20 +176,35 @@ export default function MyHousesDrawer({ userId, isAdmin, onClose, onEdit, onRef
                       : ''}
                   </div>
 
-                  {/* 수정 가능 시간 표시 */}
-                  {!isAdmin && canEdit(h) && (
-                    <div style={{ fontSize: 11, color: '#3b82f6', fontWeight: 600, marginBottom: 8 }}>
-                      ✏️ 수정 가능 — {editTimeLeft(h)} 남음
-                    </div>
-                  )}
-
-                  {/* 버튼 */}
-                  <div style={{ display: 'flex', gap: 8 }}>
+                  {/* 버튼 행 1: 수정 / 비공개 토글 / 기부증서 */}
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
                     <button onClick={() => onEdit(h)} style={{
-                      flex: 1, padding: '8px', borderRadius: 8,
+                      flex: 2, padding: '8px', borderRadius: 8,
                       border: `1.5px solid ${zone.color}66`, background: zone.color + '15',
                       color: zone.color, fontSize: 12, fontWeight: 700, cursor: 'pointer',
                     }}>✏️ 수정</button>
+
+                    <button
+                      onClick={() => handleToggleVisible(h)}
+                      disabled={togglingId === h.id}
+                      style={{
+                        flex: 1, padding: '8px', borderRadius: 8,
+                        border: `1.5px solid ${isVisible ? '#c8a96e' : '#8b5cf6'}`,
+                        background: isVisible ? '#f5ead5' : '#8b5cf622',
+                        color: isVisible ? '#6b4c2a' : '#8b5cf6',
+                        fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                      }}
+                    >{togglingId === h.id ? '...' : isVisible ? '🔓 공개' : '🔒 비공개'}</button>
+
+                    <button onClick={() => setCertHouse(h)} style={{
+                      flex: 1, padding: '8px', borderRadius: 8,
+                      border: '1.5px solid #c8a96e', background: '#f5ead5',
+                      color: '#6b4c2a', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                    }}>📜 증서</button>
+                  </div>
+
+                  {/* 버튼 행 2: 방문 링크 / 퇴거 */}
+                  <div style={{ display: 'flex', gap: 6 }}>
                     {h.link_url && (
                       <a href={h.link_url} target="_blank" rel="noopener noreferrer" style={{
                         flex: 1, padding: '8px', borderRadius: 8,
@@ -201,11 +218,11 @@ export default function MyHousesDrawer({ userId, isAdmin, onClose, onEdit, onRef
                       onClick={() => handleVacate(h)}
                       disabled={vacatingId === h.id}
                       style={{
-                        padding: '8px 10px', borderRadius: 8,
+                        flex: 1, padding: '8px', borderRadius: 8,
                         border: '1.5px solid #ef444466', background: '#fef2f2',
                         color: '#ef4444', fontSize: 11, fontWeight: 700, cursor: 'pointer',
                       }}
-                    >{vacatingId === h.id ? '...' : '퇴거'}</button>
+                    >{vacatingId === h.id ? '퇴거 중...' : '🗑️ 퇴거'}</button>
                   </div>
                 </div>
               </div>
@@ -213,14 +230,17 @@ export default function MyHousesDrawer({ userId, isAdmin, onClose, onEdit, onRef
           })}
         </div>
 
-        {/* 하단 잔디 */}
+        {/* 하단 */}
         <div>
-          <div style={{ padding: '10px 20px', borderTop: '2px solid #d4b483', background: '#f5ead5', fontSize: 11, color: '#a08060', textAlign: 'center' }}>
-            만료 7일 전부터 알림이 표시됩니다
+          <div style={{ padding: '10px 20px', borderTop: '2px solid #d4b483', background: '#f5ead5', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 11, color: '#a08060' }}>만료 7일 전부터 알림이 표시됩니다</span>
+            <a href="/my/payments" style={{ fontSize: 11, color: '#8b6914', fontWeight: 700, textDecoration: 'none', padding: '4px 10px', borderRadius: 6, border: '1px solid #c8a96e', background: '#fdf6e3' }}>🧾 결제 내역</a>
           </div>
           <div style={{ height: 8, background: 'repeating-linear-gradient(90deg,#4a7c3f 0px,#4a7c3f 5px,#3d6b34 5px,#3d6b34 10px)', borderTop: '2px solid #2d5226' }} />
         </div>
       </div>
+
+      {certHouse && <CertificateModal house={certHouse} onClose={() => setCertHouse(null)} />}
     </>
   )
 }

@@ -166,6 +166,12 @@ export default function FloatingHeader({
               whiteSpace:'nowrap',
             }}>내 집 보기</button>
           )}
+          <a href="/faq" style={{
+            padding:'9px 14px', borderRadius:8, cursor:'pointer',
+            background:'rgba(255,255,255,0.06)', color:'#a08060',
+            fontSize:12, fontWeight:600, border:'2px solid #4a3010',
+            whiteSpace:'nowrap', textDecoration:'none', display:'flex', alignItems:'center',
+          }}>❓ FAQ</a>
           {isAdmin && (
             <a href="/admin" style={{
               padding:'9px 14px', borderRadius:8, cursor:'pointer',

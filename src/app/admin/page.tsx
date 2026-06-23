@@ -8,7 +8,26 @@ import type { CellData } from '@/types/cell'
 
 const ADMIN_EMAIL = 'qasdx1212@gmail.com'
 
-type Tab = 'all' | 'expiring' | 'expired'
+type Tab = 'all' | 'expiring' | 'expired' | 'reports'
+
+interface Report {
+  id: string
+  house_id: string
+  reason: string
+  description: string | null
+  reporter_id: string
+  created_at: string
+  status: string
+  house?: { address: string; name: string | null; zone: string } | null
+}
+
+const REASON_LABEL: Record<string, string> = {
+  inappropriate_image: '🔞 부적절한 이미지',
+  illegal_ad: '🚫 불법 광고',
+  copyright: '📋 저작권 침해',
+  impersonation: '🎭 사칭',
+  other: '💬 기타',
+}
 
 export default function AdminPage() {
   const router = useRouter()
@@ -21,6 +40,8 @@ export default function AdminPage() {
   const [filterZone, setFilterZone] = useState<string | null>(null)
   const [vacatingId, setVacatingId] = useState<string | null>(null)
   const [sortBy, setSortBy] = useState<'occupied_at' | 'expires_at' | 'visit_count' | 'like_count'>('occupied_at')
+  const [reports, setReports] = useState<Report[]>([])
+  const [reportsLoading, setReportsLoading] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -44,9 +65,33 @@ export default function AdminPage() {
     setLoading(false)
   }, [])
 
+  const fetchReports = useCallback(async () => {
+    setReportsLoading(true)
+    const { data: rData } = await supabase
+      .from('reports')
+      .select('*')
+      .order('created_at', { ascending: false })
+    if (rData && rData.length > 0) {
+      const houseIds = [...new Set(rData.map((r: Report) => r.house_id))]
+      const { data: hData } = await supabase
+        .from('houses')
+        .select('id, address, name, zone')
+        .in('id', houseIds)
+      const houseMap = Object.fromEntries((hData ?? []).map((h: { id: string; address: string; name: string | null; zone: string }) => [h.id, h]))
+      setReports(rData.map((r: Report) => ({ ...r, house: houseMap[r.house_id] ?? null })))
+    } else {
+      setReports([])
+    }
+    setReportsLoading(false)
+  }, [])
+
   useEffect(() => {
     if (authorized) fetchHouses()
   }, [authorized, fetchHouses])
+
+  useEffect(() => {
+    if (authorized && tab === 'reports') fetchReports()
+  }, [authorized, tab, fetchReports])
 
   const handleVacate = async (house: CellData) => {
     if (!confirm(`"${house.name ?? house.address}" 강제 퇴거하시겠어요?\n이 작업은 되돌릴 수 없습니다.`)) return
@@ -195,11 +240,12 @@ export default function AdminPage() {
               { id: 'all', label: `전체 ${houses.length}` },
               { id: 'expiring', label: `만료 임박 ${expiringCount}` },
               { id: 'expired', label: `기간 만료 ${expiredCount}` },
+              { id: 'reports', label: `🚨 신고` },
             ] as const).map(t => (
               <button key={t.id} onClick={() => setTab(t.id)} style={{
                 padding: '7px 16px', borderRadius: 7, cursor: 'pointer', fontSize: 12, fontWeight: tab === t.id ? 700 : 500,
-                border: `2px solid ${tab === t.id ? '#c8a96e' : '#4a3010'}`,
-                background: tab === t.id ? '#3d2a08' : 'transparent',
+                border: `2px solid ${tab === t.id ? (t.id === 'reports' ? '#ef4444' : '#c8a96e') : '#4a3010'}`,
+                background: tab === t.id ? (t.id === 'reports' ? '#3d0a0a' : '#3d2a08') : 'transparent',
                 color: tab === t.id ? '#fdf6e3' : '#7a5c3a',
               }}>{t.label}</button>
             ))}
@@ -207,30 +253,92 @@ export default function AdminPage() {
 
           <div style={{ flex: 1 }} />
 
-          <select
-            value={sortBy}
-            onChange={e => setSortBy(e.target.value as typeof sortBy)}
-            style={{ padding: '7px 12px', borderRadius: 7, background: '#2a1a08', border: '1.5px solid #4a3010', color: '#c8a96e', fontSize: 12, cursor: 'pointer', outline: 'none' }}
-          >
-            <option value="occupied_at">최신 입주순</option>
-            <option value="expires_at">만료일 임박순</option>
-            <option value="visit_count">방문 많은순</option>
-            <option value="like_count">좋아요 많은순</option>
-          </select>
+          {tab !== 'reports' && (
+            <>
+              <select
+                value={sortBy}
+                onChange={e => setSortBy(e.target.value as typeof sortBy)}
+                style={{ padding: '7px 12px', borderRadius: 7, background: '#2a1a08', border: '1.5px solid #4a3010', color: '#c8a96e', fontSize: 12, cursor: 'pointer', outline: 'none' }}
+              >
+                <option value="occupied_at">최신 입주순</option>
+                <option value="expires_at">만료일 임박순</option>
+                <option value="visit_count">방문 많은순</option>
+                <option value="like_count">좋아요 많은순</option>
+              </select>
 
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="🔍 이름 / 닉네임 / 주소"
-            style={{
-              padding: '7px 14px', borderRadius: 7, width: 220, fontSize: 12,
-              background: '#2a1a08', border: '1.5px solid #4a3010',
-              color: '#fdf6e3', outline: 'none', fontFamily: 'inherit',
-            }}
-          />
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="🔍 이름 / 닉네임 / 주소"
+                style={{
+                  padding: '7px 14px', borderRadius: 7, width: 220, fontSize: 12,
+                  background: '#2a1a08', border: '1.5px solid #4a3010',
+                  color: '#fdf6e3', outline: 'none', fontFamily: 'inherit',
+                }}
+              />
+            </>
+          )}
         </div>
 
-        {/* 테이블 */}
+        {/* 신고 탭 */}
+        {tab === 'reports' ? (
+          <div style={{ background: '#1a0f05', border: '1.5px solid #4a3010', borderRadius: 10, overflow: 'hidden' }}>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                <thead>
+                  <tr style={{ background: '#3d0a0a', borderBottom: '1.5px solid #7f1d1d' }}>
+                    {['날짜', '신고된 집', '구역', '사유', '상세 내용', '작업'].map(h => (
+                      <th key={h} style={{ padding: '10px 12px', textAlign: 'left', color: '#f87171', fontWeight: 700, fontSize: 11, whiteSpace: 'nowrap' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {reportsLoading ? (
+                    <tr><td colSpan={6} style={{ padding: 48, textAlign: 'center', color: '#5a3e1a' }}>불러오는 중...</td></tr>
+                  ) : reports.length === 0 ? (
+                    <tr><td colSpan={6} style={{ padding: 48, textAlign: 'center', color: '#5a3e1a' }}>신고 내역이 없어요 ✅</td></tr>
+                  ) : reports.map((r, i) => {
+                    const houseData = r.house
+                    const zone = houseData ? ZONES[houseData.zone as keyof typeof ZONES] : null
+                    const houseInList = houseData ? houses.find(h => h.id === r.house_id) : null
+                    return (
+                      <tr key={r.id} style={{ borderBottom: '1px solid #2a1a0840', background: i % 2 === 0 ? 'transparent' : '#1e100522' }}>
+                        <td style={{ padding: '10px 12px', color: '#7a5c3a', whiteSpace: 'nowrap' }}>{r.created_at.slice(0, 10)}</td>
+                        <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                          {houseData
+                            ? <><span style={{ color: '#c8a96e', fontWeight: 700 }}>{houseData.address}</span><span style={{ color: '#7a5c3a', marginLeft: 6 }}>{houseData.name ?? '—'}</span></>
+                            : <span style={{ color: '#4a3010' }}>삭제된 집</span>}
+                        </td>
+                        <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                          {zone && <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 4, background: zone.color + '20', color: zone.color, border: `1px solid ${zone.color}44` }}>{zone.label}</span>}
+                        </td>
+                        <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                          <span style={{ fontSize: 11, color: '#f87171', fontWeight: 600 }}>{REASON_LABEL[r.reason] ?? r.reason}</span>
+                        </td>
+                        <td style={{ padding: '10px 12px', color: '#a08060', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {r.description ?? <span style={{ color: '#4a3010' }}>—</span>}
+                        </td>
+                        <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                          {houseInList ? (
+                            <button
+                              onClick={() => handleVacate(houseInList)}
+                              disabled={vacatingId === houseInList.id}
+                              style={{ padding: '5px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 11, fontWeight: 700, background: '#ef4444', border: '1.5px solid #b91c1c', color: '#fff' }}
+                            >{vacatingId === houseInList.id ? '처리중...' : '강제퇴거'}</button>
+                          ) : (
+                            <span style={{ fontSize: 11, color: '#4a3010' }}>이미 퇴거됨</span>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
+
+        /* 일반 집 테이블 */
         <div style={{ background: '#1a0f05', border: '1.5px solid #4a3010', borderRadius: 10, overflow: 'hidden' }}>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
@@ -307,10 +415,13 @@ export default function AdminPage() {
             </table>
           </div>
         </div>
+        )}
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
-          <div style={{ fontSize: 11, color: '#4a3010' }}>{filtered.length}건 표시 중 / 전체 {houses.length}건</div>
-          {filterZone && (
+          <div style={{ fontSize: 11, color: '#4a3010' }}>
+            {tab === 'reports' ? `${reports.length}건의 신고` : `${filtered.length}건 표시 중 / 전체 ${houses.length}건`}
+          </div>
+          {filterZone && tab !== 'reports' && (
             <button onClick={() => setFilterZone(null)} style={{ fontSize: 11, color: '#c8a96e', background: 'none', border: 'none', cursor: 'pointer' }}>
               구역 필터 초기화 ×
             </button>
