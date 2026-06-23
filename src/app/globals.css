@@ -45,5 +45,5 @@ html, body {
 
 @media (max-width: 600px) {
   .hide-on-mobile { display: none !important; }
-  .show-on-mobile { display: inline !important; }
+  .show-on-mobile { display: block !important; }
 }

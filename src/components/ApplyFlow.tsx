@@ -214,6 +214,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
         <div style={{ display:'flex', background:'#f0e4cc', borderBottom:'2px solid #c8a96e', flexShrink:0 }}>
           {STEPS.map((label, i) => {
             const s = (i + 1) as Step
+            if (isEdit && (s === 1 || s === 5)) return null
             const isDone = step > s, isActive = step === s
             return (
               <div key={i} style={{ flex:1, padding:'10px 4px', textAlign:'center', fontSize:11, fontWeight:isActive?800:isDone?600:400, color:isActive?zone.color:isDone?'#2f9e44':'#a08060', borderBottom:isActive?`3px solid ${zone.color}`:'3px solid transparent', transition:'all 0.12s' }}>
@@ -429,8 +430,8 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                 {/* 이미지 수정 정책 */}
                 <div style={{ padding:12, borderRadius:8, background:'#f0e4cc', border:'1.5px solid #c8a96e', fontSize:12, color:'#6b4c2a' }}>
                   <div style={{ fontWeight:700, marginBottom:4 }}>🗓 수정 정책</div>
-                  <div>· 무료 수정 기간: 입주 후 72시간 이내</div>
-                  <div>· 72시간 이후에는 수정이 제한됩니다.</div>
+                  <div>· 집 정보와 이미지는 언제든지 수정 가능합니다.</div>
+                  <div>· 입주 기간(만료일)은 수정할 수 없습니다.</div>
                 </div>
               </div>
 

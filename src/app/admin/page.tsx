@@ -83,6 +83,13 @@ export default function AdminPage() {
   const filtered = houses
     .filter(h => {
       if (filterZone && h.zone !== filterZone) return false
+      if (search.trim()) {
+        const q = search.toLowerCase()
+        const matches = h.name?.toLowerCase().includes(q) ||
+          h.nickname?.toLowerCase().includes(q) ||
+          h.address.toLowerCase().includes(q)
+        if (!matches) return false
+      }
       if (tab === 'expiring') {
         if (h.is_permanent || !h.expires_at) return false
         const ms = new Date(h.expires_at).getTime() - now
@@ -91,14 +98,6 @@ export default function AdminPage() {
       if (tab === 'expired') {
         if (h.is_permanent || !h.expires_at) return false
         return new Date(h.expires_at).getTime() <= now
-      }
-      if (search.trim()) {
-        const q = search.toLowerCase()
-        return (
-          h.name?.toLowerCase().includes(q) ||
-          h.nickname?.toLowerCase().includes(q) ||
-          h.address.toLowerCase().includes(q)
-        )
       }
       return true
     })
@@ -121,7 +120,7 @@ export default function AdminPage() {
   const occupancyRate = ((houses.length / 10000) * 100).toFixed(2)
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0f0906', fontFamily: '"Noto Sans KR", -apple-system, sans-serif', color: '#fdf6e3' }}>
+    <div style={{ height: '100vh', overflowY: 'auto', background: '#0f0906', fontFamily: '"Noto Sans KR", -apple-system, sans-serif', color: '#fdf6e3' }}>
 
       {/* 헤더 */}
       <div style={{ background: 'linear-gradient(180deg,#2c1a08,#1e1005)', borderBottom: '3px solid #6b4c2a', padding: '0 24px', position: 'sticky', top: 0, zIndex: 10 }}>
