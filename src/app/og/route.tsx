@@ -54,7 +54,7 @@ export function GET() {
             <span style={{ color:'#5a3e1a' }}>·</span>
             <span>10,000 Houses</span>
             <span style={{ color:'#5a3e1a' }}>·</span>
-            <span>cellar-sigma.vercel.app</span>
+            <span>zipzipworld.com</span>
           </div>
         </div>
       </div>
