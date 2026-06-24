@@ -429,7 +429,9 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
 
   const handleMouseUp = useCallback((e: React.MouseEvent) => {
     if (e.button === 2) return // 우클릭은 onContextMenu에서 처리
+    const hadMouseDown = isMouseDown.current
     isPanning.current = false; isMouseDown.current = false; setCursor('default')
+    if (!hadMouseDown) return // confirm 다이얼로그 닫힐 때 발생하는 spurious mouseup 무시
     const dx = Math.abs(e.clientX - mouseDownPos.current.x)
     const dy = Math.abs(e.clientY - mouseDownPos.current.y)
     const wasClick = dx <= DRAG_THRESHOLD && dy <= DRAG_THRESHOLD
