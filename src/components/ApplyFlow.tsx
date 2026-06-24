@@ -132,12 +132,64 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
     finally { setLoading(false) }
   }
 
-  // 1단계: 결제 시뮬레이션 (2초)
+  // 1단계: 이미지 업로드 → sessionStorage 저장 → Toss 결제창 오픈
   const handlePayment = async () => {
     setLoading(true); setErrorMsg(null)
-    await new Promise(r => setTimeout(r, 2000))
-    setLoading(false)
-    setPaymentDone(true)
+    try {
+      // 이미지 먼저 업로드 (Toss 리다이렉트 전에 완료해야 함)
+      let exteriorUrl: string | null = selectedCell.exterior_image_url ?? null
+      if (form.exteriorImage) exteriorUrl = await uploadImage(form.exteriorImage, `${userId}/exterior-${selectedCell.address}.${form.exteriorImage.name.split('.').pop()}`)
+      let interiorUrl: string | null = selectedCell.interior_image_url ?? null
+      if (form.interiorImage) interiorUrl = await uploadImage(form.interiorImage, `${userId}/interior-${selectedCell.address}.${form.interiorImage.name.split('.').pop()}`)
+
+      const orderId = `zipzip-${Date.now()}-${selectedCell.address}`
+
+      // 주문 데이터를 sessionStorage에 저장 (리다이렉트 후 success 페이지에서 사용)
+      sessionStorage.setItem('toss_pending_order', JSON.stringify({
+        orderId, userId,
+        address: selectedCell.address,
+        col: selectedCell.col, row: selectedCell.row,
+        width: selectedCell.width ?? 1, height: selectedCell.height ?? 1,
+        zone: selectedCell.zone,
+        name: form.name || null, nickname: form.nickname || null,
+        description: form.description || null, linkUrl: form.linkUrl || null,
+        borderEffect: form.borderEffect, days: form.days,
+        exteriorUrl, interiorUrl, amount: price, payMethod,
+      }))
+
+      // Toss SDK 동적 로드 후 결제창 오픈
+      const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY
+      if (!clientKey) throw new Error('결제 설정 오류 (키 없음)')
+
+      const { loadTossPayments } = await import('@tosspayments/tosspayments-sdk')
+      const tossPayments = await loadTossPayments(clientKey)
+      const payment = tossPayments.payment({ customerKey: userId })
+
+      // 카카오페이/토스페이는 CARD method + flowMode:DIRECT + easyPay 코드 조합
+      const easyPayCode: Record<string, string> = {
+        kakaopay: 'KAKAOPAY',
+        tosspay: 'TOSSPAY',
+      }
+
+      await payment.requestPayment({
+        method: 'CARD',
+        amount: { currency: 'KRW', value: price },
+        orderId,
+        orderName: `집.zip 입주 — ${selectedCell.address}`,
+        successUrl: `${window.location.origin}/toss-success`,
+        failUrl: `${window.location.origin}/toss-fail`,
+        ...(easyPayCode[payMethod] && {
+          card: { flowMode: 'DIRECT', easyPay: easyPayCode[payMethod] },
+        }),
+      })
+      // 여기까지 오면 Toss가 리다이렉트함 — 아래는 실행 안 됨
+    } catch (e: unknown) {
+      const err = e as { code?: string; message?: string }
+      if (err.code !== 'PAY_PROCESS_CANCELED') {
+        setErrorMsg(err.message ?? '결제 중 오류가 발생했습니다.')
+      }
+      setLoading(false)
+    }
   }
 
   // 2단계: AI 콘텐츠 검사 + 실제 입주 처리
@@ -679,7 +731,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
             }}
           >
             {loading
-              ? (contentChecking ? '🤖 AI 검사 중...' : '결제 처리 중...')
+              ? (contentChecking ? '🤖 AI 검사 중...' : '처리 중...')
               : step < lastStep
               ? '다음 단계로 →'
               : isEdit
