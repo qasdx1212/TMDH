@@ -170,7 +170,8 @@ export default function CertificateModal({ house, onClose }: CertificateModalPro
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          width: 660, maxWidth: '96vw',
+          width: 660, maxWidth: '96vw', maxHeight: '92vh',
+          display: 'flex', flexDirection: 'column',
           background: '#fdf6e3', borderRadius: 12,
           border: '4px solid #7a4f1a',
           boxShadow: '0 0 0 2px #e8c97a, 0 0 0 5px #7a4f1a, 0 24px 70px rgba(0,0,0,0.7)',
@@ -182,7 +183,7 @@ export default function CertificateModal({ house, onClose }: CertificateModalPro
           <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: '50%', background: '#ef4444', border: '2px solid #b91c1c', color: '#fff', fontSize: 16, fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
         </div>
 
-        <div style={{ padding: 20 }}>
+        <div style={{ padding: 20, overflowY: 'auto', flex: 1 }}>
           <div style={{ borderRadius: 10, overflow: 'hidden', border: '2.5px solid #8b6914', marginBottom: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}>
             <canvas ref={canvasRef} style={{ display: 'block', width: '100%', imageRendering: 'auto' }} />
           </div>

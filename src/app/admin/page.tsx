@@ -101,7 +101,7 @@ export default function AdminPage() {
       link_url: null, exterior_image_url: null, interior_image_url: null,
       border_effect: 'none', status: 'available', width: 1, height: 1,
       parent_address: null, occupied_at: null, expires_at: null,
-      is_permanent: false, like_count: 0, visit_count: 0,
+      is_permanent: false, like_count: 0, visit_count: 0, is_visible: true,
     }).eq('id', house.id)
     if ((house.width ?? 1) > 1 || (house.height ?? 1) > 1) {
       await supabase.from('houses').update({

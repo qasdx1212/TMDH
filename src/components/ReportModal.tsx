@@ -46,7 +46,8 @@ export default function ReportModal({ house, userId, onClose }: ReportModalProps
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          width: 440, maxWidth: '92vw',
+          width: 440, maxWidth: '92vw', maxHeight: '90vh',
+          display: 'flex', flexDirection: 'column',
           background: '#fdf6e3', borderRadius: 12,
           border: '4px solid #7a4f1a',
           boxShadow: '0 0 0 2px #e8c97a, 0 0 0 5px #7a4f1a, 0 24px 70px rgba(0,0,0,0.7)',
@@ -58,7 +59,7 @@ export default function ReportModal({ house, userId, onClose }: ReportModalProps
           <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: '50%', background: '#ef4444', border: '2px solid #b91c1c', color: '#fff', fontSize: 16, fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
         </div>
 
-        <div style={{ padding: 20 }}>
+        <div style={{ padding: 20, overflowY: 'auto', flex: 1 }}>
           {done ? (
             <div style={{ textAlign: 'center', padding: '24px 0' }}>
               <div style={{ fontSize: 52, marginBottom: 12 }}>✅</div>

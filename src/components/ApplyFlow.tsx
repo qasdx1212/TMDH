@@ -164,7 +164,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
         user_id: userId, name: form.name || null, nickname: form.nickname || null,
         description: form.description || null, link_url: form.linkUrl || null,
         exterior_image_url: exteriorUrl, interior_image_url: interiorUrl,
-        border_effect: form.borderEffect, status: 'occupied',
+        border_effect: form.borderEffect, status: 'occupied', is_visible: true,
         width, height, occupied_at: occupiedAt, expires_at: expiresAt,
         is_permanent: form.days === PERMANENT_DAYS,
       }).eq('address', selectedCell.address)

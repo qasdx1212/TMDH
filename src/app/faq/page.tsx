@@ -78,7 +78,7 @@ export default function FaqPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0f0906', fontFamily: '"Noto Sans KR", -apple-system, sans-serif', color: '#fdf6e3' }}>
+    <div style={{ height: '100vh', overflowY: 'auto', background: '#0f0906', fontFamily: '"Noto Sans KR", -apple-system, sans-serif', color: '#fdf6e3' }}>
       {/* 헤더 */}
       <div style={{ background: 'linear-gradient(180deg,#2c1a08,#1e1005)', borderBottom: '3px solid #6b4c2a', padding: '0 24px', position: 'sticky', top: 0, zIndex: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, height: 60, maxWidth: 800, margin: '0 auto' }}>

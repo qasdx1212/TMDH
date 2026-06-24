@@ -78,7 +78,7 @@ export default function Home() {
   const fetchHouses = useCallback(async () => {
     const { data } = await supabase
       .from('houses')
-      .select('id, address, col, row, width, height, zone, status, name, nickname, description, link_url, exterior_image_url, interior_image_url, interior_image_url, border_effect, like_count, visit_count, occupied_at, expires_at, is_permanent, parent_address, is_visible')
+      .select('id, address, col, row, width, height, zone, status, name, nickname, description, link_url, exterior_image_url, interior_image_url, border_effect, like_count, visit_count, occupied_at, expires_at, is_permanent, parent_address, is_visible')
       .neq('status', 'available')
     setHouses((data ?? []) as CellData[])
     setLoading(false)
@@ -136,7 +136,7 @@ export default function Home() {
       link_url: null, exterior_image_url: null, interior_image_url: null,
       border_effect: 'none', status: 'available', width: 1, height: 1,
       parent_address: null, occupied_at: null, expires_at: null,
-      is_permanent: false, like_count: 0, visit_count: 0,
+      is_permanent: false, like_count: 0, visit_count: 0, is_visible: true,
     }).eq('id', cell.id)
     if ((cell.width ?? 1) > 1 || (cell.height ?? 1) > 1) {
       await supabase.from('houses').update({

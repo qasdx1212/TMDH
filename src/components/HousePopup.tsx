@@ -61,7 +61,7 @@ export default function HousePopup({ house, currentUserId, isAdmin, isOwnHouse, 
       link_url: null, exterior_image_url: null, interior_image_url: null,
       border_effect: 'none', status: 'available', width: 1, height: 1,
       parent_address: null, occupied_at: null, expires_at: null,
-      is_permanent: false, like_count: 0, visit_count: 0,
+      is_permanent: false, like_count: 0, visit_count: 0, is_visible: true,
     }).eq('id', house.id)
     if ((house.width ?? 1) > 1 || (house.height ?? 1) > 1) {
       await supabase.from('houses').update({
@@ -86,7 +86,8 @@ export default function HousePopup({ house, currentUserId, isAdmin, isOwnHouse, 
         <div
           onClick={e => e.stopPropagation()}
           style={{
-            width: 660, maxWidth: '96vw',
+            width: 660, maxWidth: '96vw', maxHeight: '90vh',
+            display: 'flex', flexDirection: 'column',
             background: '#fdf6e3', borderRadius: 12,
             border: '4px solid #7a4f1a',
             boxShadow: '0 0 0 2px #e8c97a, 0 0 0 5px #7a4f1a, 0 0 0 7px #e8c97a, 0 24px 70px rgba(0,0,0,0.7)',
@@ -133,7 +134,7 @@ export default function HousePopup({ house, currentUserId, isAdmin, isOwnHouse, 
               <div style={{ fontSize: 13, color: '#a08060', lineHeight: 1.7 }}>이 집은 주인이 비공개로 설정해두었어요.</div>
             </div>
           ) : (
-            <div style={{ display: 'flex', minHeight: 180 }}>
+            <div style={{ display: 'flex', minHeight: 180, overflowY: 'auto', flex: 1 }}>
               <div style={{ flex: 1, padding: '22px 20px', minWidth: 0 }}>
                 {house.description && (
                   <div style={{ marginBottom: 20 }}>
