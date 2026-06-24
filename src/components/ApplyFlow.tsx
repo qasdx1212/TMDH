@@ -158,8 +158,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
       }))
 
       // Toss SDK 동적 로드 후 결제창 오픈
-      const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY
-      if (!clientKey) throw new Error('결제 설정 오류 (키 없음)')
+      const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || 'test_ck_6BYq7GWPVvPzgd4Jeo9n8NE5vbo1'
 
       const { loadTossPayments } = await import('@tosspayments/tosspayments-sdk')
       const tossPayments = await loadTossPayments(clientKey)
