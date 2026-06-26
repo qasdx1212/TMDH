@@ -29,11 +29,10 @@ export default function StatsPanel({ houses }: StatsPanelProps) {
   const availableCount = totalCells - occupiedCount - pendingCount
   const occupancyRate = ((occupiedCount / totalCells) * 100).toFixed(1)
 
-  const zoneSums: Record<string, number> = {}
-  occupiedHouses.forEach(h => { zoneSums[h.zone] = (zoneSums[h.zone] ?? 0) + h.visit_count })
-  const topAreas = Object.entries(zoneSums)
-    .sort(([, a], [, b]) => b - a)
-    .map(([zone, count], i) => ({ zone, count, rank: i + 1 }))
+  const topAreas = [...occupiedHouses]
+    .sort((a, b) => b.visit_count - a.visit_count)
+    .slice(0, 5)
+    .map((h, i) => ({ name: h.name ?? h.nickname ?? h.address, zone: h.zone, count: h.visit_count, rank: i + 1 }))
 
   useEffect(() => {
     supabase.from('houses').select('id, name, nickname, zone, occupied_at')
@@ -136,11 +135,11 @@ export default function StatsPanel({ houses }: StatsPanelProps) {
         <PanelLabel>🏆 인기 지역 TOP 5 (방문자 수 기준)</PanelLabel>
         {topAreas.length === 0 ? (
           <div style={{ fontSize:11, color:'#5a3e1a', marginTop:8 }}>아직 방문 데이터가 없어요</div>
-        ) : topAreas.slice(0, 5).map(area => (
-          <div key={area.zone} style={{ display:'flex', alignItems:'center', gap:8 }}>
+        ) : topAreas.map(area => (
+          <div key={area.rank} style={{ display:'flex', alignItems:'center', gap:8 }}>
             <span style={{ fontSize:10, fontWeight:800, width:18, height:18, borderRadius:4, background:'#3d2a18', color:'#c8a96e', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>{area.rank}</span>
             <span style={{ fontSize:9, color:ZONES[area.zone as keyof typeof ZONES]?.color ?? '#fff' }}>●</span>
-            <span style={{ fontSize:11, color:'#d4b47a', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{ZONES[area.zone as keyof typeof ZONES]?.label ?? area.zone}</span>
+            <span style={{ fontSize:11, color:'#d4b47a', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{area.name}</span>
             <span style={{ fontSize:10, color:'#78614a', flexShrink:0 }}>👣 {area.count.toLocaleString()}</span>
           </div>
         ))}
