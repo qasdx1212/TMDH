@@ -25,80 +25,123 @@ interface MapGridProps {
 }
 
 const CELL = 10
-const W = GRID_COLS * CELL
-const H = GRID_ROWS * CELL
+const H = GRID_ROWS * CELL   // 1000, fixed
+const RS = 2
 const DRAG_THRESHOLD = 4
-const RS = 3
 
 const rng = (x: number, y: number, s = 0) => {
   const n = Math.sin(x * 127.1 + y * 311.7 + s * 74.3) * 43758.5453
   return n - Math.floor(n)
 }
 
-function buildTerrainCanvas(): HTMLCanvasElement {
+function buildTerrainCanvas(dCols: number, colOff: number): HTMLCanvasElement {
   const tc = document.createElement('canvas')
-  tc.width = W * RS; tc.height = H * RS
+  tc.width = dCols * CELL * RS
+  tc.height = H * RS
   const ctx = tc.getContext('2d')!
   ctx.save(); ctx.scale(RS, RS)
 
-  for (let c = 0; c < GRID_COLS; c++) {
+  // draw all cells (active zone + decorative outer)
+  for (let dc = 0; dc < dCols; dc++) {
+    const ac = dc - colOff  // active col (-colOff … dCols-colOff-1)
     for (let r = 0; r < GRID_ROWS; r++) {
-      const px = c * CELL, py = r * CELL
-      const n = rng(c, r)
+      const px = dc * CELL, py = r * CELL
+      if (ac < 0 || ac >= GRID_COLS) {
+        // decorative outer terrain
+        const n = rng(dc, r)
+        ctx.fillStyle = n < 0.5 ? '#0c0703' : '#100904'
+        ctx.fillRect(px, py, CELL, CELL)
+        continue
+      }
+      const n = rng(ac, r)
       let color: string
-      if (c < 50 && r < 50) {
-        if (c % 9 === 0 || r % 9 === 0) { color = '#150c20' }
-        else { const bn = rng(Math.floor(c/3), Math.floor(r/3), 1); color = bn < 0.33 ? '#2d1a3e' : bn < 0.67 ? '#261535' : '#322046' }
-      } else if (c >= 50 && r < 50) {
+      if (ac < 50 && r < 50) {
+        if (ac % 9 === 0 || r % 9 === 0) { color = '#150c20' }
+        else { const bn = rng(Math.floor(ac/3), Math.floor(r/3), 1); color = bn < 0.33 ? '#2d1a3e' : bn < 0.67 ? '#261535' : '#322046' }
+      } else if (ac >= 50 && r < 50) {
         const riverX = 82 + Math.floor(Math.sin(r * 0.25) * 4)
-        if (c >= riverX) { color = n < 0.4 ? '#154060' : n < 0.7 ? '#1a4e72' : '#122e4a' }
-        else if (c >= riverX - 3) { color = n < 0.5 ? '#2a4a30' : '#233e28' }
-        else { const path = (c-50)%14===7||r%12===6; color = path ? '#264430' : (n<0.35?'#1a3028':n<0.7?'#1f3a2c':'#243e30') }
-      } else if (c < 50 && r >= 50) {
-        const pathH = (r-50)%8<=1, pathV = c%8===0
+        if (ac >= riverX) { color = n < 0.4 ? '#154060' : n < 0.7 ? '#1a4e72' : '#122e4a' }
+        else if (ac >= riverX - 3) { color = n < 0.5 ? '#2a4a30' : '#233e28' }
+        else { const path = (ac-50)%14===7||r%12===6; color = path ? '#264430' : (n<0.35?'#1a3028':n<0.7?'#1f3a2c':'#243e30') }
+      } else if (ac < 50 && r >= 50) {
+        const pathH = (r-50)%8<=1, pathV = ac%8===0
         if (pathH||pathV) { color = n<0.5?'#7a5a38':'#8a6840' }
-        else { const sn = rng(Math.floor(c/2), Math.floor(r/2), 2); color = sn<0.33?'#4a3520':sn<0.67?'#5a4228':'#3e2c18' }
+        else { const sn = rng(Math.floor(ac/2), Math.floor(r/2), 2); color = sn<0.33?'#4a3520':sn<0.67?'#5a4228':'#3e2c18' }
       } else {
-        const bn = rng(Math.floor(c/4), Math.floor(r/4), 3)
+        const bn = rng(Math.floor(ac/4), Math.floor(r/4), 3)
         color = n<0.04?'#5a2525':(bn<0.4?'#3d1a1a':bn<0.75?'#4a2020':'#33181a')
       }
       ctx.fillStyle = color; ctx.fillRect(px, py, CELL, CELL)
     }
   }
 
+  // zone grid lines (shifted by colOff)
   Object.entries(ZONES).forEach(([, zone]) => {
     ctx.strokeStyle = zone.gridColor; ctx.lineWidth = 0.4
-    for (let c = zone.colMin; c <= zone.colMax+1; c++) { ctx.beginPath(); ctx.moveTo(c*CELL,zone.rowMin*CELL); ctx.lineTo(c*CELL,(zone.rowMax+1)*CELL); ctx.stroke() }
-    for (let r = zone.rowMin; r <= zone.rowMax+1; r++) { ctx.beginPath(); ctx.moveTo(zone.colMin*CELL,r*CELL); ctx.lineTo((zone.colMax+1)*CELL,r*CELL); ctx.stroke() }
+    for (let c = zone.colMin; c <= zone.colMax+1; c++) {
+      ctx.beginPath(); ctx.moveTo((c+colOff)*CELL, zone.rowMin*CELL); ctx.lineTo((c+colOff)*CELL, (zone.rowMax+1)*CELL); ctx.stroke()
+    }
+    for (let r = zone.rowMin; r <= zone.rowMax+1; r++) {
+      ctx.beginPath(); ctx.moveTo((zone.colMin+colOff)*CELL, r*CELL); ctx.lineTo((zone.colMax+1+colOff)*CELL, r*CELL); ctx.stroke()
+    }
   })
 
-  for (let c = 50; c <= 78; c++) {
+  // trees in Riverside
+  for (let ac = 50; ac <= 78; ac++) {
     for (let r = 0; r < 50; r++) {
-      if (rng(c, r, 4) < 0.08) {
-        ctx.fillStyle='#2a5235'; ctx.beginPath(); ctx.arc(c*CELL+5,r*CELL+5,3.8,0,Math.PI*2); ctx.fill()
-        ctx.fillStyle='#4a7050'; ctx.beginPath(); ctx.arc(c*CELL+4,r*CELL+4,2.2,0,Math.PI*2); ctx.fill()
+      if (rng(ac, r, 4) < 0.08) {
+        const dc = ac + colOff
+        ctx.fillStyle='#2a5235'; ctx.beginPath(); ctx.arc(dc*CELL+5,r*CELL+5,3.8,0,Math.PI*2); ctx.fill()
+        ctx.fillStyle='#4a7050'; ctx.beginPath(); ctx.arc(dc*CELL+4,r*CELL+4,2.2,0,Math.PI*2); ctx.fill()
       }
     }
   }
-  for (let c = 83; c < GRID_COLS; c++) {
+
+  // river ripples
+  for (let ac = 83; ac < GRID_COLS; ac++) {
     for (let r = 0; r < 50; r++) {
       const riverX = 82+Math.floor(Math.sin(r*0.25)*4)
-      if (c>=riverX&&rng(c,r,5)<0.12) { ctx.fillStyle='rgba(255,255,255,0.07)'; ctx.fillRect(c*CELL+2,r*CELL+4,5,1) }
+      if (ac>=riverX&&rng(ac,r,5)<0.12) {
+        const dc = ac + colOff
+        ctx.fillStyle='rgba(255,255,255,0.07)'; ctx.fillRect(dc*CELL+2,r*CELL+4,5,1)
+      }
     }
   }
-  for (let c = 0; c < 50; c += 9) for (let r = 0; r < 50; r += 9) {
-    ctx.fillStyle='#c084fc55'; ctx.beginPath(); ctx.arc(c*CELL+1,r*CELL+1,1.5,0,Math.PI*2); ctx.fill()
-  }
-  ctx.strokeStyle='#6b4c2a'; ctx.lineWidth=2
-  ctx.beginPath(); ctx.moveTo(50*CELL,0); ctx.lineTo(50*CELL,H); ctx.stroke()
-  ctx.beginPath(); ctx.moveTo(0,50*CELL); ctx.lineTo(W,50*CELL); ctx.stroke()
 
+  // neon dots
+  for (let ac = 0; ac < 50; ac += 9) for (let r = 0; r < 50; r += 9) {
+    ctx.fillStyle='#c084fc55'; ctx.beginPath(); ctx.arc((ac+colOff)*CELL+1,r*CELL+1,1.5,0,Math.PI*2); ctx.fill()
+  }
+
+  // zone dividers (thick)
+  ctx.strokeStyle='#6b4c2a'; ctx.lineWidth=2
+  ctx.beginPath(); ctx.moveTo((50+colOff)*CELL,0); ctx.lineTo((50+colOff)*CELL,H); ctx.stroke()
+  ctx.beginPath(); ctx.moveTo(colOff*CELL,50*CELL); ctx.lineTo((GRID_COLS+colOff)*CELL,50*CELL); ctx.stroke()
+
+  // active zone border
+  ctx.strokeStyle='#6b4c2a'; ctx.lineWidth=3
+  ctx.strokeRect(colOff*CELL, 0, GRID_COLS*CELL, H)
+
+  // outer vignette
+  if (colOff > 0) {
+    const gL = ctx.createLinearGradient(0,0,colOff*CELL,0)
+    gL.addColorStop(0,'rgba(0,0,0,0.6)'); gL.addColorStop(1,'rgba(0,0,0,0)')
+    ctx.fillStyle=gL; ctx.fillRect(0,0,colOff*CELL,H)
+
+    const gR = ctx.createLinearGradient((colOff+GRID_COLS)*CELL,0,dCols*CELL,0)
+    gR.addColorStop(0,'rgba(0,0,0,0)'); gR.addColorStop(1,'rgba(0,0,0,0.6)')
+    ctx.fillStyle=gR; ctx.fillRect((colOff+GRID_COLS)*CELL,0,(dCols-colOff-GRID_COLS)*CELL,H)
+  }
+
+  // zone labels
   Object.entries(ZONES).forEach(([, zone]) => {
-    const cx=(zone.colMin+zone.colMax+1)/2*CELL, cy=(zone.rowMin+zone.rowMax+1)/2*CELL
+    const cx=(zone.colMin+zone.colMax+1)/2*CELL + colOff*CELL
+    const cy=(zone.rowMin+zone.rowMax+1)/2*CELL
     ctx.font='bold 13px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'
     ctx.fillStyle='#00000066'; ctx.fillText(zone.label,cx+1,cy+1)
     ctx.fillStyle=zone.color+'aa'; ctx.fillText(zone.label,cx,cy)
   })
+
   ctx.restore()
   return tc
 }
@@ -109,6 +152,11 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
   const [scale, setScale] = useState(1)
   const [offset, setOffset] = useState({ x: 0, y: 0 })
   const scaleRef = useRef(1)
+
+  // dynamic canvas width (updated at mount)
+  const wRef = useRef(GRID_COLS * CELL)
+  const colOffRef = useRef(0)
+  const [canvasW, setCanvasW] = useState(GRID_COLS * CELL)
 
   const isPanning = useRef(false)
   const panStart = useRef({ x: 0, y: 0 })
@@ -131,12 +179,10 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
   const imageCache = useRef<Map<string, HTMLImageElement>>(new Map())
   const terrainCanvas = useRef<HTMLCanvasElement | null>(null)
 
-  // touch refs
   const lastPinchDist = useRef<number | null>(null)
   const touchStartPos = useRef<{ x: number; y: number } | null>(null)
   const touchStartTime = useRef(0)
 
-  // keep scaleRef in sync
   useEffect(() => { scaleRef.current = scale }, [scale])
 
   const onViewportChangeRef = useRef(onViewportChange)
@@ -152,8 +198,10 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
     const c = containerRef.current
     if (!c) return { x, y }
     const { width: cw, height: ch } = c.getBoundingClientRect()
-    const cx = Math.min(0, Math.max(cw - W * s, x))
-    const cy = Math.min(0, Math.max(ch - H * s, y))
+    const W = wRef.current
+    const mapW = W * s, mapH = H * s
+    const cx = mapW <= cw ? (cw - mapW) / 2 : Math.min(0, Math.max(cw - mapW, x))
+    const cy = mapH <= ch ? (ch - mapH) / 2 : Math.min(0, Math.max(ch - mapH, y))
     return { x: cx, y: cy }
   }, [])
 
@@ -176,12 +224,13 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       const c = containerRef.current
       if (!c) return 1
       const r = c.getBoundingClientRect()
-      return Math.max(r.width / W, r.height / H)
+      return Math.max(r.width / wRef.current, r.height / H)
     }
     const resetToFit = () => {
       const c = containerRef.current
       if (!c) return
       const r = c.getBoundingClientRect()
+      const W = wRef.current
       const s = Math.max(r.width / W, r.height / H)
       const nx = (r.width - W * s) / 2
       const ny = (r.height - H * s) / 2
@@ -191,24 +240,25 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
     if (zoomInRef) zoomInRef.current = () => zoomTo(Math.min(6, scaleRef.current + 0.5))
     if (zoomOutRef) zoomOutRef.current = () => zoomTo(Math.max(minScale(), scaleRef.current - 0.5))
     if (fitViewRef) fitViewRef.current = resetToFit
-  }, [zoomInRef, zoomOutRef, fitViewRef])
+  }, [zoomInRef, zoomOutRef, fitViewRef, clampOffset])
 
-  // center map on target cell (e.g. from search)
+  // center on search result
   useEffect(() => {
     if (!centerTarget) return
     const container = containerRef.current
     if (!container) return
     const rect = container.getBoundingClientRect()
     const s = Math.max(scaleRef.current, 2)
-    const cellCx = (centerTarget.col + 0.5) * CELL
+    const cellCx = (centerTarget.col + colOffRef.current + 0.5) * CELL
     const cellCy = (centerTarget.row + 0.5) * CELL
     const newX = rect.width / 2 - cellCx * s
     const newY = rect.height / 2 - cellCy * s
+    const clamped = clampOffset(newX, newY, s)
     scaleRef.current = s
-    lastOffset.current = { x: newX, y: newY }
+    lastOffset.current = clamped
     setScale(s)
-    setOffset({ x: newX, y: newY })
-  }, [centerTarget])
+    setOffset(clamped)
+  }, [centerTarget, clampOffset])
 
   useEffect(() => {
     const m = new Map<string, CellData>()
@@ -217,31 +267,44 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
     houseMap.current = m; addressMap.current = am
   }, [houses])
 
-  // 마운트 시 cover fit (여백 없이 뷰포트 꽉 채움, 정사각형 픽셀 유지)
+  // mount: compute dynamic canvas width, build terrain, set initial view
   useEffect(() => {
-    const c = containerRef.current
-    if (!c) return
-    const r = c.getBoundingClientRect()
-    const s = Math.max(r.width / W, r.height / H)
-    const nx = (r.width - W * s) / 2
-    const ny = (r.height - H * s) / 2
+    const cont = containerRef.current
+    if (!cont) return
+    const { width: cw, height: ch } = cont.getBoundingClientRect()
+
+    // canvas width: enough cols to fill viewport when scale = ch/H
+    const fitScale = ch / H
+    const wNeeded = cw / fitScale
+    const dCols = Math.ceil(wNeeded / CELL) + 4
+    const colOff = Math.floor((dCols - GRID_COLS) / 2)
+    const W = dCols * CELL
+
+    wRef.current = W
+    colOffRef.current = colOff
+    setCanvasW(W)
+
+    // cover-fit scale so map fills both dimensions
+    const s = Math.max(cw / W, ch / H)
+    const nx = (cw - W * s) / 2
+    const ny = (ch - H * s) / 2
     scaleRef.current = s; lastOffset.current = { x: nx, y: ny }
     setScale(s); setOffset({ x: nx, y: ny })
-  }, [])
 
-  useEffect(() => {
-    if (terrainCanvas.current) return
-    terrainCanvas.current = buildTerrainCanvas()
+    // build terrain
+    terrainCanvas.current = buildTerrainCanvas(dCols, colOff)
     setTerrainReady(true)
   }, [])
-
 
   const toGrid = useCallback((clientX: number, clientY: number) => {
     const canvas = canvasRef.current
     if (!canvas) return null
     const rect = canvas.getBoundingClientRect()
-    const col = Math.floor((clientX - rect.left) * GRID_COLS / rect.width)
+    const W = wRef.current
+    const dCols = Math.round(W / CELL)
+    const dc = Math.floor((clientX - rect.left) * dCols / rect.width)
     const row = Math.floor((clientY - rect.top) * GRID_ROWS / rect.height)
+    const col = dc - colOffRef.current
     if (col < 0 || col >= GRID_COLS || row < 0 || row >= GRID_ROWS) return null
     return { col, row }
   }, [])
@@ -250,13 +313,15 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')!
+    const W = wRef.current
+    const colOff = colOffRef.current
     ctx.clearRect(0, 0, W * RS, H * RS)
     if (terrainCanvas.current) ctx.drawImage(terrainCanvas.current, 0, 0)
     else { ctx.fillStyle = '#2a1a0a'; ctx.fillRect(0, 0, W*RS, H*RS) }
     ctx.save(); ctx.scale(RS, RS)
 
     houses.filter(h => !h.parent_address).forEach(h => {
-      const x = h.col*CELL, y = h.row*CELL
+      const x = (h.col+colOff)*CELL, y = h.row*CELL
       const w = (h.width??1)*CELL, ht = (h.height??1)*CELL
       const zone = ZONES[h.zone]
       const cachedImg = imageCache.current.get(h.address)
@@ -283,13 +348,13 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       Object.entries(ZONES).forEach(([key, zone]) => {
         if (key === activeZone) return
         ctx.fillStyle = 'rgba(0,0,0,0.6)'
-        ctx.fillRect(zone.colMin*CELL, zone.rowMin*CELL, (zone.colMax-zone.colMin+1)*CELL, (zone.rowMax-zone.rowMin+1)*CELL)
+        ctx.fillRect((zone.colMin+colOff)*CELL, zone.rowMin*CELL, (zone.colMax-zone.colMin+1)*CELL, (zone.rowMax-zone.rowMin+1)*CELL)
       })
     }
 
     if (selection) {
       const { c1,r1,c2,r2 } = selection
-      const sx=Math.min(c1,c2)*CELL, sy=Math.min(r1,r2)*CELL
+      const sx=(Math.min(c1,c2)+colOff)*CELL, sy=Math.min(r1,r2)*CELL
       const sw=(Math.abs(c2-c1)+1)*CELL, sh=(Math.abs(r2-r1)+1)*CELL
       ctx.fillStyle='#ffffff22'; ctx.fillRect(sx,sy,sw,sh)
       ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.setLineDash([4,3]); ctx.strokeRect(sx,sy,sw,sh); ctx.setLineDash([])
@@ -312,7 +377,7 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
 
   useEffect(() => { draw() }, [draw])
 
-  // Wheel: zoom to cursor
+  // wheel zoom
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -323,8 +388,9 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       const rect = container.getBoundingClientRect()
       const mx = e.clientX - rect.left
       const my = e.clientY - rect.top
-      const coverScale = Math.max(rect.width / W, rect.height / H)
-      const newScale = Math.max(coverScale, Math.min(6, scaleRef.current - e.deltaY * 0.002))
+      const W = wRef.current
+      const minSc = Math.max(rect.width / W, rect.height / H)
+      const newScale = Math.max(minSc, Math.min(6, scaleRef.current - e.deltaY * 0.002))
       const wx = (mx - lastOffset.current.x) / scaleRef.current
       const wy = (my - lastOffset.current.y) / scaleRef.current
       const newX = mx - wx * newScale
@@ -337,9 +403,9 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
     }
     canvas.addEventListener('wheel', handler, { passive: false })
     return () => canvas.removeEventListener('wheel', handler)
-  }, [])
+  }, [clampOffset])
 
-  // Touch: pan + pinch-zoom + tap
+  // touch pan + pinch
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
@@ -348,10 +414,7 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       if (e.touches.length === 1) {
         touchStartPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
         touchStartTime.current = Date.now()
-        panStart.current = {
-          x: e.touches[0].clientX - lastOffset.current.x,
-          y: e.touches[0].clientY - lastOffset.current.y,
-        }
+        panStart.current = { x: e.touches[0].clientX - lastOffset.current.x, y: e.touches[0].clientY - lastOffset.current.y }
       } else if (e.touches.length === 2) {
         const dx = e.touches[0].clientX - e.touches[1].clientX
         const dy = e.touches[0].clientY - e.touches[1].clientY
@@ -370,6 +433,7 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
         const dx = e.touches[0].clientX - e.touches[1].clientX
         const dy = e.touches[0].clientY - e.touches[1].clientY
         const dist = Math.sqrt(dx*dx + dy*dy)
+        const W = wRef.current
         const coverSc = Math.max(el.clientWidth / W, el.clientHeight / H)
         const newScale = Math.max(coverSc, Math.min(6, scaleRef.current * (dist / lastPinchDist.current)))
         const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2
@@ -419,10 +483,10 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       el.removeEventListener('touchmove', onTouchMove)
       el.removeEventListener('touchend', onTouchEnd)
     }
-  }, [toGrid, onCellClick])
+  }, [toGrid, onCellClick, clampOffset])
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.button === 2) return // 우클릭은 onContextMenu에서 처리
+    if (e.button === 2) return
     mouseDownPos.current = { x: e.clientX, y: e.clientY }
     isMouseDown.current = true
     setTooltip(null)
@@ -439,19 +503,16 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
     if (isPanning.current) {
       const raw = { x: e.clientX - panStart.current.x, y: e.clientY - panStart.current.y }
       const clamped = clampOffset(raw.x, raw.y, scaleRef.current)
-      lastOffset.current = clamped
-      setOffset(clamped)
+      lastOffset.current = clamped; setOffset(clamped)
       return
     }
-    // hover tooltip
     if (!isMouseDown.current) {
       const grid = toGrid(e.clientX, e.clientY)
       if (grid) {
         const existing = houseMap.current.get(`${grid.col},${grid.row}`)
         const primary = existing?.parent_address ? (addressMap.current.get(existing.parent_address) ?? existing) : existing
         if (primary?.status === 'occupied') {
-          const text = primary.nickname ?? primary.name ?? '이름 없음'
-          setTooltip({ x: e.clientX, y: e.clientY, text })
+          setTooltip({ x: e.clientX, y: e.clientY, text: primary.nickname ?? primary.name ?? '이름 없음' })
         } else { setTooltip(null) }
       } else { setTooltip(null) }
     }
@@ -466,13 +527,13 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
         setSelection({ c1: selectStart.current.col, r1: selectStart.current.row, c2: grid.col, r2: grid.row })
       }
     }
-  }, [toGrid])
+  }, [toGrid, clampOffset])
 
   const handleMouseUp = useCallback((e: React.MouseEvent) => {
-    if (e.button === 2) return // 우클릭은 onContextMenu에서 처리
+    if (e.button === 2) return
     const hadMouseDown = isMouseDown.current
     isPanning.current = false; isMouseDown.current = false; setCursor('default')
-    if (!hadMouseDown) return // confirm 다이얼로그 닫힐 때 발생하는 spurious mouseup 무시
+    if (!hadMouseDown) return
     const dx = Math.abs(e.clientX - mouseDownPos.current.x)
     const dy = Math.abs(e.clientY - mouseDownPos.current.y)
     const wasClick = dx <= DRAG_THRESHOLD && dy <= DRAG_THRESHOLD
@@ -539,7 +600,7 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       onContextMenu={handleContextMenu}
     >
       <div style={{ transform:`translate(${offset.x}px,${offset.y}px) scale(${scale})`, transformOrigin:'0 0' }}>
-        <canvas ref={canvasRef} width={W*RS} height={H*RS} style={{ display:'block', width:W, height:H }} />
+        <canvas ref={canvasRef} width={canvasW * RS} height={H * RS} style={{ display:'block', width:canvasW, height:H }} />
       </div>
 
       {tooltip && (
@@ -565,25 +626,17 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
         }}>{blockMsg}</div>
       )}
 
-      {/* 우클릭 컨텍스트 메뉴 */}
       {contextMenu && (
-        <div
-          onClick={() => setContextMenu(null)}
-          style={{ position:'fixed', inset:0, zIndex:490 }}
-        >
+        <div onClick={() => setContextMenu(null)} style={{ position:'fixed', inset:0, zIndex:490 }}>
           <div
             onClick={e => e.stopPropagation()}
             style={{
               position:'fixed',
               left: Math.min(contextMenu.x + 4, window.innerWidth - 200),
               top: Math.min(contextMenu.y + 4, window.innerHeight - 220),
-              background:'#2a1a08',
-              border:'2px solid #8b6914',
-              borderRadius:10,
-              overflow:'hidden',
-              boxShadow:'0 8px 32px rgba(0,0,0,0.75)',
-              minWidth:180,
-              zIndex:491,
+              background:'#2a1a08', border:'2px solid #8b6914', borderRadius:10,
+              overflow:'hidden', boxShadow:'0 8px 32px rgba(0,0,0,0.75)',
+              minWidth:180, zIndex:491,
               fontFamily:'"Noto Sans KR", -apple-system, sans-serif',
             }}
           >
@@ -592,7 +645,6 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
                 ? `📍 빈 공간 · ${contextMenu.cell.address}`
                 : `🏠 ${contextMenu.cell.name ?? contextMenu.cell.address}`}
             </div>
-
             {contextMenu.cell.status === 'available' ? (
               <CtxItem emoji="🏠" label="입주 신청" onClick={() => { onCellClick(contextMenu.cell); setContextMenu(null) }} />
             ) : (
