@@ -158,7 +158,7 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       const container = containerRef.current
       if (!container) return
       const rect = container.getBoundingClientRect()
-      const fitScale = Math.max(0.4, Math.min(rect.width / W, rect.height / H))
+      const fitScale = Math.max(rect.width / W, rect.height / H)
       const nx = (rect.width - W * fitScale) / 2
       const ny = (rect.height - H * fitScale) / 2
       scaleRef.current = fitScale
@@ -197,12 +197,12 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
     setTerrainReady(true)
   }, [])
 
-  // 마운트 시 맵을 뷰포트에 꽉 차게 자동 fit
+  // 마운트 시 맵을 뷰포트에 cover로 채움 (여백 없이 가득)
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
     const rect = container.getBoundingClientRect()
-    const fitScale = Math.min(rect.width / W, rect.height / H)
+    const fitScale = Math.max(rect.width / W, rect.height / H)
     const nx = (rect.width - W * fitScale) / 2
     const ny = (rect.height - H * fitScale) / 2
     scaleRef.current = fitScale
