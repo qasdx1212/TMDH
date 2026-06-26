@@ -152,13 +152,25 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       lastOffset.current = { x: nx, y: ny }
       setScale(newScale); setOffset({ x: nx, y: ny })
     }
-    if (zoomInRef) zoomInRef.current = () => zoomTo(Math.min(6, scaleRef.current + 0.5))
-    if (zoomOutRef) zoomOutRef.current = () => zoomTo(Math.max(1, scaleRef.current - 0.5))
-    if (fitViewRef) fitViewRef.current = () => {
-      scaleRef.current = 1
-      lastOffset.current = { x: 0, y: 0 }
-      setScale(1); setOffset({ x: 0, y: 0 })
+    const minScale = () => {
+      const c = containerRef.current
+      if (!c) return 1
+      const r = c.getBoundingClientRect()
+      return Math.max(r.width / W, r.height / H)
     }
+    const resetToFit = () => {
+      const c = containerRef.current
+      if (!c) return
+      const r = c.getBoundingClientRect()
+      const s = Math.max(r.width / W, r.height / H)
+      const nx = (r.width - W * s) / 2
+      const ny = (r.height - H * s) / 2
+      scaleRef.current = s; lastOffset.current = { x: nx, y: ny }
+      setScale(s); setOffset({ x: nx, y: ny })
+    }
+    if (zoomInRef) zoomInRef.current = () => zoomTo(Math.min(6, scaleRef.current + 0.5))
+    if (zoomOutRef) zoomOutRef.current = () => zoomTo(Math.max(minScale(), scaleRef.current - 0.5))
+    if (fitViewRef) fitViewRef.current = resetToFit
   }, [zoomInRef, zoomOutRef, fitViewRef])
 
   // center map on target cell (e.g. from search)
@@ -184,6 +196,18 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
     houses.forEach(h => { m.set(`${h.col},${h.row}`, h); am.set(h.address, h) })
     houseMap.current = m; addressMap.current = am
   }, [houses])
+
+  // 마운트 시 cover fit (여백 없이 뷰포트 꽉 채움, 정사각형 픽셀 유지)
+  useEffect(() => {
+    const c = containerRef.current
+    if (!c) return
+    const r = c.getBoundingClientRect()
+    const s = Math.max(r.width / W, r.height / H)
+    const nx = (r.width - W * s) / 2
+    const ny = (r.height - H * s) / 2
+    scaleRef.current = s; lastOffset.current = { x: nx, y: ny }
+    setScale(s); setOffset({ x: nx, y: ny })
+  }, [])
 
   useEffect(() => {
     if (terrainCanvas.current) return
@@ -279,7 +303,8 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       const rect = container.getBoundingClientRect()
       const mx = e.clientX - rect.left
       const my = e.clientY - rect.top
-      const newScale = Math.max(1, Math.min(6, scaleRef.current - e.deltaY * 0.002))
+      const coverScale = Math.max(rect.width / W, rect.height / H)
+      const newScale = Math.max(coverScale, Math.min(6, scaleRef.current - e.deltaY * 0.002))
       const wx = (mx - lastOffset.current.x) / scaleRef.current
       const wy = (my - lastOffset.current.y) / scaleRef.current
       const newX = mx - wx * newScale
@@ -325,7 +350,8 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
         const dx = e.touches[0].clientX - e.touches[1].clientX
         const dy = e.touches[0].clientY - e.touches[1].clientY
         const dist = Math.sqrt(dx*dx + dy*dy)
-        const newScale = Math.max(1, Math.min(6, scaleRef.current * (dist / lastPinchDist.current)))
+        const coverSc = Math.max(el.clientWidth / W, el.clientHeight / H)
+        const newScale = Math.max(coverSc, Math.min(6, scaleRef.current * (dist / lastPinchDist.current)))
         const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2
         const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2
         const rect = el.getBoundingClientRect()
@@ -488,8 +514,8 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       onMouseLeave={() => { isPanning.current=false; isMouseDown.current=false; isSelecting.current=false; setSelection(null); setCursor('default'); setTooltip(null) }}
       onContextMenu={handleContextMenu}
     >
-      <div style={{ transform:`translate(${offset.x}px,${offset.y}px) scale(${scale})`, transformOrigin:'0 0', position:'absolute', inset:0 }}>
-        <canvas ref={canvasRef} width={W*RS} height={H*RS} style={{ display:'block', width:'100%', height:'100%' }} />
+      <div style={{ transform:`translate(${offset.x}px,${offset.y}px) scale(${scale})`, transformOrigin:'0 0' }}>
+        <canvas ref={canvasRef} width={W*RS} height={H*RS} style={{ display:'block', width:W, height:H }} />
       </div>
 
       {tooltip && (
