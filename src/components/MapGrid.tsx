@@ -138,6 +138,15 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
   // keep scaleRef in sync
   useEffect(() => { scaleRef.current = scale }, [scale])
 
+  const clampOffset = useCallback((x: number, y: number, s: number) => {
+    const c = containerRef.current
+    if (!c) return { x, y }
+    const { width: cw, height: ch } = c.getBoundingClientRect()
+    const cx = Math.min(0, Math.max(cw - W * s, x))
+    const cy = Math.min(0, Math.max(ch - H * s, y))
+    return { x: cx, y: cy }
+  }, [])
+
   // expose zoom functions to parent
   useEffect(() => {
     const zoomTo = (newScale: number) => {
@@ -147,10 +156,11 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       const cx = rect.width / 2, cy = rect.height / 2
       const wx = (cx - lastOffset.current.x) / scaleRef.current
       const wy = (cy - lastOffset.current.y) / scaleRef.current
-      const nx = cx - wx * newScale, ny = cy - wy * newScale
+      const raw = { x: cx - wx * newScale, y: cy - wy * newScale }
+      const clamped = clampOffset(raw.x, raw.y, newScale)
       scaleRef.current = newScale
-      lastOffset.current = { x: nx, y: ny }
-      setScale(newScale); setOffset({ x: nx, y: ny })
+      lastOffset.current = clamped
+      setScale(newScale); setOffset(clamped)
     }
     const minScale = () => {
       const c = containerRef.current
@@ -309,10 +319,11 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       const wy = (my - lastOffset.current.y) / scaleRef.current
       const newX = mx - wx * newScale
       const newY = my - wy * newScale
+      const clamped = clampOffset(newX, newY, newScale)
       scaleRef.current = newScale
-      lastOffset.current = { x: newX, y: newY }
+      lastOffset.current = clamped
       setScale(newScale)
-      setOffset({ x: newX, y: newY })
+      setOffset(clamped)
     }
     canvas.addEventListener('wheel', handler, { passive: false })
     return () => canvas.removeEventListener('wheel', handler)
@@ -342,10 +353,9 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
     const onTouchMove = (e: TouchEvent) => {
       e.preventDefault()
       if (e.touches.length === 1) {
-        const nx = e.touches[0].clientX - panStart.current.x
-        const ny = e.touches[0].clientY - panStart.current.y
-        lastOffset.current = { x: nx, y: ny }
-        setOffset({ x: nx, y: ny })
+        const raw = { x: e.touches[0].clientX - panStart.current.x, y: e.touches[0].clientY - panStart.current.y }
+        const clamped = clampOffset(raw.x, raw.y, scaleRef.current)
+        lastOffset.current = clamped; setOffset(clamped)
       } else if (e.touches.length === 2 && lastPinchDist.current !== null) {
         const dx = e.touches[0].clientX - e.touches[1].clientX
         const dy = e.touches[0].clientY - e.touches[1].clientY
@@ -358,10 +368,10 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
         const mx = cx - rect.left, my = cy - rect.top
         const wx = (mx - lastOffset.current.x) / scaleRef.current
         const wy = (my - lastOffset.current.y) / scaleRef.current
-        const newX = mx - wx * newScale, newY = my - wy * newScale
+        const clamped = clampOffset(mx - wx * newScale, my - wy * newScale, newScale)
         scaleRef.current = newScale
-        lastOffset.current = { x: newX, y: newY }
-        setScale(newScale); setOffset({ x: newX, y: newY })
+        lastOffset.current = clamped
+        setScale(newScale); setOffset(clamped)
         lastPinchDist.current = dist
       }
     }
@@ -417,10 +427,10 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (isPanning.current) {
-      const nx = e.clientX - panStart.current.x
-      const ny = e.clientY - panStart.current.y
-      lastOffset.current = { x: nx, y: ny }
-      setOffset({ x: nx, y: ny })
+      const raw = { x: e.clientX - panStart.current.x, y: e.clientY - panStart.current.y }
+      const clamped = clampOffset(raw.x, raw.y, scaleRef.current)
+      lastOffset.current = clamped
+      setOffset(clamped)
       return
     }
     // hover tooltip
