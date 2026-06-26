@@ -153,17 +153,11 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       setScale(newScale); setOffset({ x: nx, y: ny })
     }
     if (zoomInRef) zoomInRef.current = () => zoomTo(Math.min(6, scaleRef.current + 0.5))
-    if (zoomOutRef) zoomOutRef.current = () => zoomTo(Math.max(0.4, scaleRef.current - 0.5))
+    if (zoomOutRef) zoomOutRef.current = () => zoomTo(Math.max(1, scaleRef.current - 0.5))
     if (fitViewRef) fitViewRef.current = () => {
-      const container = containerRef.current
-      if (!container) return
-      const rect = container.getBoundingClientRect()
-      const fitScale = Math.max(rect.width / W, rect.height / H)
-      const nx = (rect.width - W * fitScale) / 2
-      const ny = (rect.height - H * fitScale) / 2
-      scaleRef.current = fitScale
-      lastOffset.current = { x: nx, y: ny }
-      setScale(fitScale); setOffset({ x: nx, y: ny })
+      scaleRef.current = 1
+      lastOffset.current = { x: 0, y: 0 }
+      setScale(1); setOffset({ x: 0, y: 0 })
     }
   }, [zoomInRef, zoomOutRef, fitViewRef])
 
@@ -197,19 +191,6 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
     setTerrainReady(true)
   }, [])
 
-  // 마운트 시 맵을 뷰포트에 cover로 채움 (여백 없이 가득)
-  useEffect(() => {
-    const container = containerRef.current
-    if (!container) return
-    const rect = container.getBoundingClientRect()
-    const fitScale = Math.max(rect.width / W, rect.height / H)
-    const nx = (rect.width - W * fitScale) / 2
-    const ny = (rect.height - H * fitScale) / 2
-    scaleRef.current = fitScale
-    lastOffset.current = { x: nx, y: ny }
-    setScale(fitScale)
-    setOffset({ x: nx, y: ny })
-  }, [])
 
   const toGrid = useCallback((clientX: number, clientY: number) => {
     const canvas = canvasRef.current
@@ -298,7 +279,7 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       const rect = container.getBoundingClientRect()
       const mx = e.clientX - rect.left
       const my = e.clientY - rect.top
-      const newScale = Math.max(0.4, Math.min(6, scaleRef.current - e.deltaY * 0.002))
+      const newScale = Math.max(1, Math.min(6, scaleRef.current - e.deltaY * 0.002))
       const wx = (mx - lastOffset.current.x) / scaleRef.current
       const wy = (my - lastOffset.current.y) / scaleRef.current
       const newX = mx - wx * newScale
@@ -344,7 +325,7 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
         const dx = e.touches[0].clientX - e.touches[1].clientX
         const dy = e.touches[0].clientY - e.touches[1].clientY
         const dist = Math.sqrt(dx*dx + dy*dy)
-        const newScale = Math.max(0.4, Math.min(6, scaleRef.current * (dist / lastPinchDist.current)))
+        const newScale = Math.max(1, Math.min(6, scaleRef.current * (dist / lastPinchDist.current)))
         const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2
         const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2
         const rect = el.getBoundingClientRect()
@@ -507,8 +488,8 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       onMouseLeave={() => { isPanning.current=false; isMouseDown.current=false; isSelecting.current=false; setSelection(null); setCursor('default'); setTooltip(null) }}
       onContextMenu={handleContextMenu}
     >
-      <div style={{ transform:`translate(${offset.x}px,${offset.y}px) scale(${scale})`, transformOrigin:'0 0' }}>
-        <canvas ref={canvasRef} width={W*RS} height={H*RS} style={{ display:'block', width:W, height:H }} />
+      <div style={{ transform:`translate(${offset.x}px,${offset.y}px) scale(${scale})`, transformOrigin:'0 0', position:'absolute', inset:0 }}>
+        <canvas ref={canvasRef} width={W*RS} height={H*RS} style={{ display:'block', width:'100%', height:'100%' }} />
       </div>
 
       {tooltip && (
