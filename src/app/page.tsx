@@ -29,7 +29,7 @@ export default function Home() {
   const zoomOutRef = useRef<(() => void) | null>(null)
   const fitViewRef = useRef<(() => void) | null>(null)
   const deepLinkProcessed = useRef(false)
-  const [mapViewport, setMapViewport] = useState<{ scale: number; offset: { x: number; y: number }; containerW: number; containerH: number } | null>(null)
+  const [mapViewport, setMapViewport] = useState<{ scale: number; offset: { x: number; y: number }; containerW: number; containerH: number; mapW: number } | null>(null)
 
   // Escape키로 모든 팝업 닫기
   useEffect(() => {

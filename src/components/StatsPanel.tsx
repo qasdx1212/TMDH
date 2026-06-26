@@ -7,7 +7,7 @@ import type { CellData } from '@/types/cell'
 
 interface StatsPanelProps {
   houses: CellData[]
-  mapViewport?: { scale: number; offset: { x: number; y: number }; containerW: number; containerH: number } | null
+  mapViewport?: { scale: number; offset: { x: number; y: number }; containerW: number; containerH: number; mapW?: number } | null
 }
 
 interface RecentHouse {
@@ -46,27 +46,31 @@ export default function StatsPanel({ houses, mapViewport }: StatsPanelProps) {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')!
+    const CELL = 10
+    // dCols may be wider than 100 — minimap always 100×100, scale x accordingly
+    const dCols = mapViewport?.mapW ? Math.round(mapViewport.mapW / CELL) : 100
+    const xScale = 100 / dCols  // how many minimap px per grid col
     ctx.clearRect(0, 0, 100, 100)
-    const zoneKeys = Object.keys(ZONES) as Array<keyof typeof ZONES>
-    for (const key of zoneKeys) {
-      const z = ZONES[key]
-      ctx.fillStyle = z.bg
-      ctx.fillRect(z.colMin, z.rowMin, z.colMax - z.colMin + 1, z.rowMax - z.rowMin + 1)
-    }
+
+    // zone backgrounds — right zones extended to dCols
+    ctx.fillStyle = ZONES.neon.bg; ctx.fillRect(0, 0, 50 * xScale, 50)
+    ctx.fillStyle = ZONES.riverside.bg; ctx.fillRect(50 * xScale, 0, (dCols - 50) * xScale, 50)
+    ctx.fillStyle = ZONES.oldtown.bg; ctx.fillRect(0, 50, 50 * xScale, 50)
+    ctx.fillStyle = ZONES.artdistrict.bg; ctx.fillRect(50 * xScale, 50, (dCols - 50) * xScale, 50)
+
     for (const h of houses) {
       if (h.status !== 'occupied') continue
       const z = ZONES[h.zone as keyof typeof ZONES]
       if (!z) continue
       ctx.fillStyle = z.color
-      ctx.fillRect(h.col, h.row, h.width ?? 1, h.height ?? 1)
+      ctx.fillRect(h.col * xScale, h.row, (h.width ?? 1) * xScale, h.height ?? 1)
     }
-    // 현재 뷰포트 위치 표시 (1px = 1 grid cell, CELL=10px)
+    // 현재 뷰포트 위치 표시
     if (mapViewport) {
       const { scale, offset, containerW, containerH } = mapViewport
-      const CELL = 10
-      const rx = -offset.x / (scale * CELL)
+      const rx = -offset.x / (scale * CELL) * xScale
       const ry = -offset.y / (scale * CELL)
-      const rw = containerW / (scale * CELL)
+      const rw = containerW / (scale * CELL) * xScale
       const rh = containerH / (scale * CELL)
       ctx.strokeStyle = 'rgba(255,255,255,0.85)'
       ctx.lineWidth = 1.5
