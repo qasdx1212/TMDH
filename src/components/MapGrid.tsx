@@ -197,6 +197,20 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
     setTerrainReady(true)
   }, [])
 
+  // 마운트 시 맵을 뷰포트에 꽉 차게 자동 fit
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+    const rect = container.getBoundingClientRect()
+    const fitScale = Math.min(rect.width / W, rect.height / H)
+    const nx = (rect.width - W * fitScale) / 2
+    const ny = (rect.height - H * fitScale) / 2
+    scaleRef.current = fitScale
+    lastOffset.current = { x: nx, y: ny }
+    setScale(fitScale)
+    setOffset({ x: nx, y: ny })
+  }, [])
+
   const toGrid = useCallback((clientX: number, clientY: number) => {
     const canvas = canvasRef.current
     if (!canvas) return null
