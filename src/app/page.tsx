@@ -29,6 +29,7 @@ export default function Home() {
   const zoomOutRef = useRef<(() => void) | null>(null)
   const fitViewRef = useRef<(() => void) | null>(null)
   const deepLinkProcessed = useRef(false)
+  const [mapViewport, setMapViewport] = useState<{ scale: number; offset: { x: number; y: number }; containerW: number; containerH: number } | null>(null)
 
   // Escape키로 모든 팝업 닫기
   useEffect(() => {
@@ -113,7 +114,7 @@ export default function Home() {
   }, [openApply])
 
   const handleAreaSelect = useCallback(({ col, row, width, height }: { col: number; row: number; width: number; height: number }) => {
-    const zone = getZone(col + Math.floor(width / 2), row + Math.floor(height / 2))
+    const zone = getZone(col, row)
     const prefix = { neon:'N', riverside:'R', oldtown:'O', artdistrict:'A' }[zone]
     const cell: CellData = {
       id: '', address: `${prefix}-${String(row * 100 + col).padStart(4, '0')}`,
@@ -193,11 +194,12 @@ export default function Home() {
             onViewCell={setSelectedCell}
             onEditCell={(cell) => { setSelectedCell(null); openApply(cell) }}
             onVacateCell={handleVacate}
+            onViewportChange={setMapViewport}
           />
         )}
       </div>
 
-      <StatsPanel houses={houses} />
+      <StatsPanel houses={houses} mapViewport={mapViewport} />
 
       {selectedCell && (
         <HousePopup

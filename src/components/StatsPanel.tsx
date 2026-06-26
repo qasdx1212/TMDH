@@ -7,6 +7,7 @@ import type { CellData } from '@/types/cell'
 
 interface StatsPanelProps {
   houses: CellData[]
+  mapViewport?: { scale: number; offset: { x: number; y: number }; containerW: number; containerH: number } | null
 }
 
 interface RecentHouse {
@@ -17,7 +18,7 @@ interface RecentHouse {
   occupied_at: string | null
 }
 
-export default function StatsPanel({ houses }: StatsPanelProps) {
+export default function StatsPanel({ houses, mapViewport }: StatsPanelProps) {
   const [recentHouses, setRecentHouses] = useState<RecentHouse[]>([])
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const donutRef = useRef<HTMLCanvasElement>(null)
@@ -40,7 +41,7 @@ export default function StatsPanel({ houses }: StatsPanelProps) {
       .then(({ data }) => setRecentHouses((data ?? []) as RecentHouse[]))
   }, [houses])
 
-  // 미니맵
+  // 미니맵 (뷰포트 표시 포함)
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -59,7 +60,21 @@ export default function StatsPanel({ houses }: StatsPanelProps) {
       ctx.fillStyle = z.color
       ctx.fillRect(h.col, h.row, h.width ?? 1, h.height ?? 1)
     }
-  }, [houses])
+    // 현재 뷰포트 위치 표시 (1px = 1 grid cell, CELL=10px)
+    if (mapViewport) {
+      const { scale, offset, containerW, containerH } = mapViewport
+      const CELL = 10
+      const rx = -offset.x / (scale * CELL)
+      const ry = -offset.y / (scale * CELL)
+      const rw = containerW / (scale * CELL)
+      const rh = containerH / (scale * CELL)
+      ctx.strokeStyle = 'rgba(255,255,255,0.85)'
+      ctx.lineWidth = 1.5
+      ctx.strokeRect(rx, ry, rw, rh)
+      ctx.fillStyle = 'rgba(255,255,255,0.08)'
+      ctx.fillRect(rx, ry, rw, rh)
+    }
+  }, [houses, mapViewport])
 
   // 도넛 차트
   useEffect(() => {

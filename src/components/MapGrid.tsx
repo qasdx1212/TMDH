@@ -21,6 +21,7 @@ interface MapGridProps {
   onViewCell?: (cell: CellData) => void
   onEditCell?: (cell: CellData) => void
   onVacateCell?: (cell: CellData) => void
+  onViewportChange?: (info: { scale: number; offset: { x: number; y: number }; containerW: number; containerH: number }) => void
 }
 
 const CELL = 10
@@ -102,7 +103,7 @@ function buildTerrainCanvas(): HTMLCanvasElement {
   return tc
 }
 
-export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds, activeZone, centerTarget, zoomInRef, zoomOutRef, fitViewRef, isAdmin, onViewCell, onEditCell, onVacateCell }: MapGridProps) {
+export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds, activeZone, centerTarget, zoomInRef, zoomOutRef, fitViewRef, isAdmin, onViewCell, onEditCell, onVacateCell, onViewportChange }: MapGridProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState(1)
@@ -137,6 +138,15 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
 
   // keep scaleRef in sync
   useEffect(() => { scaleRef.current = scale }, [scale])
+
+  const onViewportChangeRef = useRef(onViewportChange)
+  useEffect(() => { onViewportChangeRef.current = onViewportChange }, [onViewportChange])
+  useEffect(() => {
+    const c = containerRef.current
+    if (!c) return
+    const { width: cw, height: ch } = c.getBoundingClientRect()
+    onViewportChangeRef.current?.({ scale, offset, containerW: cw, containerH: ch })
+  }, [scale, offset])
 
   const clampOffset = useCallback((x: number, y: number, s: number) => {
     const c = containerRef.current
@@ -484,11 +494,15 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       const c2=Math.max(selectStart.current.col,selectEnd.current.col)
       const r1=Math.min(selectStart.current.row,selectEnd.current.row)
       const r2=Math.max(selectStart.current.row,selectEnd.current.row)
-      let hasOccupied = false
-      outer: for (let c=c1;c<=c2;c++) for (let r=r1;r<=r2;r++) if (houseMap.current.has(`${c},${r}`)) { hasOccupied=true; break outer }
       setSelection(null); isSelecting.current = false
-      if (hasOccupied) { setBlockMsg('선택 영역에 이미 입주된 칸이 있어요 🏠'); setTimeout(()=>setBlockMsg(''),2500) }
-      else onAreaSelect({ col:c1, row:r1, width:c2-c1+1, height:r2-r1+1 })
+      const crossesZone = (c1 < 50 && c2 >= 50) || (r1 < 50 && r2 >= 50)
+      if (crossesZone) { setBlockMsg('구역 경계를 넘는 선택은 불가해요 🗺️'); setTimeout(()=>setBlockMsg(''),2500) }
+      else {
+        let hasOccupied = false
+        outer: for (let c=c1;c<=c2;c++) for (let r=r1;r<=r2;r++) if (houseMap.current.has(`${c},${r}`)) { hasOccupied=true; break outer }
+        if (hasOccupied) { setBlockMsg('선택 영역에 이미 입주된 칸이 있어요 🏠'); setTimeout(()=>setBlockMsg(''),2500) }
+        else onAreaSelect({ col:c1, row:r1, width:c2-c1+1, height:r2-r1+1 })
+      }
     }
     selectStart.current = null; selectEnd.current = null
   }, [toGrid, onCellClick, onAreaSelect])

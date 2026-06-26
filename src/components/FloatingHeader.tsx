@@ -4,10 +4,10 @@ import { useState, useRef, useEffect } from 'react'
 import type { CellData } from '@/types/cell'
 
 const LEGEND = [
-  { color: '#22c55e', label: '내 집' },
-  { color: '#f97316', label: '관심 지역' },
-  { color: '#3b82f6', label: '판매중' },
-  { color: '#6366f1', label: '분양 완료' },
+  { color: '#c084fc', label: '네온 스트리트', zone: 'neon' },
+  { color: '#34d399', label: '리버사이드', zone: 'riverside' },
+  { color: '#fbbf24', label: '올드타운', zone: 'oldtown' },
+  { color: '#f87171', label: '아트 디스트릭트', zone: 'artdistrict' },
 ]
 
 interface FloatingHeaderProps {
@@ -29,12 +29,14 @@ interface FloatingHeaderProps {
 
 export default function FloatingHeader({
   occupiedCount, totalCells, totalDonation, userId, isAdmin,
+  activeZone, onZoneFilter,
   onApplyClick, onMyHouseClick,
   houses, onSearchSelect,
   onZoomIn, onZoomOut, onFitView,
 }: FloatingHeaderProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchFocused, setSearchFocused] = useState(false)
+  const [alarmMsg, setAlarmMsg] = useState(false)
   const searchRef = useRef<HTMLDivElement>(null)
   const occupancyRate = ((occupiedCount / totalCells) * 100).toFixed(1)
 
@@ -152,11 +154,21 @@ export default function FloatingHeader({
             display:'flex', alignItems:'center', gap:6, whiteSpace:'nowrap',
           }}>✏️ 입주 신청하기</button>
 
-          <button style={{
-            width:40, height:40, borderRadius:8, border:'2px solid #4a3010',
-            background:'rgba(255,255,255,0.06)', color:'#a08060', fontSize:18, cursor:'pointer',
-            display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
-          }}>🔔</button>
+          <div style={{ position:'relative', flexShrink:0 }}>
+            <button onClick={() => { setAlarmMsg(true); setTimeout(() => setAlarmMsg(false), 2000) }} style={{
+              width:40, height:40, borderRadius:8, border:'2px solid #4a3010',
+              background:'rgba(255,255,255,0.06)', color:'#a08060', fontSize:18, cursor:'pointer',
+              display:'flex', alignItems:'center', justifyContent:'center',
+            }}>🔔</button>
+            {alarmMsg && (
+              <div style={{
+                position:'absolute', top:'calc(100% + 6px)', right:0, whiteSpace:'nowrap',
+                background:'#2a1a08', border:'1.5px solid #8b6914', borderRadius:8,
+                padding:'8px 14px', fontSize:11, color:'#c8a96e', zIndex:400,
+                boxShadow:'0 4px 16px rgba(0,0,0,0.5)',
+              }}>🔔 알림 기능 준비 중이에요</div>
+            )}
+          </div>
 
           {userId && (
             <button onClick={onMyHouseClick} style={{
@@ -188,14 +200,28 @@ export default function FloatingHeader({
         display:'flex', alignItems:'center', justifyContent:'space-between',
         padding:'0 16px 8px', borderTop:'1px solid #4a3010', gap:12,
       }}>
-        {/* 지도 범례 */}
-        <div style={{ display:'flex', alignItems:'center', gap:16 }} className="hide-on-mobile">
-          {LEGEND.map(({ color, label }) => (
-            <div key={label} style={{ display:'flex', alignItems:'center', gap:5 }}>
-              <div style={{ width:10, height:10, borderRadius:3, background:color, flexShrink:0 }} />
-              <span style={{ fontSize:11, color:'#a08060', whiteSpace:'nowrap' }}>{label}</span>
-            </div>
-          ))}
+        {/* 지도 범례 (클릭하면 구역 필터) */}
+        <div style={{ display:'flex', alignItems:'center', gap:8 }} className="hide-on-mobile">
+          {LEGEND.map(({ color, label, zone }) => {
+            const isActive = activeZone === zone
+            return (
+              <button key={label} onClick={() => onZoneFilter(isActive ? null : zone)} style={{
+                display:'flex', alignItems:'center', gap:5,
+                padding:'3px 8px', borderRadius:6, cursor:'pointer',
+                background: isActive ? color + '22' : 'transparent',
+                border: isActive ? `1.5px solid ${color}` : '1.5px solid transparent',
+                transition:'all 0.12s',
+              }}>
+                <div style={{ width:8, height:8, borderRadius:2, background:color, flexShrink:0 }} />
+                <span style={{ fontSize:10, color: isActive ? color : '#a08060', whiteSpace:'nowrap', fontWeight: isActive ? 700 : 400 }}>{label}</span>
+              </button>
+            )
+          })}
+          {activeZone && (
+            <button onClick={() => onZoneFilter(null)} style={{
+              fontSize:10, color:'#78614a', background:'transparent', border:'none', cursor:'pointer', padding:'3px 4px',
+            }}>✕ 필터 해제</button>
+          )}
         </div>
 
         {/* 모바일 검색 */}
