@@ -41,16 +41,36 @@ function buildTerrainCanvas(dCols: number, colOff: number): HTMLCanvasElement {
   const ctx = tc.getContext('2d')!
   ctx.save(); ctx.scale(RS, RS)
 
-  // draw all cells (active zone + decorative outer)
+  // draw all cells (active zone + seamless outer extension)
   for (let dc = 0; dc < dCols; dc++) {
     const ac = dc - colOff  // active col (-colOff … dCols-colOff-1)
     for (let r = 0; r < GRID_ROWS; r++) {
       const px = dc * CELL, py = r * CELL
       if (ac < 0 || ac >= GRID_COLS) {
-        // decorative outer terrain
+        // outer terrain: blend naturally with adjacent zones
         const n = rng(dc, r)
-        ctx.fillStyle = n < 0.5 ? '#0c0703' : '#100904'
-        ctx.fillRect(px, py, CELL, CELL)
+        let color: string
+        if (r < 50) {
+          if (ac < 0) {
+            // left-top: Neon extension
+            if (dc % 9 === 0 || r % 9 === 0) { color = '#150c20' }
+            else { const bn = rng(Math.floor(dc/3), Math.floor(r/3), 1); color = bn < 0.33 ? '#2d1a3e' : bn < 0.67 ? '#261535' : '#322046' }
+          } else {
+            // right-top: Riverside extension (water)
+            color = n < 0.4 ? '#154060' : n < 0.7 ? '#1a4e72' : '#122e4a'
+          }
+        } else {
+          if (ac < 0) {
+            // left-bottom: Oldtown extension
+            const sn = rng(Math.floor(dc/2), Math.floor(r/2), 2)
+            color = sn < 0.33 ? '#4a3520' : sn < 0.67 ? '#5a4228' : '#3e2c18'
+          } else {
+            // right-bottom: Art District extension
+            const bn = rng(Math.floor(dc/4), Math.floor(r/4), 3)
+            color = n < 0.04 ? '#5a2525' : (bn < 0.4 ? '#3d1a1a' : bn < 0.75 ? '#4a2020' : '#33181a')
+          }
+        }
+        ctx.fillStyle = color; ctx.fillRect(px, py, CELL, CELL)
         continue
       }
       const n = rng(ac, r)
@@ -75,7 +95,7 @@ function buildTerrainCanvas(dCols: number, colOff: number): HTMLCanvasElement {
     }
   }
 
-  // zone grid lines (shifted by colOff)
+  // zone grid lines for active area
   Object.entries(ZONES).forEach(([, zone]) => {
     ctx.strokeStyle = zone.gridColor; ctx.lineWidth = 0.4
     for (let c = zone.colMin; c <= zone.colMax+1; c++) {
@@ -85,6 +105,42 @@ function buildTerrainCanvas(dCols: number, colOff: number): HTMLCanvasElement {
       ctx.beginPath(); ctx.moveTo((zone.colMin+colOff)*CELL, r*CELL); ctx.lineTo((zone.colMax+1+colOff)*CELL, r*CELL); ctx.stroke()
     }
   })
+  // faint grid for outer columns (top half=Neon, bottom half=Riverside/Oldtown/ArtDistrict)
+  if (colOff > 0) {
+    ctx.lineWidth = 0.3
+    // left outer - Neon top, Oldtown bottom
+    ctx.strokeStyle = ZONES.neon.gridColor
+    for (let dc = 0; dc < colOff; dc += 1) {
+      if (dc % 1 !== 0) continue
+      ctx.beginPath(); ctx.moveTo(dc*CELL, 0); ctx.lineTo(dc*CELL, 50*CELL); ctx.stroke()
+    }
+    for (let r = 0; r <= 50; r++) {
+      ctx.beginPath(); ctx.moveTo(0, r*CELL); ctx.lineTo(colOff*CELL, r*CELL); ctx.stroke()
+    }
+    ctx.strokeStyle = ZONES.oldtown.gridColor
+    for (let dc = 0; dc < colOff; dc++) {
+      ctx.beginPath(); ctx.moveTo(dc*CELL, 50*CELL); ctx.lineTo(dc*CELL, H); ctx.stroke()
+    }
+    for (let r = 50; r <= GRID_ROWS; r++) {
+      ctx.beginPath(); ctx.moveTo(0, r*CELL); ctx.lineTo(colOff*CELL, r*CELL); ctx.stroke()
+    }
+    // right outer - Riverside top, ArtDistrict bottom
+    const rx = (colOff+GRID_COLS)*CELL
+    ctx.strokeStyle = ZONES.riverside.gridColor
+    for (let dc = colOff+GRID_COLS; dc < dCols; dc++) {
+      ctx.beginPath(); ctx.moveTo(dc*CELL, 0); ctx.lineTo(dc*CELL, 50*CELL); ctx.stroke()
+    }
+    for (let r = 0; r <= 50; r++) {
+      ctx.beginPath(); ctx.moveTo(rx, r*CELL); ctx.lineTo(dCols*CELL, r*CELL); ctx.stroke()
+    }
+    ctx.strokeStyle = ZONES.artdistrict.gridColor
+    for (let dc = colOff+GRID_COLS; dc < dCols; dc++) {
+      ctx.beginPath(); ctx.moveTo(dc*CELL, 50*CELL); ctx.lineTo(dc*CELL, H); ctx.stroke()
+    }
+    for (let r = 50; r <= GRID_ROWS; r++) {
+      ctx.beginPath(); ctx.moveTo(rx, r*CELL); ctx.lineTo(dCols*CELL, r*CELL); ctx.stroke()
+    }
+  }
 
   // trees in Riverside
   for (let ac = 50; ac <= 78; ac++) {
@@ -117,21 +173,6 @@ function buildTerrainCanvas(dCols: number, colOff: number): HTMLCanvasElement {
   ctx.strokeStyle='#6b4c2a'; ctx.lineWidth=2
   ctx.beginPath(); ctx.moveTo((50+colOff)*CELL,0); ctx.lineTo((50+colOff)*CELL,H); ctx.stroke()
   ctx.beginPath(); ctx.moveTo(colOff*CELL,50*CELL); ctx.lineTo((GRID_COLS+colOff)*CELL,50*CELL); ctx.stroke()
-
-  // active zone border
-  ctx.strokeStyle='#6b4c2a'; ctx.lineWidth=3
-  ctx.strokeRect(colOff*CELL, 0, GRID_COLS*CELL, H)
-
-  // outer vignette
-  if (colOff > 0) {
-    const gL = ctx.createLinearGradient(0,0,colOff*CELL,0)
-    gL.addColorStop(0,'rgba(0,0,0,0.6)'); gL.addColorStop(1,'rgba(0,0,0,0)')
-    ctx.fillStyle=gL; ctx.fillRect(0,0,colOff*CELL,H)
-
-    const gR = ctx.createLinearGradient((colOff+GRID_COLS)*CELL,0,dCols*CELL,0)
-    gR.addColorStop(0,'rgba(0,0,0,0)'); gR.addColorStop(1,'rgba(0,0,0,0.6)')
-    ctx.fillStyle=gR; ctx.fillRect((colOff+GRID_COLS)*CELL,0,(dCols-colOff-GRID_COLS)*CELL,H)
-  }
 
   // zone labels
   Object.entries(ZONES).forEach(([, zone]) => {
