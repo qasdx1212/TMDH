@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { getZone } from '@/lib/constants'
+import { hashPwd } from '@/lib/hash'
 import type { CellData } from '@/types/cell'
 import MapGrid from '@/components/MapGrid'
 import FloatingHeader from '@/components/FloatingHeader'
@@ -79,7 +80,7 @@ export default function Home() {
   const fetchHouses = useCallback(async () => {
     const { data } = await supabase
       .from('houses')
-      .select('id, address, col, row, width, height, zone, status, name, nickname, description, link_url, exterior_image_url, interior_image_url, border_effect, like_count, visit_count, occupied_at, expires_at, is_permanent, parent_address, is_visible')
+      .select('id, address, col, row, width, height, zone, status, name, nickname, description, link_url, exterior_image_url, interior_image_url, border_effect, like_count, visit_count, occupied_at, expires_at, is_permanent, parent_address, is_visible, has_password')
       .neq('status', 'available')
     setHouses((data ?? []) as CellData[])
     setLoading(false)
@@ -131,6 +132,14 @@ export default function Home() {
   }, [fetchHouses])
 
   const handleVacate = useCallback(async (cell: CellData) => {
+    // 비밀번호 보호된 집은 context menu 경로도 검증 (admin 제외)
+    if (!isAdmin && cell.has_password) {
+      const pwd = window.prompt('비밀번호를 입력해주세요:')
+      if (!pwd) return
+      const hash = await hashPwd(pwd)
+      const { data } = await supabase.rpc('verify_house_password', { house_address: cell.address, pwd_hash: hash })
+      if (!data) { alert('비밀번호가 틀렸어요 🔒'); return }
+    }
     if (!confirm(`"${cell.name ?? cell.address}"에서 퇴거하시겠어요?\n이 작업은 되돌릴 수 없습니다.`)) return
     await supabase.from('houses').update({
       user_id: null, name: null, nickname: null, description: null,

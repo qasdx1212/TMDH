@@ -24,4 +24,5 @@ export interface CellData {
   is_permanent: boolean
   parent_address?: string | null
   is_visible?: boolean
+  has_password?: boolean | null
 }

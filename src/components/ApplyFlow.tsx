@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { ZONES, DURATIONS, PERMANENT_DAYS, calcPrice, formatKRW, getAddress } from '@/lib/constants'
+import { hashPwd } from '@/lib/hash'
 import type { CellData } from '@/types/cell'
 
 interface ApplyFlowProps {
@@ -26,6 +27,9 @@ interface FormData {
   interiorPreview: string | null
   days: number
   borderEffect: 'none' | 'neon'
+  password: string
+  passwordConfirm: string
+  removePassword: boolean
 }
 
 const STEPS = ['위치 확인', '집 정보', '외관 이미지', '신청 확인', '결제']
@@ -45,6 +49,9 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
     interiorPreview: isEdit ? (selectedCell.interior_image_url ?? null) : null,
     days: 30,
     borderEffect: isEdit ? (selectedCell.border_effect ?? 'none') : 'none',
+    password: '',
+    passwordConfirm: '',
+    removePassword: false,
   })
   const [loading, setLoading] = useState(false)
   const [payMethod, setPayMethod] = useState('card')
@@ -119,11 +126,19 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
       if (form.exteriorImage) exteriorUrl = await uploadImage(form.exteriorImage, `${userId}/exterior-${selectedCell.address}.${form.exteriorImage.name.split('.').pop()}`)
       let interiorUrl: string | null = selectedCell.interior_image_url ?? null
       if (form.interiorImage) interiorUrl = await uploadImage(form.interiorImage, `${userId}/interior-${selectedCell.address}.${form.interiorImage.name.split('.').pop()}`)
+
+      const pwdFields = form.removePassword
+        ? { password_hash: null, has_password: false }
+        : form.password
+          ? { password_hash: await hashPwd(form.password), has_password: true }
+          : {}
+
       const { error } = await supabase.from('houses').update({
         name: form.name || null, nickname: form.nickname || null,
         description: form.description || null, link_url: form.linkUrl || null,
         exterior_image_url: exteriorUrl, interior_image_url: interiorUrl,
         border_effect: form.borderEffect,
+        ...pwdFields,
       }).eq('address', selectedCell.address)
       if (error) { setErrorMsg(`저장 실패: ${error.message}`); return }
       setShowSuccess(true)
@@ -210,6 +225,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
       const occupiedAt = new Date().toISOString()
       const col = selectedCell.col, row = selectedCell.row
       const width = selectedCell.width ?? 1, height = selectedCell.height ?? 1
+      const pwdHash = form.password ? await hashPwd(form.password) : null
 
       const { error } = await supabase.from('houses').update({
         user_id: userId, name: form.name || null, nickname: form.nickname || null,
@@ -218,6 +234,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
         border_effect: form.borderEffect, status: 'occupied', is_visible: true,
         width, height, occupied_at: occupiedAt, expires_at: expiresAt,
         is_permanent: form.days === PERMANENT_DAYS,
+        password_hash: pwdHash, has_password: !!pwdHash,
       }).eq('address', selectedCell.address)
       if (error) { setErrorMsg(`저장 실패: ${error.message}`); return }
 
@@ -251,6 +268,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
 
   const canNext = () => {
     if (step === 2 && !form.name.trim()) return false
+    if (step === 2 && form.password && form.password !== form.passwordConfirm) return false
     return true
   }
 
@@ -422,6 +440,48 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                   <input style={inputStyle} placeholder="사용할 닉네임" maxLength={7} value={form.nickname} onChange={e => setForm(f => ({ ...f, nickname: e.target.value }))} />
                   <CharCount cur={form.nickname.length} max={7} />
                 </Field>
+
+                {/* 비밀번호 설정 */}
+                <div style={{ marginTop:8, padding:'14px', borderRadius:10, background:'#fffbeb', border:'1.5px solid #fde68a' }}>
+                  <div style={{ fontSize:13, fontWeight:800, color:'#92400e', marginBottom:6 }}>🔑 비밀번호 설정 <span style={{ fontSize:11, fontWeight:400, color:'#a08060' }}>(선택사항)</span></div>
+                  <div style={{ fontSize:11, color:'#a08060', marginBottom:10, lineHeight:1.6 }}>
+                    설정 시 수정·삭제할 때 비밀번호가 필요해요.
+                  </div>
+                  {isEdit && selectedCell.has_password && (
+                    <label style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10, cursor:'pointer' }}>
+                      <input type="checkbox" checked={form.removePassword} onChange={e => setForm(f => ({ ...f, removePassword: e.target.checked, password:'', passwordConfirm:'' }))} />
+                      <span style={{ fontSize:12, color:'#ef4444', fontWeight:600 }}>기존 비밀번호 삭제</span>
+                    </label>
+                  )}
+                  {!form.removePassword && (
+                    <>
+                      <input
+                        type="password"
+                        style={{ ...inputStyle, marginBottom:8 }}
+                        placeholder={isEdit && selectedCell.has_password ? '새 비밀번호 (변경하려면 입력)' : '비밀번호 입력'}
+                        value={form.password}
+                        onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                      />
+                      {form.password && (
+                        <>
+                          <input
+                            type="password"
+                            style={{ ...inputStyle, borderColor: form.passwordConfirm && form.password !== form.passwordConfirm ? '#ef4444' : '#d4b483' }}
+                            placeholder="비밀번호 확인"
+                            value={form.passwordConfirm}
+                            onChange={e => setForm(f => ({ ...f, passwordConfirm: e.target.value }))}
+                          />
+                          {form.passwordConfirm && form.password !== form.passwordConfirm && (
+                            <div style={{ fontSize:11, color:'#ef4444', marginTop:4 }}>비밀번호가 일치하지 않아요</div>
+                          )}
+                          {form.passwordConfirm && form.password === form.passwordConfirm && (
+                            <div style={{ fontSize:11, color:'#22c55e', marginTop:4 }}>✓ 비밀번호 일치</div>
+                          )}
+                        </>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
 
               {/* 오른쪽: 라이브 미리보기 */}

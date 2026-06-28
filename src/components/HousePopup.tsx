@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { ZONES } from '@/lib/constants'
+import { hashPwd } from '@/lib/hash'
 import type { CellData } from '@/types/cell'
 import ReportModal from './ReportModal'
 
@@ -24,6 +25,10 @@ export default function HousePopup({ house, currentUserId, isAdmin, isOwnHouse, 
   const [likeLoading, setLikeLoading] = useState(false)
   const [copied, setCopied] = useState(false)
   const [showReport, setShowReport] = useState(false)
+  const [pwdModal, setPwdModal] = useState<'edit' | 'vacate' | null>(null)
+  const [pwdInput, setPwdInput] = useState('')
+  const [pwdError, setPwdError] = useState('')
+  const [pwdLoading, setPwdLoading] = useState(false)
 
   const zone = ZONES[house.zone]
   const isAvailable = house.status === 'available'
@@ -70,6 +75,32 @@ export default function HousePopup({ house, currentUserId, isAdmin, isOwnHouse, 
       }).eq('parent_address', house.address)
     }
     onAdminDelete?.()
+  }
+
+  const requirePassword = (action: 'edit' | 'vacate') => {
+    if (isAdmin || !house.has_password) {
+      if (action === 'edit') { onEdit?.(house); onClose() }
+      else onVacate?.(house)
+    } else {
+      setPwdInput(''); setPwdError(''); setPwdModal(action)
+    }
+  }
+
+  const handlePwdSubmit = async () => {
+    if (!pwdInput) return
+    setPwdLoading(true); setPwdError('')
+    try {
+      const hash = await hashPwd(pwdInput)
+      const { data } = await supabase.rpc('verify_house_password', { house_address: house.address, pwd_hash: hash })
+      if (data) {
+        const action = pwdModal; setPwdModal(null); setPwdInput('')
+        if (action === 'edit') { onEdit?.(house); onClose() }
+        else if (action === 'vacate') onVacate?.(house)
+      } else {
+        setPwdError('비밀번호가 틀렸어요 🔒')
+      }
+    } catch { setPwdError('오류가 발생했습니다.') }
+    finally { setPwdLoading(false) }
   }
 
   const handleShare = () => {
@@ -205,9 +236,11 @@ export default function HousePopup({ house, currentUserId, isAdmin, isOwnHouse, 
           {/* 내 집 관리 바 */}
           {isOwnHouse && !isAvailable && (
             <div style={{ padding: '8px 16px', background: '#0f2a1a', borderTop: '2px solid #2f9e44', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 11, color: '#34d399', fontWeight: 700, flex: 1 }}>🏠 내 집</span>
-              <button onClick={() => { onEdit?.(house); onClose() }} style={{ padding: '6px 16px', borderRadius: 6, background: '#1a4a30', border: '1.5px solid #2f9e44', color: '#34d399', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>✏️ 수정</button>
-              <button onClick={() => onVacate?.(house)} style={{ padding: '6px 14px', borderRadius: 6, background: '#fef2f2', border: '1.5px solid #ef444466', color: '#ef4444', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>🗑️ 퇴거</button>
+              <span style={{ fontSize: 11, color: '#34d399', fontWeight: 700, flex: 1 }}>
+                🏠 내 집 {house.has_password && <span style={{ fontSize: 10, color: '#fbbf24' }}>🔑</span>}
+              </span>
+              <button onClick={() => requirePassword('edit')} style={{ padding: '6px 16px', borderRadius: 6, background: '#1a4a30', border: '1.5px solid #2f9e44', color: '#34d399', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>✏️ 수정</button>
+              <button onClick={() => requirePassword('vacate')} style={{ padding: '6px 14px', borderRadius: 6, background: '#fef2f2', border: '1.5px solid #ef444466', color: '#ef4444', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>🗑️ 퇴거</button>
             </div>
           )}
 
@@ -227,6 +260,57 @@ export default function HousePopup({ house, currentUserId, isAdmin, isOwnHouse, 
           </div>
         </div>
       </div>
+
+      {/* 비밀번호 확인 모달 */}
+      {pwdModal && (
+        <div style={{ position:'fixed', inset:0, zIndex:700, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.75)', backdropFilter:'blur(4px)' }}>
+          <div style={{
+            background:'#fdf6e3', borderRadius:12, padding:'28px 24px', width:320, maxWidth:'90vw',
+            border:'3px solid #7a4f1a', boxShadow:'0 0 0 2px #e8c97a, 0 16px 48px rgba(0,0,0,0.6)',
+            fontFamily:'"Noto Sans KR",-apple-system,sans-serif',
+          }}>
+            <div style={{ fontSize:40, textAlign:'center', marginBottom:12 }}>🔑</div>
+            <div style={{ fontSize:16, fontWeight:900, color:'#3d2a18', textAlign:'center', marginBottom:6 }}>
+              {pwdModal === 'edit' ? '수정하기' : '퇴거하기'}
+            </div>
+            <div style={{ fontSize:12, color:'#78614a', textAlign:'center', marginBottom:20, lineHeight:1.7 }}>
+              이 집에 설정된 비밀번호를 입력해주세요.
+            </div>
+            <input
+              type="password"
+              autoFocus
+              value={pwdInput}
+              onChange={e => { setPwdInput(e.target.value); setPwdError('') }}
+              onKeyDown={e => e.key === 'Enter' && handlePwdSubmit()}
+              placeholder="비밀번호 입력"
+              style={{
+                width:'100%', padding:'10px 12px', borderRadius:8, boxSizing:'border-box',
+                border:`2px solid ${pwdError ? '#ef4444' : '#d4b483'}`,
+                background:'#fdf6e3', color:'#3d2a18', fontSize:14, outline:'none', fontFamily:'inherit',
+              }}
+            />
+            {pwdError && <div style={{ fontSize:12, color:'#ef4444', marginTop:6, textAlign:'center' }}>{pwdError}</div>}
+            <div style={{ display:'flex', gap:10, marginTop:18 }}>
+              <button onClick={() => setPwdModal(null)} style={{ flex:1, padding:'10px', borderRadius:8, border:'2px solid #c8a96e', background:'#f5ead5', color:'#78614a', fontSize:13, fontWeight:600, cursor:'pointer' }}>
+                취소
+              </button>
+              <button
+                onClick={handlePwdSubmit}
+                disabled={!pwdInput || pwdLoading}
+                style={{
+                  flex:2, padding:'10px', borderRadius:8,
+                  border:`2px solid ${pwdModal === 'vacate' ? '#ef4444' : '#2f9e44'}`,
+                  background: pwdModal === 'vacate' ? '#ef4444' : '#2f9e44',
+                  color:'#fff', fontSize:13, fontWeight:800, cursor: !pwdInput || pwdLoading ? 'default' : 'pointer',
+                  opacity: !pwdInput || pwdLoading ? 0.6 : 1,
+                }}
+              >
+                {pwdLoading ? '확인 중...' : pwdModal === 'vacate' ? '🗑️ 퇴거하기' : '✏️ 수정하기'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 신고 모달 */}
       {showReport && currentUserId && (
