@@ -1,10 +1,10 @@
 'use client'
 
 import { useRef, useEffect, useCallback, useState } from 'react'
-import { GRID_ROWS, ZONES, getZone } from '@/lib/constants'
+import { GRID_ROWS, ZONES } from '@/lib/constants'
 import type { CellData } from '@/types/cell'
 
-interface Selection { col: number; row: number; width: number; height: number }
+interface Selection { col: number; row: number; width: number; height: number; zone: string }
 
 interface MapGridProps {
   houses: CellData[]
@@ -30,42 +30,56 @@ const H = GRID_ROWS * CELL   // 1000px fixed height
 const RS = 2
 const DRAG_THRESHOLD = 4
 
+// Zone helpers — use dynamic half (dCols/2) so all 4 zones are equal width
+const ZONE_PREFIX: Record<string, string> = { neon:'N', riverside:'R', oldtown:'O', artdistrict:'A' }
+function zoneAt(col: number, row: number, half: number): string {
+  if (col < half && row < 50) return 'neon'
+  if (col >= half && row < 50) return 'riverside'
+  if (col < half && row >= 50) return 'oldtown'
+  return 'artdistrict'
+}
+
 const rng = (x: number, y: number, s = 0) => {
   const n = Math.sin(x * 127.1 + y * 311.7 + s * 74.3) * 43758.5453
   return n - Math.floor(n)
 }
 
 // dCols = total purchasable columns (computed to fill viewport width)
+// half = horizontal zone boundary = Math.floor(dCols/2), splits left/right zones equally
 function buildTerrainCanvas(dCols: number): HTMLCanvasElement {
+  const half = Math.floor(dCols / 2)
   const tc = document.createElement('canvas')
   tc.width = dCols * CELL * RS
   tc.height = H * RS
   const ctx = tc.getContext('2d')!
   ctx.save(); ctx.scale(RS, RS)
 
+  // river position relative to half (about 32 cols into riverside zone)
+  const riverRelX = 32
+
   for (let c = 0; c < dCols; c++) {
     for (let r = 0; r < GRID_ROWS; r++) {
       const px = c * CELL, py = r * CELL
       const n = rng(c, r)
       let color: string
-      if (c < 50 && r < 50) {
-        // Neon
+      if (c < half && r < 50) {
+        // Neon — left top
         if (c % 9 === 0 || r % 9 === 0) { color = '#150c20' }
         else { const bn = rng(Math.floor(c/3), Math.floor(r/3), 1); color = bn < 0.33 ? '#2d1a3e' : bn < 0.67 ? '#261535' : '#322046' }
-      } else if (c >= 50 && r < 50) {
-        // Riverside (extended right: same biome continues)
-        const riverX = 82 + Math.floor(Math.sin(r * 0.25) * 4)
-        if (c >= riverX && c < 100) { color = n < 0.4 ? '#154060' : n < 0.7 ? '#1a4e72' : '#122e4a' }
-        else if (c >= riverX - 3 && c < 100) { color = n < 0.5 ? '#2a4a30' : '#233e28' }
-        else if (c < 100) { const path = (c-50)%14===7||r%12===6; color = path ? '#264430' : (n<0.35?'#1a3028':n<0.7?'#1f3a2c':'#243e30') }
-        else { color = n < 0.35 ? '#1a3028' : n < 0.7 ? '#1f3a2c' : '#243e30' }
-      } else if (c < 50 && r >= 50) {
-        // Oldtown
+      } else if (c >= half && r < 50) {
+        // Riverside — right top
+        const riverX = half + riverRelX + Math.floor(Math.sin(r * 0.25) * 4)
+        const rc = c - half  // relative col within riverside
+        if (c >= riverX && c < half + riverRelX + 10) { color = n < 0.4 ? '#154060' : n < 0.7 ? '#1a4e72' : '#122e4a' }
+        else if (c >= riverX - 3 && c < half + riverRelX + 10) { color = n < 0.5 ? '#2a4a30' : '#233e28' }
+        else { const path = rc%14===7||r%12===6; color = path ? '#264430' : (n<0.35?'#1a3028':n<0.7?'#1f3a2c':'#243e30') }
+      } else if (c < half && r >= 50) {
+        // Oldtown — left bottom
         const pathH = (r-50)%8<=1, pathV = c%8===0
         if (pathH||pathV) { color = n<0.5?'#7a5a38':'#8a6840' }
         else { const sn = rng(Math.floor(c/2), Math.floor(r/2), 2); color = sn<0.33?'#4a3520':sn<0.67?'#5a4228':'#3e2c18' }
       } else {
-        // Art District (extended right)
+        // Art District — right bottom
         const bn = rng(Math.floor(c/4), Math.floor(r/4), 3)
         color = n<0.04?'#5a2525':(bn<0.4?'#3d1a1a':bn<0.75?'#4a2020':'#33181a')
       }
@@ -73,51 +87,52 @@ function buildTerrainCanvas(dCols: number): HTMLCanvasElement {
     }
   }
 
-  // grid lines — left zones (neon, oldtown)
+  // grid lines — left zones (neon, oldtown) 0..half
   ctx.lineWidth = 0.4
   ctx.strokeStyle = ZONES.neon.gridColor
-  for (let c = 0; c <= 50; c++) { ctx.beginPath(); ctx.moveTo(c*CELL,0); ctx.lineTo(c*CELL,50*CELL); ctx.stroke() }
-  for (let r = 0; r <= 50; r++) { ctx.beginPath(); ctx.moveTo(0,r*CELL); ctx.lineTo(50*CELL,r*CELL); ctx.stroke() }
+  for (let c = 0; c <= half; c++) { ctx.beginPath(); ctx.moveTo(c*CELL,0); ctx.lineTo(c*CELL,50*CELL); ctx.stroke() }
+  for (let r = 0; r <= 50; r++) { ctx.beginPath(); ctx.moveTo(0,r*CELL); ctx.lineTo(half*CELL,r*CELL); ctx.stroke() }
   ctx.strokeStyle = ZONES.oldtown.gridColor
-  for (let c = 0; c <= 50; c++) { ctx.beginPath(); ctx.moveTo(c*CELL,50*CELL); ctx.lineTo(c*CELL,H); ctx.stroke() }
-  for (let r = 50; r <= GRID_ROWS; r++) { ctx.beginPath(); ctx.moveTo(0,r*CELL); ctx.lineTo(50*CELL,r*CELL); ctx.stroke() }
+  for (let c = 0; c <= half; c++) { ctx.beginPath(); ctx.moveTo(c*CELL,50*CELL); ctx.lineTo(c*CELL,H); ctx.stroke() }
+  for (let r = 50; r <= GRID_ROWS; r++) { ctx.beginPath(); ctx.moveTo(0,r*CELL); ctx.lineTo(half*CELL,r*CELL); ctx.stroke() }
 
-  // grid lines — right zones (riverside, artdistrict) extended to dCols
+  // grid lines — right zones (riverside, artdistrict) half..dCols
   ctx.strokeStyle = ZONES.riverside.gridColor
-  for (let c = 50; c <= dCols; c++) { ctx.beginPath(); ctx.moveTo(c*CELL,0); ctx.lineTo(c*CELL,50*CELL); ctx.stroke() }
-  for (let r = 0; r <= 50; r++) { ctx.beginPath(); ctx.moveTo(50*CELL,r*CELL); ctx.lineTo(dCols*CELL,r*CELL); ctx.stroke() }
+  for (let c = half; c <= dCols; c++) { ctx.beginPath(); ctx.moveTo(c*CELL,0); ctx.lineTo(c*CELL,50*CELL); ctx.stroke() }
+  for (let r = 0; r <= 50; r++) { ctx.beginPath(); ctx.moveTo(half*CELL,r*CELL); ctx.lineTo(dCols*CELL,r*CELL); ctx.stroke() }
   ctx.strokeStyle = ZONES.artdistrict.gridColor
-  for (let c = 50; c <= dCols; c++) { ctx.beginPath(); ctx.moveTo(c*CELL,50*CELL); ctx.lineTo(c*CELL,H); ctx.stroke() }
-  for (let r = 50; r <= GRID_ROWS; r++) { ctx.beginPath(); ctx.moveTo(50*CELL,r*CELL); ctx.lineTo(dCols*CELL,r*CELL); ctx.stroke() }
+  for (let c = half; c <= dCols; c++) { ctx.beginPath(); ctx.moveTo(c*CELL,50*CELL); ctx.lineTo(c*CELL,H); ctx.stroke() }
+  for (let r = 50; r <= GRID_ROWS; r++) { ctx.beginPath(); ctx.moveTo(half*CELL,r*CELL); ctx.lineTo(dCols*CELL,r*CELL); ctx.stroke() }
 
-  // trees
-  for (let c = 50; c <= 78; c++) for (let r = 0; r < 50; r++) {
+  // trees — start of riverside (right zone)
+  for (let c = half; c <= half + 28; c++) for (let r = 0; r < 50; r++) {
     if (rng(c, r, 4) < 0.08) {
       ctx.fillStyle='#2a5235'; ctx.beginPath(); ctx.arc(c*CELL+5,r*CELL+5,3.8,0,Math.PI*2); ctx.fill()
       ctx.fillStyle='#4a7050'; ctx.beginPath(); ctx.arc(c*CELL+4,r*CELL+4,2.2,0,Math.PI*2); ctx.fill()
     }
   }
   // river ripples
-  for (let c = 83; c < Math.min(dCols, 100); c++) for (let r = 0; r < 50; r++) {
-    const riverX = 82+Math.floor(Math.sin(r*0.25)*4)
-    if (c>=riverX&&rng(c,r,5)<0.12) { ctx.fillStyle='rgba(255,255,255,0.07)'; ctx.fillRect(c*CELL+2,r*CELL+4,5,1) }
+  const riverBase = half + riverRelX
+  for (let c = riverBase; c < riverBase + 12; c++) for (let r = 0; r < 50; r++) {
+    if (rng(c,r,5)<0.12) { ctx.fillStyle='rgba(255,255,255,0.07)'; ctx.fillRect(c*CELL+2,r*CELL+4,5,1) }
   }
-  // neon dots
-  for (let c = 0; c < 50; c += 9) for (let r = 0; r < 50; r += 9) {
+  // neon dots — scattered across left zone
+  for (let c = 0; c < half; c += 9) for (let r = 0; r < 50; r += 9) {
     ctx.fillStyle='#c084fc55'; ctx.beginPath(); ctx.arc(c*CELL+1,r*CELL+1,1.5,0,Math.PI*2); ctx.fill()
   }
 
   // zone dividers
   ctx.strokeStyle='#6b4c2a'; ctx.lineWidth=2
-  ctx.beginPath(); ctx.moveTo(50*CELL,0); ctx.lineTo(50*CELL,H); ctx.stroke()
+  ctx.beginPath(); ctx.moveTo(half*CELL,0); ctx.lineTo(half*CELL,H); ctx.stroke()
   ctx.beginPath(); ctx.moveTo(0,50*CELL); ctx.lineTo(dCols*CELL,50*CELL); ctx.stroke()
 
-  // zone labels — right zones centered over full right extent
-  const rightCx = (50 + dCols) / 2
+  // zone labels centered in each quadrant
+  const leftCx = half / 2
+  const rightCx = half + (dCols - half) / 2
   const labels = [
-    { cx: 25, cy: 25, label: ZONES.neon.label, color: ZONES.neon.color },
-    { cx: rightCx, cy: 25, label: ZONES.riverside.label, color: ZONES.riverside.color },
-    { cx: 25, cy: 75, label: ZONES.oldtown.label, color: ZONES.oldtown.color },
+    { cx: leftCx,  cy: 25, label: ZONES.neon.label,        color: ZONES.neon.color },
+    { cx: rightCx, cy: 25, label: ZONES.riverside.label,   color: ZONES.riverside.color },
+    { cx: leftCx,  cy: 75, label: ZONES.oldtown.label,     color: ZONES.oldtown.color },
     { cx: rightCx, cy: 75, label: ZONES.artdistrict.label, color: ZONES.artdistrict.color },
   ]
   labels.forEach(({ cx, cy, label, color }) => {
@@ -317,12 +332,18 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
     })
 
     if (activeZone) {
-      Object.entries(ZONES).forEach(([key, zone]) => {
+      const half = Math.floor(dCols / 2)
+      // Draw darkening overlay for non-active zones using dynamic boundaries
+      const zoneBounds: Record<string, [number,number,number,number]> = {
+        neon:        [0,    half-1,  0,  49],
+        riverside:   [half, dCols-1, 0,  49],
+        oldtown:     [0,    half-1,  50, 99],
+        artdistrict: [half, dCols-1, 50, 99],
+      }
+      Object.entries(zoneBounds).forEach(([key, [cMin, cMax, rMin, rMax]]) => {
         if (key === activeZone) return
         ctx.fillStyle = 'rgba(0,0,0,0.6)'
-        // right zones extend to full dCols
-        const colMax = (key === 'riverside' || key === 'artdistrict') ? dCols - 1 : zone.colMax
-        ctx.fillRect(zone.colMin*CELL, zone.rowMin*CELL, (colMax-zone.colMin+1)*CELL, (zone.rowMax-zone.rowMin+1)*CELL)
+        ctx.fillRect(cMin*CELL, rMin*CELL, (cMax-cMin+1)*CELL, (rMax-rMin+1)*CELL)
       })
     }
 
@@ -427,8 +448,9 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
               const cell = existing.parent_address ? (addressMap.current.get(existing.parent_address) ?? existing) : existing
               onCellClick(cell)
             } else {
-              const zone = getZone(grid.col, grid.row)
-              const prefix = { neon:'N', riverside:'R', oldtown:'O', artdistrict:'A' }[zone]
+              const half = Math.floor(wRef.current / CELL / 2)
+              const zone = zoneAt(grid.col, grid.row, half)
+              const prefix = ZONE_PREFIX[zone]
               onCellClick({ id:'', address:`${prefix}-${String(grid.row*100+grid.col).padStart(4,'0')}`, col:grid.col, row:grid.row, zone, status:'available', name:null, nickname:null, description:null, link_url:null, exterior_image_url:null, border_effect:'none', like_count:0, visit_count:0, occupied_at:null, expires_at:null, is_permanent:false })
             }
           }
@@ -502,8 +524,9 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
         const cell = existing.parent_address ? (addressMap.current.get(existing.parent_address) ?? existing) : existing
         onCellClick(cell)
       } else {
-        const zone = getZone(grid.col, grid.row)
-        const prefix = { neon:'N', riverside:'R', oldtown:'O', artdistrict:'A' }[zone]
+        const half = Math.floor(wRef.current / CELL / 2)
+        const zone = zoneAt(grid.col, grid.row, half)
+        const prefix = ZONE_PREFIX[zone]
         onCellClick({ id:'', address:`${prefix}-${String(grid.row*100+grid.col).padStart(4,'0')}`, col:grid.col, row:grid.row, zone, status:'available', name:null, nickname:null, description:null, link_url:null, exterior_image_url:null, border_effect:'none', like_count:0, visit_count:0, occupied_at:null, expires_at:null, is_permanent:false })
       }
     } else if (isSelecting.current && selectStart.current && selectEnd.current) {
@@ -512,13 +535,17 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       const r1=Math.min(selectStart.current.row,selectEnd.current.row)
       const r2=Math.max(selectStart.current.row,selectEnd.current.row)
       setSelection(null); isSelecting.current = false
-      const crossesZone = (c1 < 50 && c2 >= 50) || (r1 < 50 && r2 >= 50)
+      const half = Math.floor(wRef.current / CELL / 2)
+      const crossesZone = (c1 < half && c2 >= half) || (r1 < 50 && r2 >= 50)
       if (crossesZone) { setBlockMsg('구역 경계를 넘는 선택은 불가해요 🗺️'); setTimeout(()=>setBlockMsg(''),2500) }
       else {
         let hasOccupied = false
         outer: for (let c=c1;c<=c2;c++) for (let r=r1;r<=r2;r++) if (houseMap.current.has(`${c},${r}`)) { hasOccupied=true; break outer }
         if (hasOccupied) { setBlockMsg('선택 영역에 이미 입주된 칸이 있어요 🏠'); setTimeout(()=>setBlockMsg(''),2500) }
-        else onAreaSelect({ col:c1, row:r1, width:c2-c1+1, height:r2-r1+1 })
+        else {
+          const zone = zoneAt(c1, r1, half)
+          onAreaSelect({ col:c1, row:r1, width:c2-c1+1, height:r2-r1+1, zone })
+        }
       }
     }
     selectStart.current = null; selectEnd.current = null
@@ -530,8 +557,9 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
     if (!grid) { setContextMenu(null); return }
     const existing = houseMap.current.get(`${grid.col},${grid.row}`)
     const primary = existing ? (existing.parent_address ? (addressMap.current.get(existing.parent_address) ?? existing) : existing) : null
-    const zone = getZone(grid.col, grid.row)
-    const prefix = { neon:'N', riverside:'R', oldtown:'O', artdistrict:'A' }[zone]
+    const half = Math.floor(wRef.current / CELL / 2)
+    const zone = zoneAt(grid.col, grid.row, half)
+    const prefix = ZONE_PREFIX[zone]
     const cell: CellData = primary ?? {
       id: '', address: `${prefix}-${String(grid.row*100+grid.col).padStart(4,'0')}`,
       col: grid.col, row: grid.row, zone, status: 'available',
