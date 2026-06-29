@@ -23,7 +23,7 @@ export default function StatsPanel({ houses, mapViewport }: StatsPanelProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const donutRef = useRef<HTMLCanvasElement>(null)
 
-  const totalCells = 10000
+  const totalCells = 20000
   const occupiedHouses = houses.filter(h => h.status === 'occupied')
   const occupiedCount = occupiedHouses.length
   const pendingCount = houses.filter(h => h.status === 'pending').length
@@ -47,31 +47,30 @@ export default function StatsPanel({ houses, mapViewport }: StatsPanelProps) {
     if (!canvas) return
     const ctx = canvas.getContext('2d')!
     const CELL = 10
-    // dCols may be wider than 100 — minimap always 100×100, scale x accordingly
-    const dCols = mapViewport?.mapW ? Math.round(mapViewport.mapW / CELL) : 100
-    const xScale = 100 / dCols  // how many minimap px per grid col
+    // fixed 200×100 grid → minimap 100×100px with SX=0.5, SY=1
+    const SX = 0.5, SY = 1
     ctx.clearRect(0, 0, 100, 100)
 
-    // zone backgrounds — right zones extended to dCols
-    ctx.fillStyle = ZONES.neon.bg; ctx.fillRect(0, 0, 50 * xScale, 50)
-    ctx.fillStyle = ZONES.riverside.bg; ctx.fillRect(50 * xScale, 0, (dCols - 50) * xScale, 50)
-    ctx.fillStyle = ZONES.oldtown.bg; ctx.fillRect(0, 50, 50 * xScale, 50)
-    ctx.fillStyle = ZONES.artdistrict.bg; ctx.fillRect(50 * xScale, 50, (dCols - 50) * xScale, 50)
+    // zone backgrounds (col boundary at 100, row boundary at 50)
+    ctx.fillStyle = ZONES.neon.bg;        ctx.fillRect(0,    0,  100*SX, 50*SY)
+    ctx.fillStyle = ZONES.riverside.bg;   ctx.fillRect(100*SX, 0,  100*SX, 50*SY)
+    ctx.fillStyle = ZONES.oldtown.bg;     ctx.fillRect(0,    50*SY, 100*SX, 50*SY)
+    ctx.fillStyle = ZONES.artdistrict.bg; ctx.fillRect(100*SX, 50*SY, 100*SX, 50*SY)
 
     for (const h of houses) {
       if (h.status !== 'occupied') continue
       const z = ZONES[h.zone as keyof typeof ZONES]
       if (!z) continue
       ctx.fillStyle = z.color
-      ctx.fillRect(h.col * xScale, h.row, (h.width ?? 1) * xScale, h.height ?? 1)
+      ctx.fillRect(h.col * SX, h.row * SY, (h.width ?? 1) * SX, (h.height ?? 1) * SY)
     }
     // 현재 뷰포트 위치 표시
     if (mapViewport) {
       const { scale, offset, containerW, containerH } = mapViewport
-      const rx = -offset.x / (scale * CELL) * xScale
-      const ry = -offset.y / (scale * CELL)
-      const rw = containerW / (scale * CELL) * xScale
-      const rh = containerH / (scale * CELL)
+      const rx = -offset.x / (scale * CELL) * SX
+      const ry = -offset.y / (scale * CELL) * SY
+      const rw = containerW / (scale * CELL) * SX
+      const rh = containerH / (scale * CELL) * SY
       ctx.strokeStyle = 'rgba(255,255,255,0.85)'
       ctx.lineWidth = 1.5
       ctx.strokeRect(rx, ry, rw, rh)

@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
-import { ZONES, DURATIONS, PERMANENT_DAYS, calcPrice, formatKRW, getAddress } from '@/lib/constants'
+import { ZONES, ZONE_PRICES, DURATIONS, PERMANENT_DAYS, PERMANENT_MULTIPLIER, calcPrice, formatKRW, getAddress, getZone } from '@/lib/constants'
 import { hashPwd } from '@/lib/hash'
 import type { CellData } from '@/types/cell'
 
@@ -64,7 +64,31 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
 
   const zone = ZONES[selectedCell.zone]
   const cellCount = (selectedCell.width ?? 1) * (selectedCell.height ?? 1)
-  const price = calcPrice(selectedCell.zone, cellCount, form.days)
+
+  // 구역별 칸수 계산 (cross-zone 선택 지원)
+  const zoneBreakdown = useMemo(() => {
+    const bd: Partial<Record<string, number>> = {}
+    for (let c = selectedCell.col; c < selectedCell.col + (selectedCell.width ?? 1); c++) {
+      for (let r = selectedCell.row; r < selectedCell.row + (selectedCell.height ?? 1); r++) {
+        const z = getZone(c, r)
+        bd[z] = (bd[z] ?? 0) + 1
+      }
+    }
+    return bd
+  }, [selectedCell])
+
+  const isMultiZone = Object.keys(zoneBreakdown).length > 1
+
+  const calcTotalPrice = (days: number): number => {
+    return Math.round(Object.entries(zoneBreakdown).reduce((sum, [z, count]) => {
+      const base = (ZONE_PRICES[z] ?? 0) * (count ?? 0)
+      if (days === PERMANENT_DAYS) return sum + base * PERMANENT_MULTIPLIER
+      const dur = DURATIONS.find(d => d.days === days)
+      return sum + base * (dur?.multiplier ?? 1)
+    }, 0))
+  }
+
+  const price = calcTotalPrice(form.days)
 
   // 미니맵 (Step 1) — 4구역 + 선택 셀 표시
   useEffect(() => {
@@ -72,24 +96,25 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
     const canvas = miniMapRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')!
-    const S = 2 // 2px per cell
+    // SX=1 (200 cols → 200px), SY=2 (100 rows → 200px)
+    const SX = 1, SY = 2
     ctx.clearRect(0, 0, 200, 200)
     // 구역 배경
     const zoneBgs: Record<string, string> = { neon:'#2d1a3e', riverside:'#1a3028', oldtown:'#3d2a0a', artdistrict:'#3d1a1a' }
     Object.entries(ZONES).forEach(([key, z]) => {
       ctx.fillStyle = zoneBgs[key] ?? '#111'
-      ctx.fillRect(z.colMin*S, z.rowMin*S, (z.colMax-z.colMin+1)*S, (z.rowMax-z.rowMin+1)*S)
+      ctx.fillRect(z.colMin*SX, z.rowMin*SY, (z.colMax-z.colMin+1)*SX, (z.rowMax-z.rowMin+1)*SY)
     })
-    // 구역 경계
+    // 구역 경계 (col=100→x=100, row=50→y=100)
     ctx.strokeStyle = '#8b6914'; ctx.lineWidth = 1
     ctx.beginPath(); ctx.moveTo(100, 0); ctx.lineTo(100, 200); ctx.stroke()
     ctx.beginPath(); ctx.moveTo(0, 100); ctx.lineTo(200, 100); ctx.stroke()
     // 구역 라벨
     const zoneLabels: Record<string, { x:number; y:number; label:string; color:string }> = {
-      neon:       { x:25, y:12, label:'네온', color:'#c084fc' },
-      riverside:  { x:150, y:12, label:'리버사이드', color:'#34d399' },
-      oldtown:    { x:25, y:112, label:'올드타운', color:'#fbbf24' },
-      artdistrict:{ x:150, y:112, label:'아트', color:'#f87171' },
+      neon:       { x:50,  y:50,  label:'네온', color:'#c084fc' },
+      riverside:  { x:150, y:50,  label:'리버', color:'#34d399' },
+      oldtown:    { x:50,  y:150, label:'올드타운', color:'#fbbf24' },
+      artdistrict:{ x:150, y:150, label:'아트', color:'#f87171' },
     }
     Object.entries(zoneLabels).forEach(([, { x, y, label, color }]) => {
       ctx.font = 'bold 9px sans-serif'; ctx.fillStyle = color; ctx.textAlign = 'center'
@@ -97,10 +122,10 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
     })
     // 선택된 셀
     ctx.fillStyle = '#ffd700'
-    ctx.fillRect(selectedCell.col * S, selectedCell.row * S, Math.max(2, (selectedCell.width ?? 1) * S), Math.max(2, (selectedCell.height ?? 1) * S))
+    ctx.fillRect(selectedCell.col * SX, selectedCell.row * SY, Math.max(1, (selectedCell.width ?? 1) * SX), Math.max(2, (selectedCell.height ?? 1) * SY))
     // 빛나는 테두리
     ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 1.5
-    ctx.strokeRect(selectedCell.col * S - 1, selectedCell.row * S - 1, Math.max(4, (selectedCell.width ?? 1) * S + 2), Math.max(4, (selectedCell.height ?? 1) * S + 2))
+    ctx.strokeRect(selectedCell.col * SX - 1, selectedCell.row * SY - 1, Math.max(3, (selectedCell.width ?? 1) * SX + 2), Math.max(4, (selectedCell.height ?? 1) * SY + 2))
   }, [step, selectedCell])
 
   const handleFile = (type: 'exterior' | 'interior') => (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -329,7 +354,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
             <div style={{ width:36, height:36, borderRadius:8, background:'linear-gradient(135deg,#8b6914,#5a3e10)', border:'2px solid #c8a96e', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18 }}>🏠</div>
             <div>
               <div style={{ fontSize:17, fontWeight:900, color:'#2a1505' }}>{isEdit ? '✏️ 집 정보 수정' : '🏠 입주 신청'}</div>
-              <div style={{ fontSize:11, color:zone.color, fontWeight:600 }}>{zone.label} · {selectedCell.address} · {cellCount}칸</div>
+              <div style={{ fontSize:11, color:zone.color, fontWeight:600 }}>{isMultiZone ? '복합 구역' : zone.label} · {selectedCell.address} · {cellCount}칸</div>
             </div>
           </div>
           <button onClick={onClose} style={{ width:32, height:32, borderRadius:'50%', background:'#ef4444', border:'3px solid #b91c1c', color:'#fff', fontSize:20, fontWeight:900, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>×</button>
@@ -374,10 +399,10 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
               <div style={{ flex:1, padding:'20px' }}>
                 <div style={{ fontSize:13, fontWeight:800, color:'#3d2a18', marginBottom:14, paddingBottom:10, borderBottom:'2px solid #e8d8bb' }}>선택한 위치 정보</div>
                 {[
-                  { label:'구역', value: zone.label, color: zone.color },
+                  { label:'구역', value: isMultiZone ? `복합 구역 (${Object.keys(zoneBreakdown).length}개)` : zone.label, color: zone.color },
                   { label:'등급', value: '일반 구역' },
                   { label:'인접 특징', value: '메인 거리 인접' },
-                  { label:'현재 가격', value: `💰 ${formatKRW(calcPrice(selectedCell.zone, 1, 30))} / 1칸·1개월` },
+                  { label:'현재 가격', value: isMultiZone ? `💰 ${formatKRW(calcTotalPrice(30))} / 전체·1개월` : `💰 ${formatKRW(calcPrice(selectedCell.zone, 1, 30))} / 1칸·1개월` },
                   { label:'선택 면적', value: `${selectedCell.width ?? 1} × ${selectedCell.height ?? 1} 칸 (${cellCount}칸)` },
                   { label:'최소 구매 면적', value: '1칸 (10×10px)' },
                 ].map(({ label, value, color }) => (
@@ -386,6 +411,17 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                     <span style={{ fontSize:13, fontWeight:700, color: color ?? '#3d2a18' }}>{value}</span>
                   </div>
                 ))}
+                {isMultiZone && (
+                  <div style={{ marginTop:10, padding:10, borderRadius:8, background:'#f0fff4', border:'1.5px solid #86efac', fontSize:12, color:'#166534', lineHeight:1.8 }}>
+                    <div style={{ fontWeight:700, marginBottom:4 }}>📊 구역별 구성</div>
+                    {Object.entries(zoneBreakdown).map(([z, count]) => (
+                      <div key={z} style={{ display:'flex', justifyContent:'space-between' }}>
+                        <span style={{ color: ZONES[z as keyof typeof ZONES]?.color }}>{ZONES[z as keyof typeof ZONES]?.label}</span>
+                        <span>{count}칸 × {formatKRW(ZONE_PRICES[z])}/칸</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div style={{ marginTop:16, padding:14, borderRadius:8, background:'#fffbeb', border:'1.5px solid #fde68a', fontSize:12, color:'#92400e', lineHeight:1.7 }}>
                   ℹ️ 선택한 위치와 면적은 이후 변경할 수 없습니다.
                 </div>
@@ -673,11 +709,11 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                     <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
                       {DURATIONS.map(({ days: d, label }) => (
                         <PeriodBtn key={d} active={form.days === d} color={zone.color} onClick={() => setForm(f => ({ ...f, days: d }))}>
-                          {label}<br /><span style={{ fontSize:10, opacity:0.8 }}>{formatKRW(calcPrice(selectedCell.zone, cellCount, d))}</span>
+                          {label}<br /><span style={{ fontSize:10, opacity:0.8 }}>{formatKRW(calcTotalPrice(d))}</span>
                         </PeriodBtn>
                       ))}
                       <PeriodBtn active={form.days === PERMANENT_DAYS} color={zone.color} onClick={() => setForm(f => ({ ...f, days: PERMANENT_DAYS }))}>
-                        영구 보존<br /><span style={{ fontSize:10, opacity:0.8 }}>{formatKRW(calcPrice(selectedCell.zone, cellCount, PERMANENT_DAYS))}</span>
+                        영구 보존<br /><span style={{ fontSize:10, opacity:0.8 }}>{formatKRW(calcTotalPrice(PERMANENT_DAYS))}</span>
                       </PeriodBtn>
                     </div>
                   </div>

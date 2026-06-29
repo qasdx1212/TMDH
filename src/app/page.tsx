@@ -116,7 +116,7 @@ export default function Home() {
   const handleAreaSelect = useCallback(({ col, row, width, height, zone }: { col: number; row: number; width: number; height: number; zone: Zone }) => {
     const prefix = { neon:'N', riverside:'R', oldtown:'O', artdistrict:'A' }[zone]
     const cell: CellData = {
-      id: '', address: `${prefix}-${String(row * 100 + col).padStart(4, '0')}`,
+      id: '', address: `${prefix}-${String(row * 200 + col).padStart(5, '0')}`,
       col, row, width, height, zone, status: 'available',
       name: null, nickname: null, description: null, link_url: null,
       exterior_image_url: null, border_effect: 'none',
@@ -162,7 +162,7 @@ export default function Home() {
     <div style={{ width:'100vw', height:'100vh', display:'flex', flexDirection:'column', background:'#1a0f05', overflow:'hidden' }}>
       <FloatingHeader
         occupiedCount={occupiedCount}
-        totalCells={10000}
+        totalCells={20000}
         totalDonation={totalDonation}
         userId={userId}
         isAdmin={isAdmin}
