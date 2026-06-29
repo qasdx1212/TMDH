@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { hashPwd } from '@/lib/hash'
-import type { CellData } from '@/types/cell'
+import type { CellData, Zone } from '@/types/cell'
 import MapGrid from '@/components/MapGrid'
 import FloatingHeader from '@/components/FloatingHeader'
 import HousePopup from '@/components/HousePopup'
@@ -113,8 +113,8 @@ export default function Home() {
     else setSelectedCell(cell)
   }, [openApply])
 
-  const handleAreaSelect = useCallback(({ col, row, width, height, zone }: { col: number; row: number; width: number; height: number; zone: string }) => {
-    const prefix = ({ neon:'N', riverside:'R', oldtown:'O', artdistrict:'A' } as Record<string,string>)[zone] ?? 'N'
+  const handleAreaSelect = useCallback(({ col, row, width, height, zone }: { col: number; row: number; width: number; height: number; zone: Zone }) => {
+    const prefix = { neon:'N', riverside:'R', oldtown:'O', artdistrict:'A' }[zone]
     const cell: CellData = {
       id: '', address: `${prefix}-${String(row * 100 + col).padStart(4, '0')}`,
       col, row, width, height, zone, status: 'available',

@@ -2,9 +2,9 @@
 
 import { useRef, useEffect, useCallback, useState } from 'react'
 import { GRID_ROWS, ZONES } from '@/lib/constants'
-import type { CellData } from '@/types/cell'
+import type { CellData, Zone } from '@/types/cell'
 
-interface Selection { col: number; row: number; width: number; height: number; zone: string }
+interface Selection { col: number; row: number; width: number; height: number; zone: Zone }
 
 interface MapGridProps {
   houses: CellData[]
@@ -32,7 +32,7 @@ const DRAG_THRESHOLD = 4
 
 // Zone helpers — use dynamic half (dCols/2) so all 4 zones are equal width
 const ZONE_PREFIX: Record<string, string> = { neon:'N', riverside:'R', oldtown:'O', artdistrict:'A' }
-function zoneAt(col: number, row: number, half: number): string {
+function zoneAt(col: number, row: number, half: number): Zone {
   if (col < half && row < 50) return 'neon'
   if (col >= half && row < 50) return 'riverside'
   if (col < half && row >= 50) return 'oldtown'
