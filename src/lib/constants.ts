@@ -10,10 +10,10 @@ export const ZONES = {
 } as const
 
 export const ZONE_PRICES: Record<string, number> = {
-  neon: 20000,
-  riverside: 15000,
-  oldtown: 10000,
-  artdistrict: 12000,
+  neon: 1000,
+  riverside: 1000,
+  oldtown: 1000,
+  artdistrict: 1000,
 }
 
 export const PERMANENT_MULTIPLIER = 30 // 월가격 × 30

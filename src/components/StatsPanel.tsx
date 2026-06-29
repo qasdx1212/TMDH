@@ -46,36 +46,55 @@ export default function StatsPanel({ houses, mapViewport }: StatsPanelProps) {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')!
+    const W = 100, H = 100
     const CELL = 10
-    // fixed 200×100 grid → minimap 100×100px with SX=0.5, SY=1
-    const SX = 0.5, SY = 1
-    ctx.clearRect(0, 0, 100, 100)
+    const SX = 0.5, SY = 1  // 200cols→100px, 100rows→100px
+    ctx.clearRect(0, 0, W, H)
 
-    // zone backgrounds (col boundary at 100, row boundary at 50)
-    ctx.fillStyle = ZONES.neon.bg;        ctx.fillRect(0,    0,  100*SX, 50*SY)
-    ctx.fillStyle = ZONES.riverside.bg;   ctx.fillRect(100*SX, 0,  100*SX, 50*SY)
-    ctx.fillStyle = ZONES.oldtown.bg;     ctx.fillRect(0,    50*SY, 100*SX, 50*SY)
-    ctx.fillStyle = ZONES.artdistrict.bg; ctx.fillRect(100*SX, 50*SY, 100*SX, 50*SY)
+    // 배경
+    ctx.fillStyle = '#1a0f05'
+    ctx.fillRect(0, 0, W, H)
 
+    // 구역 배경
+    ctx.fillStyle = ZONES.neon.bg;        ctx.fillRect(0,    0,     50, 50)
+    ctx.fillStyle = ZONES.riverside.bg;   ctx.fillRect(50,   0,     50, 50)
+    ctx.fillStyle = ZONES.oldtown.bg;     ctx.fillRect(0,    50,    50, 50)
+    ctx.fillStyle = ZONES.artdistrict.bg; ctx.fillRect(50,   50,    50, 50)
+
+    // 구역 경계선
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)'
+    ctx.lineWidth = 0.5
+    ctx.beginPath(); ctx.moveTo(50, 0); ctx.lineTo(50, H); ctx.stroke()
+    ctx.beginPath(); ctx.moveTo(0, 50); ctx.lineTo(W, 50); ctx.stroke()
+
+    // 입주 셀
     for (const h of houses) {
       if (h.status !== 'occupied') continue
       const z = ZONES[h.zone as keyof typeof ZONES]
       if (!z) continue
       ctx.fillStyle = z.color
-      ctx.fillRect(h.col * SX, h.row * SY, (h.width ?? 1) * SX, (h.height ?? 1) * SY)
+      ctx.fillRect(h.col * SX, h.row * SY, Math.max((h.width ?? 1) * SX, 0.5), Math.max((h.height ?? 1) * SY, 0.5))
     }
-    // 현재 뷰포트 위치 표시
+
+    // 뷰포트 표시: 바깥을 어둡게, 안쪽을 창문처럼
     if (mapViewport) {
       const { scale, offset, containerW, containerH } = mapViewport
-      const rx = -offset.x / (scale * CELL) * SX
-      const ry = -offset.y / (scale * CELL) * SY
-      const rw = containerW / (scale * CELL) * SX
-      const rh = containerH / (scale * CELL) * SY
-      ctx.strokeStyle = 'rgba(255,255,255,0.85)'
-      ctx.lineWidth = 1.5
+      const rx = Math.max(0, -offset.x / (scale * CELL) * SX)
+      const ry = Math.max(0, -offset.y / (scale * CELL) * SY)
+      const rw = Math.min(containerW / (scale * CELL) * SX, W - rx)
+      const rh = Math.min(containerH / (scale * CELL) * SY, H - ry)
+
+      // 뷰포트 밖 어두운 오버레이
+      ctx.fillStyle = 'rgba(0,0,0,0.55)'
+      ctx.fillRect(0, 0, W, ry)               // 위
+      ctx.fillRect(0, ry + rh, W, H - ry - rh) // 아래
+      ctx.fillRect(0, ry, rx, rh)             // 왼쪽
+      ctx.fillRect(rx + rw, ry, W - rx - rw, rh) // 오른쪽
+
+      // 뷰포트 테두리
+      ctx.strokeStyle = 'rgba(255,220,100,0.9)'
+      ctx.lineWidth = 1
       ctx.strokeRect(rx, ry, rw, rh)
-      ctx.fillStyle = 'rgba(255,255,255,0.08)'
-      ctx.fillRect(rx, ry, rw, rh)
     }
   }, [houses, mapViewport])
 
@@ -124,7 +143,7 @@ export default function StatsPanel({ houses, mapViewport }: StatsPanelProps) {
       {/* 미니맵 */}
       <div style={{ padding:'10px 12px', borderRight:'1px solid #8b691430', display:'flex', flexDirection:'column', gap:6 }}>
         <PanelLabel>🗺️ 미니맵</PanelLabel>
-        <canvas ref={canvasRef} width={100} height={100} style={{ width:110, height:110, borderRadius:4, border:'2px solid #8b6914', imageRendering:'pixelated', flexShrink:0 }} />
+        <canvas ref={canvasRef} width={100} height={100} style={{ width:100, height:100, borderRadius:4, border:'2px solid #8b6914', imageRendering:'pixelated', flexShrink:0 }} />
       </div>
 
       {/* 분양 현황 — 도넛 차트 */}
