@@ -165,11 +165,14 @@ export default function Home() {
         totalCells={20000}
         totalDonation={totalDonation}
         userId={userId}
+        userEmail={userEmail}
         isAdmin={isAdmin}
         activeZone={activeZone}
         onZoneFilter={setActiveZone}
         onApplyClick={() => setShowApply(true)}
         onMyHouseClick={() => setShowMyHouses(true)}
+        onLogin={() => supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/auth/callback` } })}
+        onLogout={() => supabase.auth.signOut()}
         houses={houses}
         onSearchSelect={(house) => {
           setSelectedCell(house)

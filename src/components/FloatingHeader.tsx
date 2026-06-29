@@ -15,11 +15,14 @@ interface FloatingHeaderProps {
   totalCells: number
   totalDonation: number
   userId?: string
+  userEmail?: string
   isAdmin?: boolean
   activeZone: string | null
   onZoneFilter: (zone: string | null) => void
   onApplyClick: () => void
   onMyHouseClick: () => void
+  onLogin: () => void
+  onLogout: () => void
   houses: CellData[]
   onSearchSelect: (house: CellData) => void
   onZoomIn?: () => void
@@ -28,16 +31,18 @@ interface FloatingHeaderProps {
 }
 
 export default function FloatingHeader({
-  occupiedCount, totalCells, totalDonation, userId, isAdmin,
+  occupiedCount, totalCells, totalDonation, userId, userEmail, isAdmin,
   activeZone, onZoneFilter,
-  onApplyClick, onMyHouseClick,
+  onApplyClick, onMyHouseClick, onLogin, onLogout,
   houses, onSearchSelect,
   onZoomIn, onZoomOut, onFitView,
 }: FloatingHeaderProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchFocused, setSearchFocused] = useState(false)
   const [alarmMsg, setAlarmMsg] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
   const searchRef = useRef<HTMLDivElement>(null)
+  const profileRef = useRef<HTMLDivElement>(null)
   const occupancyRate = ((occupiedCount / totalCells) * 100).toFixed(1)
 
   const results = searchQuery.trim().length >= 1
@@ -53,6 +58,7 @@ export default function FloatingHeader({
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(e.target as Node)) setSearchFocused(false)
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) setProfileOpen(false)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
@@ -191,6 +197,70 @@ export default function FloatingHeader({
               fontSize:12, fontWeight:700, border:'2px solid #ef444444',
               whiteSpace:'nowrap', textDecoration:'none', display:'flex', alignItems:'center',
             }}>🔑 관리</a>
+          )}
+
+          {/* 로그인/프로필 */}
+          {!userId ? (
+            <button onClick={onLogin} style={{
+              padding:'9px 16px', borderRadius:8, cursor:'pointer',
+              background:'linear-gradient(180deg,#3b5bdb,#2c47c4)',
+              color:'#fff', fontSize:13, fontWeight:700,
+              border:'2px solid #4c6ef5', whiteSpace:'nowrap',
+              boxShadow:'0 3px 0 #1a2d7a',
+            }}>🔍 로그인</button>
+          ) : (
+            <div ref={profileRef} style={{ position:'relative', flexShrink:0 }}>
+              <button onClick={() => setProfileOpen(p => !p)} style={{
+                display:'flex', alignItems:'center', gap:7, padding:'6px 12px 6px 8px',
+                borderRadius:8, cursor:'pointer',
+                background: profileOpen ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.08)',
+                border:'2px solid #4a3010', color:'#d4b483',
+              }}>
+                <div style={{
+                  width:26, height:26, borderRadius:'50%',
+                  background:'linear-gradient(135deg,#8b6914,#5a3e10)',
+                  border:`2px solid ${isAdmin ? '#f87171' : '#c8a96e'}`,
+                  display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, flexShrink:0,
+                }}>{isAdmin ? '👑' : '👤'}</div>
+                <span style={{ fontSize:12, fontWeight:600, maxWidth:100, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                  {isAdmin ? '관리자' : (userEmail?.split('@')[0] ?? '내 계정')}
+                </span>
+                <span style={{ fontSize:10, color:'#7a5c3a' }}>{profileOpen ? '▲' : '▼'}</span>
+              </button>
+              {profileOpen && (
+                <div style={{
+                  position:'absolute', top:'calc(100% + 6px)', right:0,
+                  background:'#2a1a08', border:'2px solid #8b6914', borderRadius:10,
+                  overflow:'hidden', zIndex:500, minWidth:200,
+                  boxShadow:'0 8px 32px rgba(0,0,0,0.7)',
+                  fontFamily:'"Noto Sans KR", sans-serif',
+                }}>
+                  <div style={{ padding:'12px 14px', borderBottom:'1px solid #4a3010' }}>
+                    <div style={{ fontSize:10, color:'#7a5c3a', marginBottom:3 }}>로그인된 계정</div>
+                    <div style={{ fontSize:12, color:'#fdf6e3', fontWeight:600, wordBreak:'break-all' }}>{userEmail}</div>
+                    {isAdmin && <div style={{ marginTop:5, fontSize:10, color:'#f87171', fontWeight:700 }}>👑 관리자 계정</div>}
+                  </div>
+                  <button onClick={() => { setProfileOpen(false); onMyHouseClick() }} style={{
+                    display:'flex', alignItems:'center', gap:10, width:'100%',
+                    padding:'11px 14px', background:'transparent', border:'none',
+                    borderBottom:'1px solid #3d2a1830', color:'#fdf6e3',
+                    fontSize:13, fontWeight:600, cursor:'pointer', textAlign:'left', fontFamily:'inherit',
+                  }}
+                    onMouseEnter={e => (e.currentTarget.style.background='#3d2a18')}
+                    onMouseLeave={e => (e.currentTarget.style.background='transparent')}
+                  >🏠 내 집 보기</button>
+                  <button onClick={() => { setProfileOpen(false); onLogout() }} style={{
+                    display:'flex', alignItems:'center', gap:10, width:'100%',
+                    padding:'11px 14px', background:'transparent', border:'none',
+                    color:'#f87171', fontSize:13, fontWeight:600,
+                    cursor:'pointer', textAlign:'left', fontFamily:'inherit',
+                  }}
+                    onMouseEnter={e => (e.currentTarget.style.background='#3d1a1a')}
+                    onMouseLeave={e => (e.currentTarget.style.background='transparent')}
+                  >🚪 로그아웃</button>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
