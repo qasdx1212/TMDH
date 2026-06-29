@@ -156,10 +156,11 @@ export default function Home() {
     fetchHouses()
   }, [fetchHouses])
 
-  const headerHeight = 58 + 36
+  const HEADER_H = 58 + 36  // FloatingHeader 실제 높이
+  const STATS_H = 148       // StatsPanel 실제 높이
 
   return (
-    <div style={{ width:'100vw', height:'100vh', display:'flex', flexDirection:'column', background:'#1a0f05', overflow:'hidden' }}>
+    <div style={{ width:'100vw', height:'100vh', background:'#1a0f05', overflow:'hidden' }}>
       <FloatingHeader
         occupiedCount={occupiedCount}
         totalCells={20000}
@@ -184,7 +185,8 @@ export default function Home() {
         onFitView={() => fitViewRef.current?.()}
       />
 
-      <div style={{ flex:1, marginTop:headerHeight, overflow:'hidden' }}>
+      {/* 맵: 헤더 아래~스탯 위 사이 고정 영역 */}
+      <div style={{ position:'fixed', top:HEADER_H, left:0, right:0, bottom:STATS_H, overflow:'hidden' }}>
         {loading ? (
           <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100%', color:'#a07850', fontSize:14 }}>
             지도를 불러오는 중...
@@ -209,7 +211,10 @@ export default function Home() {
         )}
       </div>
 
-      <StatsPanel houses={houses} mapViewport={mapViewport} />
+      {/* 스탯: 하단 고정 */}
+      <div style={{ position:'fixed', bottom:0, left:0, right:0 }}>
+        <StatsPanel houses={houses} mapViewport={mapViewport} />
+      </div>
 
       {selectedCell && (
         <HousePopup
