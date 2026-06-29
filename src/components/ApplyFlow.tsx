@@ -293,6 +293,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
 
   const canNext = () => {
     if (step === 2 && !form.name.trim()) return false
+    if (step === 2 && !isEdit && !form.password) return false
     if (step === 2 && form.password && form.password !== form.passwordConfirm) return false
     return true
   }
@@ -404,7 +405,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                   { label:'인접 특징', value: '메인 거리 인접' },
                   { label:'현재 가격', value: isMultiZone ? `💰 ${formatKRW(calcTotalPrice(30))} / 전체·1개월` : `💰 ${formatKRW(calcPrice(selectedCell.zone, 1, 30))} / 1칸·1개월` },
                   { label:'선택 면적', value: `${selectedCell.width ?? 1} × ${selectedCell.height ?? 1} 칸 (${cellCount}칸)` },
-                  { label:'최소 구매 면적', value: '1칸 (10×10px)' },
+                  { label:'최소 구매 면적', value: '1칸 = 1픽셀 (화면 10×10px)' },
                 ].map(({ label, value, color }) => (
                   <div key={label} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 0', borderBottom:'1px solid #e8d8bb' }}>
                     <span style={{ fontSize:13, color:'#78614a' }}>{label}</span>
@@ -479,9 +480,13 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
 
                 {/* 비밀번호 설정 */}
                 <div style={{ marginTop:8, padding:'14px', borderRadius:10, background:'#fffbeb', border:'1.5px solid #fde68a' }}>
-                  <div style={{ fontSize:13, fontWeight:800, color:'#92400e', marginBottom:6 }}>🔑 비밀번호 설정 <span style={{ fontSize:11, fontWeight:400, color:'#a08060' }}>(선택사항)</span></div>
+                  <div style={{ fontSize:13, fontWeight:800, color:'#92400e', marginBottom:6 }}>
+                    🔑 비밀번호 설정
+                    {!isEdit && <span style={{ fontSize:11, fontWeight:700, color:'#ef4444', marginLeft:6 }}>* 필수</span>}
+                    {isEdit && <span style={{ fontSize:11, fontWeight:400, color:'#a08060', marginLeft:6 }}>(변경 선택사항)</span>}
+                  </div>
                   <div style={{ fontSize:11, color:'#a08060', marginBottom:10, lineHeight:1.6 }}>
-                    설정 시 수정·삭제할 때 비밀번호가 필요해요.
+                    {isEdit ? '변경하려면 새 비밀번호를 입력하세요.' : '수정·삭제 시 필요한 비밀번호를 설정해주세요.'}
                   </div>
                   {isEdit && selectedCell.has_password && (
                     <label style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10, cursor:'pointer' }}>
@@ -494,7 +499,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                       <input
                         type="password"
                         style={{ ...inputStyle, marginBottom:8 }}
-                        placeholder={isEdit && selectedCell.has_password ? '새 비밀번호 (변경하려면 입력)' : '비밀번호 입력'}
+                        placeholder={isEdit ? '새 비밀번호 (변경하려면 입력)' : '비밀번호 입력 (필수)'}
                         value={form.password}
                         onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
                       />
