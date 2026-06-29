@@ -348,9 +348,12 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       const container = containerRef.current
       if (!container) return
       const rect = container.getBoundingClientRect()
-      const mx = e.clientX - rect.left, my = e.clientY - rect.top
       const minSc = Math.max(rect.width / W, rect.height / H)
       const newScale = Math.max(minSc, Math.min(6, scaleRef.current - e.deltaY * 0.002))
+      // 최소 스케일 근처에서는 화면 중앙 기준 줌 — 마우스 위치 기준이면 offset 흔들림 발생
+      const atMin = scaleRef.current <= minSc + 0.001
+      const mx = atMin ? rect.width / 2 : e.clientX - rect.left
+      const my = atMin ? rect.height / 2 : e.clientY - rect.top
       const wx = (mx - lastOffset.current.x) / scaleRef.current
       const wy = (my - lastOffset.current.y) / scaleRef.current
       const clamped = clampOffset(mx - wx * newScale, my - wy * newScale, newScale)
