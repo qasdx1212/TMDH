@@ -405,7 +405,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                   { label:'인접 특징', value: '메인 거리 인접' },
                   { label:'현재 가격', value: isMultiZone ? `💰 ${formatKRW(calcTotalPrice(30))} / 전체·1개월` : `💰 ${formatKRW(calcPrice(selectedCell.zone, 1, 30))} / 1칸·1개월` },
                   { label:'선택 면적', value: `${selectedCell.width ?? 1} × ${selectedCell.height ?? 1} 칸 (${cellCount}칸)` },
-                  { label:'최소 구매 면적', value: '1칸 = 1픽셀 (화면 10×10px)' },
+                  { label:'최소 구매 면적', value: '1칸 (화면에서 10×10px 크기)' },
                 ].map(({ label, value, color }) => (
                   <div key={label} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 0', borderBottom:'1px solid #e8d8bb' }}>
                     <span style={{ fontSize:13, color:'#78614a' }}>{label}</span>
