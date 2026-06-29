@@ -47,7 +47,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
     exteriorFit: 'cover',
     interiorImage: null,
     interiorPreview: isEdit ? (selectedCell.interior_image_url ?? null) : null,
-    days: 30,
+    days: PERMANENT_DAYS,
     borderEffect: isEdit ? (selectedCell.border_effect ?? 'none') : 'none',
     password: '',
     passwordConfirm: '',
@@ -401,11 +401,9 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                 <div style={{ fontSize:13, fontWeight:800, color:'#3d2a18', marginBottom:14, paddingBottom:10, borderBottom:'2px solid #e8d8bb' }}>선택한 위치 정보</div>
                 {[
                   { label:'구역', value: isMultiZone ? `복합 구역 (${Object.keys(zoneBreakdown).length}개)` : zone.label, color: zone.color },
-                  { label:'등급', value: '일반 구역' },
-                  { label:'인접 특징', value: '메인 거리 인접' },
-                  { label:'현재 가격', value: isMultiZone ? `💰 ${formatKRW(calcTotalPrice(30))} / 전체·1개월` : `💰 ${formatKRW(calcPrice(selectedCell.zone, 1, 30))} / 1칸·1개월` },
                   { label:'선택 면적', value: `${selectedCell.width ?? 1} × ${selectedCell.height ?? 1} 칸 (${cellCount}칸)` },
-                  { label:'최소 구매 면적', value: '1칸 (화면에서 10×10px 크기)' },
+                  { label:'기준 가격', value: '1,000원 / 1칸' },
+                  { label:'선택 총액', value: `💰 ${formatKRW(calcTotalPrice(PERMANENT_DAYS))} (영구)`, color: '#2f9e44' },
                 ].map(({ label, value, color }) => (
                   <div key={label} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 0', borderBottom:'1px solid #e8d8bb' }}>
                     <span style={{ fontSize:13, color:'#78614a' }}>{label}</span>
@@ -639,7 +637,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                 <div style={{ padding:12, borderRadius:8, background:'#f0e4cc', border:'1.5px solid #c8a96e', fontSize:12, color:'#6b4c2a' }}>
                   <div style={{ fontWeight:700, marginBottom:4 }}>🗓 수정 정책</div>
                   <div>· 집 정보와 이미지는 언제든지 수정 가능합니다.</div>
-                  <div>· 입주 기간(만료일)은 수정할 수 없습니다.</div>
+                  <div>· 위치와 면적은 변경할 수 없습니다.</div>
                 </div>
               </div>
 
@@ -709,23 +707,12 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                 )}
 
                 {!isEdit && (
-                  <div style={{ marginTop:20 }}>
-                    <div style={{ fontSize:13, fontWeight:700, color:'#4a2e10', marginBottom:10 }}>입주 기간 선택</div>
-                    <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
-                      {DURATIONS.map(({ days: d, label }) => (
-                        <PeriodBtn key={d} active={form.days === d} color={zone.color} onClick={() => setForm(f => ({ ...f, days: d }))}>
-                          {label}<br /><span style={{ fontSize:10, opacity:0.8 }}>{formatKRW(calcTotalPrice(d))}</span>
-                        </PeriodBtn>
-                      ))}
-                      <PeriodBtn active={form.days === PERMANENT_DAYS} color={zone.color} onClick={() => setForm(f => ({ ...f, days: PERMANENT_DAYS }))}>
-                        영구 보존<br /><span style={{ fontSize:10, opacity:0.8 }}>{formatKRW(calcTotalPrice(PERMANENT_DAYS))}</span>
-                      </PeriodBtn>
+                  <div style={{ marginTop:20, padding:'14px 16px', borderRadius:10, background:'#f0fff4', border:'2px solid #86efac', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                    <div>
+                      <div style={{ fontSize:13, fontWeight:800, color:'#166534' }}>🏠 영구 입주</div>
+                      <div style={{ fontSize:11, color:'#4ade80', marginTop:3 }}>한번 입주하면 영구적으로 유지됩니다.</div>
                     </div>
-                  </div>
-                )}
-                {isEdit && (
-                  <div style={{ marginTop:16, padding:12, borderRadius:8, background:'#f0fff4', border:'1.5px solid #86efac', fontSize:12, color:'#166534' }}>
-                    ℹ️ 수정 모드에서는 입주 기간이 변경되지 않습니다. 기존 기간이 유지됩니다.
+                    <div style={{ fontSize:18, fontWeight:900, color:'#166534' }}>{formatKRW(calcTotalPrice(PERMANENT_DAYS))}</div>
                   </div>
                 )}
               </div>
@@ -736,7 +723,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                 <div style={{ fontSize:12, color:'#78614a', lineHeight:1.8 }}>
                   · 반드시 마지막 단계에서 결제를 완료해야 신청이 정상적으로 접수됩니다.<br /><br />
                   · 결제 완료 후 즉시 입주 처리됩니다.<br /><br />
-                  · 3개월 이내 미결제 시 자동 취소됩니다.
+                  · 영구 입주로 만료일이 없습니다.
                 </div>
               </div>
             </div>
@@ -755,9 +742,8 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                   <InfoRow key={label} label={label} value={value} highlight={highlight} />
                 ))}
                 <div style={{ marginTop:16, fontSize:12, color:'#78614a', lineHeight:1.8 }}>
-                  · 결제 완료 후 입주가 확정됩니다.<br />
-                  · 3개월 이내 미결제 시 자동 취소됩니다.<br />
-                  · 결제 대상 정보는 반드시 유지해주세요.
+                  · 결제 완료 후 즉시 입주가 확정됩니다.<br />
+                  · 영구 입주로 만료일이 없습니다.
                 </div>
 
                 {errorMsg && (

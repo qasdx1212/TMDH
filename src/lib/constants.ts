@@ -16,7 +16,7 @@ export const ZONE_PRICES: Record<string, number> = {
   artdistrict: 1000,
 }
 
-export const PERMANENT_MULTIPLIER = 30 // 월가격 × 30
+export const PERMANENT_MULTIPLIER = 1 // 영구제: 기준가 × 1 (= 칸당 기준가 그대로)
 
 export const DURATIONS = [
   { days: 30,  label: '1개월',  multiplier: 1 },
