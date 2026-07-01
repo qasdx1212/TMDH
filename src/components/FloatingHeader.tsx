@@ -249,6 +249,12 @@ export default function FloatingHeader({
                     onMouseEnter={e => (e.currentTarget.style.background='#3d2a18')}
                     onMouseLeave={e => (e.currentTarget.style.background='transparent')}
                   >🏠 내 집 보기</button>
+                  <a href="/terms" style={{
+                    display:'flex', alignItems:'center', gap:10, width:'100%',
+                    padding:'10px 14px', background:'transparent',
+                    borderBottom:'1px solid #3d2a1830', color:'#7a5c3a',
+                    fontSize:12, textDecoration:'none',
+                  }}>📄 이용약관 · 개인정보처리방침</a>
                   <button onClick={() => { setProfileOpen(false); onLogout() }} style={{
                     display:'flex', alignItems:'center', gap:10, width:'100%',
                     padding:'11px 14px', background:'transparent', border:'none',
@@ -328,6 +334,15 @@ export default function FloatingHeader({
               ))}
             </div>
           )}
+        </div>
+
+        {/* 링크 */}
+        <div style={{ display:'flex', alignItems:'center', gap:8 }} className="hide-on-mobile">
+          <a href="/terms" style={{ fontSize:10, color:'#5a4030', textDecoration:'none' }}>이용약관</a>
+          <span style={{ fontSize:10, color:'#3d2a18' }}>·</span>
+          <a href="/privacy" style={{ fontSize:10, color:'#5a4030', textDecoration:'none' }}>개인정보처리방침</a>
+          <span style={{ fontSize:10, color:'#3d2a18' }}>·</span>
+          <span style={{ fontSize:10, color:'#3d2a18' }}>스트릿애드</span>
         </div>
 
         {/* 줌 컨트롤 */}
