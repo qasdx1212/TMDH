@@ -78,6 +78,7 @@ export default function HousePopup({ house, currentUserId, isAdmin, isOwnHouse, 
   }
 
   const requirePassword = (action: 'edit' | 'vacate') => {
+    if (!isOwnHouse && !isAdmin) return
     if (isAdmin || !house.has_password) {
       if (action === 'edit') { onEdit?.(house); onClose() }
       else onVacate?.(house)

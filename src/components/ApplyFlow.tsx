@@ -750,9 +750,6 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                   <div style={{ marginTop:16, padding:12, borderRadius:8, background:'#fef2f2', border:'1.5px solid #fca5a5', fontSize:12, color:'#991b1b' }}>❌ {errorMsg}</div>
                 )}
 
-                <div style={{ marginTop:16, padding:12, borderRadius:8, background:'#fffbeb', border:'1.5px solid #fde68a', fontSize:12, color:'#92400e' }}>
-                  ⚠️ 현재 결제는 테스트 모드입니다. 실제 결제 없이 입주 처리됩니다.
-                </div>
               </div>
 
               <div style={{ width:240, flexShrink:0, padding:'24px 16px', background:'#f5ead5' }}>

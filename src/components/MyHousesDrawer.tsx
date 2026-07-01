@@ -233,7 +233,7 @@ export default function MyHousesDrawer({ userId, isAdmin, onClose, onEdit, onRef
         {/* 하단 */}
         <div>
           <div style={{ padding: '10px 20px', borderTop: '2px solid #d4b483', background: '#f5ead5', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 11, color: '#a08060' }}>만료 7일 전부터 알림이 표시됩니다</span>
+            <span style={{ fontSize: 11, color: '#a08060' }}>영구 입주 · 만료일 없음</span>
             <a href="/my/payments" style={{ fontSize: 11, color: '#8b6914', fontWeight: 700, textDecoration: 'none', padding: '4px 10px', borderRadius: 6, border: '1px solid #c8a96e', background: '#fdf6e3' }}>🧾 결제 내역</a>
           </div>
           <div style={{ height: 8, background: 'repeating-linear-gradient(90deg,#4a7c3f 0px,#4a7c3f 5px,#3d6b34 5px,#3d6b34 10px)', borderTop: '2px solid #2d5226' }} />

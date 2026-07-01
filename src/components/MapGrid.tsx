@@ -329,12 +329,13 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
 
   useEffect(() => {
     houses.forEach(h => {
-      if (!h.exterior_image_url || h.parent_address) return
+      const imgUrl = h.exterior_image_url || h.interior_image_url
+      if (!imgUrl || h.parent_address) return
       if (imageCache.current.has(h.address)) return
       const img = new Image(); img.crossOrigin = 'anonymous'
       img.onload = () => { imageCache.current.set(h.address, img); draw() }
       img.onerror = () => { imageCache.current.set(h.address, img) }
-      img.src = h.exterior_image_url
+      img.src = imgUrl
     })
   }, [houses, draw])
 
