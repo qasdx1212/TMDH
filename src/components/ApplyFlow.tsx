@@ -172,7 +172,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
     finally { setLoading(false) }
   }
 
-  // 1단계: 이미지 업로드 → sessionStorage 저장 → Toss 결제창 오픈
+  // 1단계: 이미지 업로드 → DB orders 저장 → Toss 결제창 오픈
   const handlePayment = async () => {
     setLoading(true); setErrorMsg(null)
     try {
@@ -184,18 +184,21 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
 
       const orderId = `zipzip-${Date.now()}-${selectedCell.address}`
 
-      // 주문 데이터를 sessionStorage에 저장 (리다이렉트 후 success 페이지에서 사용)
-      sessionStorage.setItem('toss_pending_order', JSON.stringify({
-        orderId, userId,
+      // 주문 데이터를 DB에 저장 (sessionStorage 대신 — 모바일 카카오페이 유실 방지, 금액 서버 검증용)
+      const { error: orderErr } = await supabase.from('orders').insert({
+        id: orderId,
+        user_id: userId,
         address: selectedCell.address,
         col: selectedCell.col, row: selectedCell.row,
         width: selectedCell.width ?? 1, height: selectedCell.height ?? 1,
         zone: selectedCell.zone,
         name: form.name || null, nickname: form.nickname || null,
-        description: form.description || null, linkUrl: form.linkUrl || null,
-        borderEffect: form.borderEffect, days: form.days,
-        exteriorUrl, interiorUrl, amount: price, payMethod,
-      }))
+        description: form.description || null, link_url: form.linkUrl || null,
+        border_effect: form.borderEffect, days: form.days,
+        exterior_url: exteriorUrl, interior_url: interiorUrl,
+        amount: price, pay_method: payMethod,
+      })
+      if (orderErr) { setErrorMsg('주문 저장 실패: ' + orderErr.message); setLoading(false); return }
 
       // Toss SDK 동적 로드 후 결제창 오픈
       const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || 'test_ck_6BYq7GWPVvPzgd4Jeo9n8NE5vbo1'

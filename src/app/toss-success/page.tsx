@@ -6,8 +6,8 @@ import { supabase } from '@/lib/supabase'
 import { PERMANENT_DAYS, getAddress } from '@/lib/constants'
 
 interface PendingOrder {
-  orderId: string
-  userId: string
+  id: string
+  user_id: string
   address: string
   col: number
   row: number
@@ -17,13 +17,13 @@ interface PendingOrder {
   name: string | null
   nickname: string | null
   description: string | null
-  linkUrl: string | null
-  borderEffect: string
+  link_url: string | null
+  border_effect: string
   days: number
-  exteriorUrl: string | null
-  interiorUrl: string | null
+  exterior_url: string | null
+  interior_url: string | null
   amount: number
-  payMethod: string
+  pay_method: string
 }
 
 function TossSuccessContent() {
@@ -36,20 +36,19 @@ function TossSuccessContent() {
   useEffect(() => {
     const paymentKey = searchParams.get('paymentKey')
     const orderId = searchParams.get('orderId')
-    const amount = Number(searchParams.get('amount'))
 
     const run = async () => {
-      if (!paymentKey || !orderId || !amount) {
+      if (!paymentKey || !orderId) {
         setErrorMsg('결제 파라미터가 올바르지 않아요.')
         setStatus('error')
         return
       }
 
-      // 1. 서버사이드 결제 승인
+      // 1. 서버사이드 결제 승인 (금액은 서버가 DB에서 조회)
       const confirmRes = await fetch('/api/toss-confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paymentKey, orderId, amount }),
+        body: JSON.stringify({ paymentKey, orderId }),
       })
       if (!confirmRes.ok) {
         const err = await confirmRes.json()
@@ -58,15 +57,14 @@ function TossSuccessContent() {
         return
       }
 
-      // 2. 주문 정보 꺼내기
-      const raw = sessionStorage.getItem('toss_pending_order')
-      if (!raw) {
+      // 2. 주문 정보를 응답에서 꺼내기 (sessionStorage 의존 제거)
+      const confirmData = await confirmRes.json()
+      const order: PendingOrder = confirmData.order
+      if (!order) {
         setErrorMsg('주문 정보를 찾을 수 없어요. 고객센터에 문의해주세요.')
         setStatus('error')
         return
       }
-      const order: PendingOrder = JSON.parse(raw)
-      sessionStorage.removeItem('toss_pending_order')
       setAddress(order.address)
 
       // 3. 인증 확인
@@ -77,30 +75,30 @@ function TossSuccessContent() {
         return
       }
 
-      // 4. 입주 처리
+      // 4. 입주 처리 — .eq('status','available') 조건으로 동시 구매 race condition 방지
       const expiresAt = order.days === PERMANENT_DAYS
         ? null
         : new Date(Date.now() + order.days * 86400000).toISOString()
       const occupiedAt = new Date().toISOString()
 
-      const { error: houseErr } = await supabase.from('houses').update({
+      const { data: claimed, error: houseErr } = await supabase.from('houses').update({
         user_id: user.id,
         name: order.name, nickname: order.nickname,
-        description: order.description, link_url: order.linkUrl,
-        exterior_image_url: order.exteriorUrl, interior_image_url: order.interiorUrl,
-        border_effect: order.borderEffect, status: 'occupied', is_visible: true,
+        description: order.description, link_url: order.link_url,
+        exterior_image_url: order.exterior_url, interior_image_url: order.interior_url,
+        border_effect: order.border_effect, status: 'occupied', is_visible: true,
         width: order.width, height: order.height,
         occupied_at: occupiedAt, expires_at: expiresAt,
         is_permanent: order.days === PERMANENT_DAYS,
-      }).eq('address', order.address)
+      }).eq('address', order.address).eq('status', 'available').select('id')
 
-      if (houseErr) {
-        setErrorMsg(`입주 처리 실패: ${houseErr.message}`)
+      if (houseErr || !claimed || claimed.length === 0) {
+        setErrorMsg('이미 다른 사람이 입주한 칸이에요. 결제 환불은 고객센터로 문의해주세요.')
         setStatus('error')
         return
       }
 
-      // 위성 셀 처리
+      // 위성 셀 처리 (멀티셀 구매)
       if (order.width > 1 || order.height > 1) {
         for (let c = order.col; c < order.col + order.width; c++) {
           for (let r = order.row; r < order.row + order.height; r++) {
@@ -120,7 +118,7 @@ function TossSuccessContent() {
         house_address: order.address,
         amount: order.amount,
         type: 'move_in',
-        method: order.payMethod,
+        method: order.pay_method,
         status: 'completed',
       })
 
