@@ -45,89 +45,21 @@ function buildTerrainCanvas(): HTMLCanvasElement {
   const ctx = tc.getContext('2d')!
   ctx.save(); ctx.scale(RS, RS)
 
-  const riverRelX = 32 // river position: 32 cols into riverside zone
-
+  // 통합 지도 — 따뜻한 갈색 지형
   for (let c = 0; c < GRID_COLS; c++) {
     for (let r = 0; r < GRID_ROWS; r++) {
-      const px = c * CELL, py = r * CELL
-      const n = rng(c, r)
-      let color: string
-      if (c < HALF && r < 50) {
-        // Neon — left top
-        if (c % 9 === 0 || r % 9 === 0) { color = '#150c20' }
-        else { const bn = rng(Math.floor(c/3), Math.floor(r/3), 1); color = bn < 0.33 ? '#2d1a3e' : bn < 0.67 ? '#261535' : '#322046' }
-      } else if (c >= HALF && r < 50) {
-        // Riverside — right top
-        const riverX = HALF + riverRelX + Math.floor(Math.sin(r * 0.25) * 4)
-        const rc = c - HALF
-        if (c >= riverX && c < HALF + riverRelX + 10) { color = n < 0.4 ? '#154060' : n < 0.7 ? '#1a4e72' : '#122e4a' }
-        else if (c >= riverX - 3 && c < HALF + riverRelX + 10) { color = n < 0.5 ? '#2a4a30' : '#233e28' }
-        else { const path = rc%14===7||r%12===6; color = path ? '#264430' : (n<0.35?'#1a3028':n<0.7?'#1f3a2c':'#243e30') }
-      } else if (c < HALF && r >= 50) {
-        // Oldtown — left bottom
-        const pathH = (r-50)%8<=1, pathV = c%8===0
-        if (pathH||pathV) { color = n<0.5?'#7a5a38':'#8a6840' }
-        else { const sn = rng(Math.floor(c/2), Math.floor(r/2), 2); color = sn<0.33?'#4a3520':sn<0.67?'#5a4228':'#3e2c18' }
-      } else {
-        // Art District — right bottom
-        const bn = rng(Math.floor(c/4), Math.floor(r/4), 3)
-        color = n<0.04?'#5a2525':(bn<0.4?'#3d1a1a':bn<0.75?'#4a2020':'#33181a')
-      }
-      ctx.fillStyle = color; ctx.fillRect(px, py, CELL, CELL)
+      const bn = rng(Math.floor(c / 3), Math.floor(r / 3), 1)
+      const color = bn < 0.35 ? '#3a2510' : bn < 0.7 ? '#4a3018' : '#3d2a14'
+      ctx.fillStyle = color
+      ctx.fillRect(c * CELL, r * CELL, CELL, CELL)
     }
   }
 
-  // grid lines — left zones (neon, oldtown) 0..HALF
+  // 그리드 라인 (전체 동일)
   ctx.lineWidth = 0.4
   ctx.strokeStyle = ZONES.neon.gridColor
-  for (let c = 0; c <= HALF; c++) { ctx.beginPath(); ctx.moveTo(c*CELL,0); ctx.lineTo(c*CELL,50*CELL); ctx.stroke() }
-  for (let r = 0; r <= 50; r++) { ctx.beginPath(); ctx.moveTo(0,r*CELL); ctx.lineTo(HALF*CELL,r*CELL); ctx.stroke() }
-  ctx.strokeStyle = ZONES.oldtown.gridColor
-  for (let c = 0; c <= HALF; c++) { ctx.beginPath(); ctx.moveTo(c*CELL,50*CELL); ctx.lineTo(c*CELL,H); ctx.stroke() }
-  for (let r = 50; r <= GRID_ROWS; r++) { ctx.beginPath(); ctx.moveTo(0,r*CELL); ctx.lineTo(HALF*CELL,r*CELL); ctx.stroke() }
-
-  // grid lines — right zones (riverside, artdistrict) HALF..GRID_COLS
-  ctx.strokeStyle = ZONES.riverside.gridColor
-  for (let c = HALF; c <= GRID_COLS; c++) { ctx.beginPath(); ctx.moveTo(c*CELL,0); ctx.lineTo(c*CELL,50*CELL); ctx.stroke() }
-  for (let r = 0; r <= 50; r++) { ctx.beginPath(); ctx.moveTo(HALF*CELL,r*CELL); ctx.lineTo(GRID_COLS*CELL,r*CELL); ctx.stroke() }
-  ctx.strokeStyle = ZONES.artdistrict.gridColor
-  for (let c = HALF; c <= GRID_COLS; c++) { ctx.beginPath(); ctx.moveTo(c*CELL,50*CELL); ctx.lineTo(c*CELL,H); ctx.stroke() }
-  for (let r = 50; r <= GRID_ROWS; r++) { ctx.beginPath(); ctx.moveTo(HALF*CELL,r*CELL); ctx.lineTo(GRID_COLS*CELL,r*CELL); ctx.stroke() }
-
-  // trees — start of riverside zone
-  for (let c = HALF; c <= HALF + 28; c++) for (let r = 0; r < 50; r++) {
-    if (rng(c, r, 4) < 0.08) {
-      ctx.fillStyle='#2a5235'; ctx.beginPath(); ctx.arc(c*CELL+5,r*CELL+5,3.8,0,Math.PI*2); ctx.fill()
-      ctx.fillStyle='#4a7050'; ctx.beginPath(); ctx.arc(c*CELL+4,r*CELL+4,2.2,0,Math.PI*2); ctx.fill()
-    }
-  }
-  // river ripples
-  const riverBase = HALF + riverRelX
-  for (let c = riverBase; c < riverBase + 12; c++) for (let r = 0; r < 50; r++) {
-    if (rng(c,r,5)<0.12) { ctx.fillStyle='rgba(255,255,255,0.07)'; ctx.fillRect(c*CELL+2,r*CELL+4,5,1) }
-  }
-  // neon dots — scattered across left zone
-  for (let c = 0; c < HALF; c += 9) for (let r = 0; r < 50; r += 9) {
-    ctx.fillStyle='#c084fc55'; ctx.beginPath(); ctx.arc(c*CELL+1,r*CELL+1,1.5,0,Math.PI*2); ctx.fill()
-  }
-
-  // zone dividers
-  ctx.strokeStyle='#6b4c2a'; ctx.lineWidth=2
-  ctx.beginPath(); ctx.moveTo(HALF*CELL,0); ctx.lineTo(HALF*CELL,H); ctx.stroke()
-  ctx.beginPath(); ctx.moveTo(0,50*CELL); ctx.lineTo(GRID_COLS*CELL,50*CELL); ctx.stroke()
-
-  // zone labels centered in each quadrant
-  const labels = [
-    { cx: HALF/2,           cy: 25, label: ZONES.neon.label,        color: ZONES.neon.color },
-    { cx: HALF + HALF/2,    cy: 25, label: ZONES.riverside.label,   color: ZONES.riverside.color },
-    { cx: HALF/2,           cy: 75, label: ZONES.oldtown.label,     color: ZONES.oldtown.color },
-    { cx: HALF + HALF/2,    cy: 75, label: ZONES.artdistrict.label, color: ZONES.artdistrict.color },
-  ]
-  labels.forEach(({ cx, cy, label, color }) => {
-    ctx.font='bold 13px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'
-    ctx.fillStyle='#00000066'; ctx.fillText(label,cx*CELL+1,cy*CELL+1)
-    ctx.fillStyle=color+'aa'; ctx.fillText(label,cx*CELL,cy*CELL)
-  })
+  for (let c = 0; c <= GRID_COLS; c++) { ctx.beginPath(); ctx.moveTo(c*CELL,0); ctx.lineTo(c*CELL,H); ctx.stroke() }
+  for (let r = 0; r <= GRID_ROWS; r++) { ctx.beginPath(); ctx.moveTo(0,r*CELL); ctx.lineTo(GRID_COLS*CELL,r*CELL); ctx.stroke() }
 
   ctx.restore()
   return tc
