@@ -3,12 +3,6 @@
 import { useState, useRef, useEffect } from 'react'
 import type { CellData } from '@/types/cell'
 
-const LEGEND = [
-  { color: '#c084fc', label: '네온 스트리트', zone: 'neon' },
-  { color: '#34d399', label: '리버사이드', zone: 'riverside' },
-  { color: '#fbbf24', label: '올드타운', zone: 'oldtown' },
-  { color: '#f87171', label: '아트 디스트릭트', zone: 'artdistrict' },
-]
 
 interface FloatingHeaderProps {
   occupiedCount: number
@@ -276,29 +270,7 @@ export default function FloatingHeader({
         display:'flex', alignItems:'center', justifyContent:'space-between',
         padding:'0 16px 8px', borderTop:'1px solid #4a3010', gap:12,
       }}>
-        {/* 지도 범례 (클릭하면 구역 필터) */}
-        <div style={{ display:'flex', alignItems:'center', gap:8 }} className="hide-on-mobile">
-          {LEGEND.map(({ color, label, zone }) => {
-            const isActive = activeZone === zone
-            return (
-              <button key={label} onClick={() => onZoneFilter(isActive ? null : zone)} style={{
-                display:'flex', alignItems:'center', gap:5,
-                padding:'3px 8px', borderRadius:6, cursor:'pointer',
-                background: isActive ? color + '22' : 'transparent',
-                border: isActive ? `1.5px solid ${color}` : '1.5px solid transparent',
-                transition:'all 0.12s',
-              }}>
-                <div style={{ width:8, height:8, borderRadius:2, background:color, flexShrink:0 }} />
-                <span style={{ fontSize:10, color: isActive ? color : '#a08060', whiteSpace:'nowrap', fontWeight: isActive ? 700 : 400 }}>{label}</span>
-              </button>
-            )
-          })}
-          {activeZone && (
-            <button onClick={() => onZoneFilter(null)} style={{
-              fontSize:10, color:'#78614a', background:'transparent', border:'none', cursor:'pointer', padding:'3px 4px',
-            }}>✕ 필터 해제</button>
-          )}
-        </div>
+        <div style={{ flex: 1 }} />
 
         {/* 모바일 검색 */}
         <div ref={searchRef} style={{ position:'relative', flex:1 }} className="show-on-mobile">

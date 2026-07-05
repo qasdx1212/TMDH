@@ -51,28 +51,14 @@ export default function StatsPanel({ houses, mapViewport }: StatsPanelProps) {
     const SX = 0.5, SY = 1  // 200cols→100px, 100rows→100px
     ctx.clearRect(0, 0, W, H)
 
-    // 배경
-    ctx.fillStyle = '#1a0f05'
+    // 배경 (단일 색상)
+    ctx.fillStyle = '#3a2510'
     ctx.fillRect(0, 0, W, H)
-
-    // 구역 배경
-    ctx.fillStyle = ZONES.neon.bg;        ctx.fillRect(0,    0,     50, 50)
-    ctx.fillStyle = ZONES.riverside.bg;   ctx.fillRect(50,   0,     50, 50)
-    ctx.fillStyle = ZONES.oldtown.bg;     ctx.fillRect(0,    50,    50, 50)
-    ctx.fillStyle = ZONES.artdistrict.bg; ctx.fillRect(50,   50,    50, 50)
-
-    // 구역 경계선
-    ctx.strokeStyle = 'rgba(255,255,255,0.12)'
-    ctx.lineWidth = 0.5
-    ctx.beginPath(); ctx.moveTo(50, 0); ctx.lineTo(50, H); ctx.stroke()
-    ctx.beginPath(); ctx.moveTo(0, 50); ctx.lineTo(W, 50); ctx.stroke()
 
     // 입주 셀
     for (const h of houses) {
       if (h.status !== 'occupied') continue
-      const z = ZONES[h.zone as keyof typeof ZONES]
-      if (!z) continue
-      ctx.fillStyle = z.color
+      ctx.fillStyle = '#c8a96e'
       ctx.fillRect(h.col * SX, h.row * SY, Math.max((h.width ?? 1) * SX, 0.5), Math.max((h.height ?? 1) * SY, 0.5))
     }
 

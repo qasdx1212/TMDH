@@ -3,10 +3,10 @@ export const GRID_ROWS = 100
 export const CELL_PX = 10 // 1칸 = 10px (표시용)
 
 export const ZONES = {
-  neon:        { label: '네온 스트리트',    colMin: 0,   colMax: 99,  rowMin: 0,  rowMax: 49, color: '#c084fc', bg: '#2d1a3e', gridColor: '#3d2550' },
-  riverside:   { label: '리버사이드',       colMin: 100, colMax: 199, rowMin: 0,  rowMax: 49, color: '#34d399', bg: '#1a3028', gridColor: '#24402e' },
-  oldtown:     { label: '올드타운',         colMin: 0,   colMax: 99,  rowMin: 50, rowMax: 99, color: '#fbbf24', bg: '#3d2a0a', gridColor: '#4d3410' },
-  artdistrict: { label: '아트 디스트릭트',  colMin: 100, colMax: 199, rowMin: 50, rowMax: 99, color: '#f87171', bg: '#3d1a1a', gridColor: '#4d2020' },
+  neon:        { label: '집.zip', colMin: 0,   colMax: 99,  rowMin: 0,  rowMax: 49, color: '#c8a96e', bg: '#3a2510', gridColor: '#4a3018' },
+  riverside:   { label: '집.zip', colMin: 100, colMax: 199, rowMin: 0,  rowMax: 49, color: '#c8a96e', bg: '#3a2510', gridColor: '#4a3018' },
+  oldtown:     { label: '집.zip', colMin: 0,   colMax: 99,  rowMin: 50, rowMax: 99, color: '#c8a96e', bg: '#3a2510', gridColor: '#4a3018' },
+  artdistrict: { label: '집.zip', colMin: 100, colMax: 199, rowMin: 50, rowMax: 99, color: '#c8a96e', bg: '#3a2510', gridColor: '#4a3018' },
 } as const
 
 export const ZONE_PRICES: Record<string, number> = {
