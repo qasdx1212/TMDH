@@ -59,6 +59,11 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
   const [showSuccess, setShowSuccess] = useState(false)
   const [paymentDone, setPaymentDone] = useState(false)
   const [contentChecking, setContentChecking] = useState(false)
+  // 결제 전 필수 동의 (전자상거래법 시행령 제21조)
+  const [agreeTerms, setAgreeTerms] = useState(false)
+  const [agreeRefund, setAgreeRefund] = useState(false)
+  const [agreeAge, setAgreeAge] = useState(false)
+  const allAgreed = agreeTerms && agreeRefund && agreeAge
   const miniMapRef = useRef<HTMLCanvasElement>(null)
   const lastStep: Step = isEdit ? 4 : 5
 
@@ -164,7 +169,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
         exterior_image_url: exteriorUrl, interior_image_url: interiorUrl,
         border_effect: form.borderEffect,
         ...pwdFields,
-      }).eq('address', selectedCell.address)
+      }).eq('address', selectedCell.address).eq('user_id', userId)
       if (error) { setErrorMsg(`저장 실패: ${error.message}`); return }
       setShowSuccess(true)
       setTimeout(() => { setShowSuccess(false); onSuccess() }, 2200)
@@ -298,6 +303,8 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
     if (step === 2 && !form.name.trim()) return false
     if (step === 2 && !isEdit && !form.password) return false
     if (step === 2 && form.password && form.password !== form.passwordConfirm) return false
+    // 결제 단계: 필수 동의 3개를 모두 체크해야 결제 버튼 활성화
+    if (step === lastStep && !isEdit && !paymentDone && !allAgreed) return false
     return true
   }
 
@@ -734,6 +741,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
 
           {/* ── STEP 5: 결제 ── */}
           {step === 5 && (
+            <>
             <div style={{ display:'flex', gap:0 }}>
               <div style={{ flex:1, padding:'24px 20px', borderRight:'1px solid #d4b483' }}>
                 <SectionTitle>주문 정보</SectionTitle>
@@ -790,6 +798,52 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                 )}
               </div>
             </div>
+
+            {/* 결제 전 필수 동의 (전자상거래법 시행령 제21조) */}
+            {!paymentDone && (
+              <div style={{ padding:'16px 20px', borderTop:'2px solid #c8a96e', background:'#1a0f05' }}>
+                {/* 모두 동의 마스터 */}
+                <label style={{ display:'flex', alignItems:'center', gap:10, cursor:'pointer', paddingBottom:10, marginBottom:10, borderBottom:'1px solid #3d2a18' }}>
+                  <input
+                    type="checkbox"
+                    checked={allAgreed}
+                    onChange={e => { const v = e.target.checked; setAgreeTerms(v); setAgreeRefund(v); setAgreeAge(v) }}
+                    style={{ width:18, height:18, accentColor:'#c8a96e', cursor:'pointer', flexShrink:0 }}
+                  />
+                  <span style={{ fontSize:13, fontWeight:800, color:'#c8a96e' }}>✅ 아래 내용에 모두 동의합니다</span>
+                </label>
+
+                {/* [필수] 이용약관 · 개인정보 */}
+                <label style={{ display:'flex', alignItems:'flex-start', gap:10, cursor:'pointer', marginBottom:8 }}>
+                  <input type="checkbox" checked={agreeTerms} onChange={e => setAgreeTerms(e.target.checked)} style={{ width:16, height:16, accentColor:'#c8a96e', cursor:'pointer', marginTop:2, flexShrink:0 }} />
+                  <span style={{ fontSize:12, color:'#a08060', lineHeight:1.7 }}>
+                    <span style={{ color:'#c8a96e', fontWeight:700 }}>[필수]</span>{' '}
+                    <a href="/terms" target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ color:'#c8a96e', textDecoration:'underline' }}>이용약관</a> 및{' '}
+                    <a href="/privacy" target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ color:'#c8a96e', textDecoration:'underline' }}>개인정보처리방침</a>에 따른 개인정보 수집·이용에 동의합니다
+                  </span>
+                </label>
+
+                {/* [필수] 환불 제한 확인 */}
+                <label style={{ display:'flex', alignItems:'flex-start', gap:10, cursor:'pointer', marginBottom:8 }}>
+                  <input type="checkbox" checked={agreeRefund} onChange={e => setAgreeRefund(e.target.checked)} style={{ width:16, height:16, accentColor:'#c8a96e', cursor:'pointer', marginTop:2, flexShrink:0 }} />
+                  <span style={{ fontSize:12, color:'#a08060', lineHeight:1.7 }}>
+                    <span style={{ color:'#c8a96e', fontWeight:700 }}>[필수]</span>{' '}
+                    디지털 콘텐츠 특성상 결제 완료 즉시 제공이 시작되어{' '}
+                    <a href="/terms?tab=refund" target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ color:'#c8a96e', textDecoration:'underline' }}>환불</a>이 제한됨을 확인했습니다
+                  </span>
+                </label>
+
+                {/* [필수] 만 14세 이상 */}
+                <label style={{ display:'flex', alignItems:'flex-start', gap:10, cursor:'pointer' }}>
+                  <input type="checkbox" checked={agreeAge} onChange={e => setAgreeAge(e.target.checked)} style={{ width:16, height:16, accentColor:'#c8a96e', cursor:'pointer', marginTop:2, flexShrink:0 }} />
+                  <span style={{ fontSize:12, color:'#a08060', lineHeight:1.7 }}>
+                    <span style={{ color:'#c8a96e', fontWeight:700 }}>[필수]</span>{' '}
+                    만 14세 이상입니다
+                  </span>
+                </label>
+              </div>
+            )}
+            </>
           )}
         </div>
 
@@ -809,10 +863,11 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
             }}
             disabled={loading || !canNext()}
             style={{
-              flex:2, padding:'12px', borderRadius:8, cursor: loading || !canNext() ? 'default' : 'pointer',
+              flex:2, padding:'12px', borderRadius:8, cursor: loading || !canNext() ? 'not-allowed' : 'pointer',
               background: loading || !canNext() ? '#c8a96e' : paymentDone ? 'linear-gradient(180deg,#2f9e44,#1a6b28)' : `linear-gradient(180deg, ${zone.color}, ${zone.color}cc)`,
               color:'#fff', fontSize:14, fontWeight:800,
               border:`2px solid ${paymentDone ? '#2f9e44' : zone.color}`,
+              opacity: loading || !canNext() ? 0.5 : 1,
               boxShadow: loading || !canNext() ? 'none' : `0 4px 0 ${paymentDone ? '#1a6b2888' : zone.color + '88'}`,
             }}
           >

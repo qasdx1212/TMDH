@@ -201,7 +201,7 @@ export default function FloatingHeader({
               color:'#fff', fontSize:13, fontWeight:700,
               border:'2px solid #4c6ef5', whiteSpace:'nowrap',
               boxShadow:'0 3px 0 #1a2d7a',
-            }}>🔍 로그인</button>
+            }}>🔑 로그인</button>
           ) : (
             <div ref={profileRef} style={{ position:'relative', flexShrink:0 }}>
               <button onClick={() => setProfileOpen(p => !p)} style={{
