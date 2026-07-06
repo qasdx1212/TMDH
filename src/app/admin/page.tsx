@@ -96,18 +96,24 @@ export default function AdminPage() {
   const handleVacate = async (house: CellData) => {
     if (!confirm(`"${house.name ?? house.address}" 강제 퇴거하시겠어요?\n이 작업은 되돌릴 수 없습니다.`)) return
     setVacatingId(house.id)
-    await supabase.from('houses').update({
-      user_id: null, name: null, nickname: null, description: null,
-      link_url: null, exterior_image_url: null, interior_image_url: null,
-      border_effect: 'none', status: 'available', width: 1, height: 1,
-      parent_address: null, occupied_at: null, expires_at: null,
-      is_permanent: false, like_count: 0, visit_count: 0, is_visible: true,
-    }).eq('id', house.id)
-    if ((house.width ?? 1) > 1 || (house.height ?? 1) > 1) {
-      await supabase.from('houses').update({
-        user_id: null, status: 'available', parent_address: null,
-        occupied_at: null, expires_at: null, is_permanent: false,
-      }).eq('parent_address', house.address)
+    const { data: { session } } = await supabase.auth.getSession()
+    const res = await fetch('/api/admin/vacate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session?.access_token ?? ''}`,
+      },
+      body: JSON.stringify({
+        houseId: house.id,
+        address: house.address,
+        width: house.width ?? 1,
+        height: house.height ?? 1,
+      }),
+    })
+    if (!res.ok) {
+      alert('강제 퇴거 실패')
+      setVacatingId(null)
+      return
     }
     setVacatingId(null)
     setHouses(prev => prev.filter(h => h.id !== house.id))
