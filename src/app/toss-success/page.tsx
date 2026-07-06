@@ -44,10 +44,21 @@ function TossSuccessContent() {
         return
       }
 
-      // 1. 서버사이드 결제 승인 (금액은 서버가 DB에서 조회)
+      // 1. 세션 토큰 먼저 확인
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        setErrorMsg('로그인 세션이 만료됐어요. 다시 로그인 후 고객센터에 문의해주세요.')
+        setStatus('error')
+        return
+      }
+
+      // 2. 서버사이드 결제 승인 (금액은 서버가 DB에서 조회, JWT로 소유자 검증)
       const confirmRes = await fetch('/api/toss-confirm', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({ paymentKey, orderId }),
       })
       if (!confirmRes.ok) {
@@ -57,7 +68,7 @@ function TossSuccessContent() {
         return
       }
 
-      // 2. 주문 정보를 응답에서 꺼내기 (sessionStorage 의존 제거)
+      // 3. 주문 정보를 응답에서 꺼내기 (sessionStorage 의존 제거)
       const confirmData = await confirmRes.json()
       const order: PendingOrder = confirmData.order
       if (!order) {
@@ -67,8 +78,8 @@ function TossSuccessContent() {
       }
       setAddress(order.address)
 
-      // 3. 인증 확인
-      const { data: { user } } = await supabase.auth.getUser()
+      // 4. 인증 확인
+      const user = session.user
       if (!user) {
         setErrorMsg('로그인 세션이 만료됐어요. 다시 로그인 후 고객센터에 문의해주세요.')
         setStatus('error')

@@ -81,6 +81,7 @@ export default function Home() {
       .from('houses')
       .select('id, address, col, row, width, height, zone, status, name, nickname, description, link_url, exterior_image_url, interior_image_url, border_effect, like_count, visit_count, occupied_at, expires_at, is_permanent, parent_address, is_visible, has_password')
       .neq('status', 'available')
+      .range(0, 19999)
     setHouses((data ?? []) as CellData[])
     setLoading(false)
   }, [])

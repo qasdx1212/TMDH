@@ -278,17 +278,17 @@ export default function PrivacyPage() {
             <div>
               <span style={{ color: '#8b6914', fontWeight: 700 }}>대표자명</span>
               <span style={{ color: '#7a5c3a', margin: '0 8px' }}>|</span>
-              [대표자명]
+              이승원
             </div>
             <div>
               <span style={{ color: '#8b6914', fontWeight: 700 }}>사업자등록번호</span>
               <span style={{ color: '#7a5c3a', margin: '0 8px' }}>|</span>
-              [000-00-00000]
+              593-17-02833
             </div>
             <div>
               <span style={{ color: '#8b6914', fontWeight: 700 }}>주소</span>
               <span style={{ color: '#7a5c3a', margin: '0 8px' }}>|</span>
-              [사업장 주소]
+              경기도 의정부시 태평로 13, 14층 1401호
             </div>
             <div>
               <span style={{ color: '#8b6914', fontWeight: 700 }}>통신판매업신고번호</span>
