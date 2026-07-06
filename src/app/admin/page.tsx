@@ -168,7 +168,7 @@ export default function AdminPage() {
   const permanentCount = houses.filter(h => h.is_permanent).length
   const totalVisits = houses.reduce((s, h) => s + h.visit_count, 0)
   const totalLikes = houses.reduce((s, h) => s + h.like_count, 0)
-  const occupancyRate = ((houses.length / 10000) * 100).toFixed(2)
+  const occupancyRate = ((houses.length / 20000) * 100).toFixed(2)
 
   return (
     <div style={{ height: '100vh', overflowY: 'auto', background: '#0f0906', fontFamily: '"Noto Sans KR", -apple-system, sans-serif', color: '#fdf6e3' }}>
@@ -192,7 +192,7 @@ export default function AdminPage() {
         {/* 핵심 통계 */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 12, marginBottom: 20 }}>
           {[
-            { label: '총 입주', value: `${houses.length.toLocaleString()}채`, color: '#4ade80', sub: `/ 10,000칸` },
+            { label: '총 입주', value: `${houses.length.toLocaleString()}채`, color: '#4ade80', sub: `/ 20,000칸` },
             { label: '분양률', value: `${occupancyRate}%`, color: '#f59e0b', sub: '전체 대비' },
             { label: '영구 입주', value: `${permanentCount}채`, color: '#c084fc', sub: '만료 없음' },
             { label: '만료 임박', value: `${expiringCount}채`, color: '#f97316', sub: '7일 이내' },
@@ -212,7 +212,7 @@ export default function AdminPage() {
           {Object.entries(ZONES).map(([key, zone]) => {
             const zoneHouses = houses.filter(h => h.zone === key)
             const count = zoneHouses.length
-            const rate = ((count / 2500) * 100).toFixed(1)
+            const rate = ((count / 5000) * 100).toFixed(1)
             const visits = zoneHouses.reduce((s, h) => s + h.visit_count, 0)
             return (
               <div
