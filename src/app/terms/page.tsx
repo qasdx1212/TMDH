@@ -16,7 +16,8 @@ export default async function TermsPage({ searchParams }: Props) {
   return (
     <div
       style={{
-        minHeight: '100vh',
+        height: '100vh',
+        overflowY: 'auto',
         background: '#0f0906',
         fontFamily: '"Noto Sans KR", -apple-system, sans-serif',
         color: '#fdf6e3',
