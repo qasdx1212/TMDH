@@ -801,14 +801,17 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                       { id:'kakaopay', label:'💛 카카오페이' },
                     ].map(m => (
                       <div key={m.id} onClick={() => setPayMethod(m.id)} style={{
-                        padding:'12px 14px', borderRadius:8, cursor:'pointer', marginBottom:8,
-                        border:`2px solid ${payMethod === m.id ? zone.color : '#c8a96e'}`,
-                        background: payMethod === m.id ? zone.color + '12' : '#fdf6e3',
-                        color: payMethod === m.id ? zone.color : '#78614a',
-                        fontSize:13, fontWeight: payMethod === m.id ? 700 : 500,
+                        padding:'13px 16px', borderRadius:10, cursor:'pointer', marginBottom:8,
+                        border:`2.5px solid ${payMethod === m.id ? zone.color : '#d3bf95'}`,
+                        background: payMethod === m.id ? '#fffdf7' : '#ece1c9',
+                        color: payMethod === m.id ? '#3d2a18' : '#9c8967',
+                        fontSize:13, fontWeight: payMethod === m.id ? 800 : 500,
                         display:'flex', alignItems:'center', gap:8,
+                        opacity: payMethod === m.id ? 1 : 0.7,
+                        boxShadow: payMethod === m.id ? `0 0 0 3px ${zone.color}30, 0 3px 10px ${zone.color}40` : 'none',
+                        transition:'all 0.12s',
                       }}>
-                        {payMethod === m.id && <span>✓</span>}{m.label}
+                        {payMethod === m.id && <span style={{ color: zone.color, fontWeight:900 }}>✓</span>}{m.label}
                       </div>
                     ))}
                   </>
