@@ -159,7 +159,7 @@ export default function Home() {
   }, [fetchHouses])
 
   const HEADER_H = 58 + 36  // FloatingHeader 실제 높이
-  const STATS_H = 148       // StatsPanel 실제 높이
+  const STATS_H = 176       // StatsPanel 실제 높이 (사업자정보 푸터 포함)
 
   return (
     <div style={{ width:'100vw', height:'100vh', background:'#1a0f05', overflow:'hidden' }}>

@@ -182,6 +182,25 @@ export default function StatsPanel({ houses, mapViewport }: StatsPanelProps) {
         ))}
       </div>
     </div>
+    {/* 사업자정보 + 상품/요금 (PG 심사·전자상거래법 표기) */}
+    <div style={{
+      background:'#160c04', borderTop:'1px solid #4a3010',
+      padding:'6px 16px', fontSize:10, color:'#7a5c3a',
+      whiteSpace:'nowrap', overflowX:'auto', minWidth:580,
+      fontFamily:'"Noto Sans KR",-apple-system,sans-serif',
+    }}>
+      <strong style={{ color:'#c8a96e', fontWeight:700 }}>스트릿애드 (StreetAd)</strong>
+      {' · 대표 이승원 · 사업자등록번호 593-17-02833 · 경기도 의정부시 태평로 13, 14층 1401호 · '}
+      qasdx1212@gmail.com
+      {' · 통신판매업신고 신고 중 · '}
+      <strong style={{ color:'#c8a96e' }}>집.zip 디지털 공간 이용권 1칸(픽셀) 1,000원~ (이용기간 30일·90일·180일·365일·영구)</strong>
+      {' · '}
+      <a href="/terms" style={{ color:'#8b6914', textDecoration:'none' }}>이용약관</a>
+      {' · '}
+      <a href="/privacy" style={{ color:'#8b6914', textDecoration:'none' }}>개인정보처리방침</a>
+      {' · '}
+      <a href="/terms?tab=refund" style={{ color:'#8b6914', textDecoration:'none' }}>환불정책</a>
+    </div>
     </div>
   )
 }
