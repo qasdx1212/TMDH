@@ -71,8 +71,21 @@ export default function FloatingHeader({
       boxShadow:'0 4px 20px rgba(0,0,0,0.5)',
       fontFamily:'"Noto Sans KR",-apple-system,sans-serif',
     }}>
+      {/* 모바일 헤더 반응형: 좁은 화면(≤600px)에서 버튼 라벨을 숨기고 아이콘만 표시 */}
+      <style>{`
+        .fh-btn-icon { display: none; }
+        @media (max-width: 600px) {
+          .fh-main-row { padding: 0 10px !important; gap: 8px !important; }
+          .fh-btn-group { gap: 6px !important; }
+          .fh-action-btn { padding: 9px 12px !important; }
+          .fh-btn-label { display: none !important; }
+          .fh-btn-icon { display: inline !important; }
+          .fh-profile-meta { display: none !important; }
+          .fh-profile-btn { padding: 6px 8px !important; }
+        }
+      `}</style>
       {/* 메인 줄 */}
-      <div style={{ display:'flex', alignItems:'center', padding:'0 16px', height:58, gap:16 }}>
+      <div className="fh-main-row" style={{ display:'flex', alignItems:'center', padding:'0 16px', height:58, gap:16 }}>
         {/* 로고 */}
         <div style={{ display:'flex', alignItems:'center', gap:10, flexShrink:0, marginRight:4 }}>
           <div style={{
@@ -145,14 +158,14 @@ export default function FloatingHeader({
         </div>
 
         {/* 버튼 그룹 */}
-        <div style={{ display:'flex', gap:8, flexShrink:0 }}>
-          <button onClick={onApplyClick} style={{
+        <div className="fh-btn-group" style={{ display:'flex', gap:8, flexShrink:0 }}>
+          <button onClick={onApplyClick} className="fh-action-btn" style={{
             padding:'9px 20px', borderRadius:8, cursor:'pointer',
             background:'linear-gradient(180deg,#8b6914,#6b4c10)',
             color:'#fdf6e3', fontSize:13, fontWeight:700,
             border:'2px solid #c8a96e', boxShadow:'0 3px 0 #3d2a08',
             display:'flex', alignItems:'center', gap:6, whiteSpace:'nowrap',
-          }}>✏️ 입주 신청하기</button>
+          }}>✏️<span className="fh-btn-label">입주 신청하기</span></button>
 
           <div style={{ position:'relative', flexShrink:0 }}>
             <button onClick={() => { setAlarmMsg(true); setTimeout(() => setAlarmMsg(false), 2000) }} style={{
@@ -171,40 +184,41 @@ export default function FloatingHeader({
           </div>
 
           {userId && (
-            <button onClick={onMyHouseClick} style={{
+            <button onClick={onMyHouseClick} className="fh-action-btn" style={{
               padding:'9px 16px', borderRadius:8, cursor:'pointer',
               background:'rgba(255,255,255,0.08)', color:'#d4b483',
               fontSize:13, fontWeight:600, border:'2px solid #4a3010',
-              whiteSpace:'nowrap',
-            }}>내 집 보기</button>
+              whiteSpace:'nowrap', display:'flex', alignItems:'center',
+            }}><span className="fh-btn-icon">🏠</span><span className="fh-btn-label">내 집 보기</span></button>
           )}
-          <a href="/faq" style={{
+          <a href="/faq" className="fh-action-btn" style={{
             padding:'9px 14px', borderRadius:8, cursor:'pointer',
             background:'rgba(255,255,255,0.06)', color:'#a08060',
             fontSize:12, fontWeight:600, border:'2px solid #4a3010',
             whiteSpace:'nowrap', textDecoration:'none', display:'flex', alignItems:'center',
-          }}>❓ FAQ</a>
+          }}>❓<span className="fh-btn-label">{' '}FAQ</span></a>
           {isAdmin && (
-            <a href="/admin" style={{
+            <a href="/admin" className="fh-action-btn" style={{
               padding:'9px 14px', borderRadius:8, cursor:'pointer',
               background:'rgba(239,68,68,0.12)', color:'#f87171',
               fontSize:12, fontWeight:700, border:'2px solid #ef444444',
               whiteSpace:'nowrap', textDecoration:'none', display:'flex', alignItems:'center',
-            }}>🔑 관리</a>
+            }}>🔑<span className="fh-btn-label">{' '}관리</span></a>
           )}
 
           {/* 로그인/프로필 */}
           {!userId ? (
-            <button onClick={onLogin} style={{
+            <button onClick={onLogin} className="fh-action-btn" style={{
               padding:'9px 16px', borderRadius:8, cursor:'pointer',
               background:'linear-gradient(180deg,#3b5bdb,#2c47c4)',
               color:'#fff', fontSize:13, fontWeight:700,
               border:'2px solid #4c6ef5', whiteSpace:'nowrap',
               boxShadow:'0 3px 0 #1a2d7a',
-            }}>🔑 로그인</button>
+              display:'flex', alignItems:'center',
+            }}>🔑<span className="fh-btn-label">{' '}로그인</span></button>
           ) : (
             <div ref={profileRef} style={{ position:'relative', flexShrink:0 }}>
-              <button onClick={() => setProfileOpen(p => !p)} style={{
+              <button onClick={() => setProfileOpen(p => !p)} className="fh-profile-btn" style={{
                 display:'flex', alignItems:'center', gap:7, padding:'6px 12px 6px 8px',
                 borderRadius:8, cursor:'pointer',
                 background: profileOpen ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.08)',
@@ -216,10 +230,10 @@ export default function FloatingHeader({
                   border:`2px solid ${isAdmin ? '#f87171' : '#c8a96e'}`,
                   display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, flexShrink:0,
                 }}>{isAdmin ? '👑' : '👤'}</div>
-                <span style={{ fontSize:12, fontWeight:600, maxWidth:100, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                <span className="fh-profile-meta" style={{ fontSize:12, fontWeight:600, maxWidth:100, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                   {isAdmin ? '관리자' : (userEmail?.split('@')[0] ?? '내 계정')}
                 </span>
-                <span style={{ fontSize:10, color:'#7a5c3a' }}>{profileOpen ? '▲' : '▼'}</span>
+                <span className="fh-profile-meta" style={{ fontSize:10, color:'#7a5c3a' }}>{profileOpen ? '▲' : '▼'}</span>
               </button>
               {profileOpen && (
                 <div style={{

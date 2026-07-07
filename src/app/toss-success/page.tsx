@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { PERMANENT_DAYS, getAddress } from '@/lib/constants'
+import { toUserMessage } from '@/lib/errorMessage'
 
 interface PendingOrder {
   id: string
@@ -138,7 +139,7 @@ function TossSuccessContent() {
     }
 
     run().catch(e => {
-      setErrorMsg(String(e))
+      setErrorMsg(toUserMessage(e))
       setStatus('error')
     })
   }, [searchParams, router])

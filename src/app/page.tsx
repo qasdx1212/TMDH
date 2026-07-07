@@ -10,6 +10,7 @@ import HousePopup from '@/components/HousePopup'
 import ApplyFlow from '@/components/ApplyFlow'
 import StatsPanel from '@/components/StatsPanel'
 import MyHousesDrawer from '@/components/MyHousesDrawer'
+import OnboardingOverlay from '@/components/OnboardingOverlay'
 
 export default function Home() {
   const [houses, setHouses] = useState<CellData[]>([])
@@ -162,6 +163,7 @@ export default function Home() {
 
   return (
     <div style={{ width:'100vw', height:'100vh', background:'#1a0f05', overflow:'hidden' }}>
+      <OnboardingOverlay />
       <FloatingHeader
         occupiedCount={occupiedCount}
         totalCells={20000}

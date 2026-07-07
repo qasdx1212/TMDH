@@ -47,7 +47,11 @@ export default function HousePopup({ house, currentUserId, isAdmin, isOwnHouse, 
   }, [house.id, isAvailable])
 
   const toggleLike = async () => {
-    if (!currentUserId || !house.id) return
+    if (!currentUserId) {
+      alert('로그인 후 좋아요를 누를 수 있어요')
+      return
+    }
+    if (!house.id) return
     setLikeLoading(true)
     if (liked) {
       const { error } = await supabase.from('likes').delete().eq('user_id', currentUserId).eq('house_id', house.id)
@@ -200,8 +204,8 @@ export default function HousePopup({ house, currentUserId, isAdmin, isOwnHouse, 
               <StatCell>
                 <button
                   onClick={toggleLike}
-                  disabled={likeLoading || !currentUserId}
-                  style={{ background: 'none', border: 'none', cursor: currentUserId ? 'pointer' : 'default', display: 'flex', alignItems: 'center', gap: 6, padding: 0, fontSize: 16, fontWeight: 800, color: liked ? '#e03131' : '#5a3e1a' }}
+                  disabled={likeLoading}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, padding: 0, fontSize: 16, fontWeight: 800, color: liked ? '#e03131' : '#5a3e1a' }}
                 >
                   {liked ? '❤️' : '🤍'} {likeCount.toLocaleString()}
                 </button>

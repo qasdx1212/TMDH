@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import { ZONES, ZONE_PRICES, DURATIONS, PERMANENT_DAYS, PERMANENT_MULTIPLIER, calcPrice, formatKRW, getAddress, getZone } from '@/lib/constants'
 import { hashPwd } from '@/lib/hash'
+import { toUserMessage } from '@/lib/errorMessage'
 import type { CellData } from '@/types/cell'
 
 interface ApplyFlowProps {
@@ -170,7 +171,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
         border_effect: form.borderEffect,
         ...pwdFields,
       }).eq('address', selectedCell.address).eq('user_id', userId)
-      if (error) { setErrorMsg(`저장 실패: ${error.message}`); return }
+      if (error) { setErrorMsg(`저장 실패: ${toUserMessage(error)}`); return }
       setShowSuccess(true)
       setTimeout(() => { setShowSuccess(false); onSuccess() }, 2200)
     } catch { setErrorMsg('오류가 발생했습니다.') }
@@ -203,7 +204,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
         exterior_url: exteriorUrl, interior_url: interiorUrl,
         amount: price, pay_method: payMethod,
       })
-      if (orderErr) { setErrorMsg('주문 저장 실패: ' + orderErr.message); setLoading(false); return }
+      if (orderErr) { setErrorMsg('주문 저장 실패: ' + toUserMessage(orderErr)); setLoading(false); return }
 
       // Toss SDK 동적 로드 후 결제창 오픈
       const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || 'test_ck_6BYq7GWPVvPzgd4Jeo9n8NE5vbo1'
@@ -233,7 +234,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
     } catch (e: unknown) {
       const err = e as { code?: string; message?: string }
       if (err.code !== 'PAY_PROCESS_CANCELED') {
-        setErrorMsg(err.message ?? '결제 중 오류가 발생했습니다.')
+        setErrorMsg(toUserMessage(e))
       }
       setLoading(false)
     }
@@ -269,7 +270,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
         is_permanent: form.days === PERMANENT_DAYS,
         password_hash: pwdHash, has_password: !!pwdHash,
       }).eq('address', selectedCell.address)
-      if (error) { setErrorMsg(`저장 실패: ${error.message}`); return }
+      if (error) { setErrorMsg(`저장 실패: ${toUserMessage(error)}`); return }
 
       if (width > 1 || height > 1) {
         for (let c = col; c < col + width; c++) {
@@ -310,6 +311,13 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
 
   return (
     <div style={{ position:'fixed', inset:0, zIndex:600, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.82)', backdropFilter:'blur(6px)' }}>
+      {/* 모바일 반응형: 좁은 화면(≤640px)에서 좌우 2열 레이아웃을 1열로 전환 */}
+      <style>{`
+        @media (max-width: 640px) {
+          .af-row { flex-direction: column !important; }
+          .af-col { width: 100% !important; border-right: none !important; }
+        }
+      `}</style>
       <div style={{
         width: step === 3 ? 860 : 700, maxWidth:'96vw', maxHeight:'92vh',
         background:'#fdf6e3', borderRadius:12,
@@ -390,9 +398,9 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
 
           {/* ── STEP 1: 위치 확인 ── */}
           {step === 1 && (
-            <div style={{ display:'flex', gap:0, height:'100%' }}>
+            <div className="af-row" style={{ display:'flex', gap:0, height:'100%' }}>
               {/* 왼쪽: 미니맵 */}
-              <div style={{ width:220, flexShrink:0, padding:'20px', borderRight:'1px solid #d4b483', display:'flex', flexDirection:'column', gap:12 }}>
+              <div className="af-col" style={{ width:220, flexShrink:0, padding:'20px', borderRight:'1px solid #d4b483', display:'flex', flexDirection:'column', gap:12 }}>
                 <div style={{ fontSize:13, fontWeight:800, color:'#3d2a18' }}>지도에서 선택한 위치</div>
                 <div style={{ position:'relative', borderRadius:8, overflow:'hidden', border:'2px solid #8b6914' }}>
                   <canvas ref={miniMapRef} width={200} height={200} style={{ display:'block', width:'100%', imageRendering:'pixelated' }} />
@@ -407,7 +415,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
               </div>
 
               {/* 오른쪽: 위치 정보 */}
-              <div style={{ flex:1, padding:'20px' }}>
+              <div className="af-col" style={{ flex:1, padding:'20px' }}>
                 <div style={{ fontSize:13, fontWeight:800, color:'#3d2a18', marginBottom:14, paddingBottom:10, borderBottom:'2px solid #e8d8bb' }}>선택한 위치 정보</div>
                 {[
                   { label:'구역', value: isMultiZone ? `복합 구역 (${Object.keys(zoneBreakdown).length}개)` : zone.label, color: zone.color },
@@ -440,9 +448,9 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
 
           {/* ── STEP 2: 집 정보 + 라이브 미리보기 ── */}
           {step === 2 && (
-            <div style={{ display:'flex', gap:0 }}>
+            <div className="af-row" style={{ display:'flex', gap:0 }}>
               {/* 왼쪽: 폼 */}
-              <div style={{ flex:1, padding:'24px 20px', borderRight:'1px solid #d4b483', overflowY:'auto', maxHeight:'calc(92vh - 160px)' }}>
+              <div className="af-col" style={{ flex:1, padding:'24px 20px', borderRight:'1px solid #d4b483', overflowY:'auto', maxHeight:'calc(92vh - 160px)' }}>
                 <SectionTitle>집 정보를 입력해주세요</SectionTitle>
                 <Field label="집 이름 *" hint="최대 20자">
                   <input style={inputStyle} placeholder="예) 토토의 작은 집" maxLength={20} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
@@ -534,7 +542,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
               </div>
 
               {/* 오른쪽: 라이브 미리보기 */}
-              <div style={{ width:280, flexShrink:0, padding:'16px', background:'#f0e4cc', display:'flex', flexDirection:'column', gap:8 }}>
+              <div className="af-col" style={{ width:280, flexShrink:0, padding:'16px', background:'#f0e4cc', display:'flex', flexDirection:'column', gap:8 }}>
                 <div style={{ fontSize:11, fontWeight:700, color:'#78614a', textAlign:'center' }}>집을 클릭하면 이렇게 보여요!</div>
                 <div style={{ background:'#fdf6e3', borderRadius:8, border:'3px solid #7a4f1a', overflow:'hidden', boxShadow:'0 0 0 1px #e8c97a, 0 4px 12px rgba(0,0,0,0.3)', fontSize:12, position:'relative' }}>
                   {/* 닫기 */}
@@ -591,9 +599,9 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
 
           {/* ── STEP 3: 외관 이미지 ── */}
           {step === 3 && (
-            <div style={{ display:'flex', gap:0 }}>
+            <div className="af-row" style={{ display:'flex', gap:0 }}>
               {/* 왼쪽 */}
-              <div style={{ flex:1, padding:'20px', borderRight:'1px solid #d4b483', overflowY:'auto', maxHeight:'calc(92vh - 160px)' }}>
+              <div className="af-col" style={{ flex:1, padding:'20px', borderRight:'1px solid #d4b483', overflowY:'auto', maxHeight:'calc(92vh - 160px)' }}>
                 <SectionTitle>건물 외관 이미지 등록</SectionTitle>
                 <div style={{ fontSize:12, color:'#78614a', marginBottom:16, lineHeight:1.6 }}>
                   사람들이 지도에서 가장 먼저 보게 되는 이미지예요.
@@ -652,7 +660,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
               </div>
 
               {/* 오른쪽: 지도 미리보기 */}
-              <div style={{ width:300, flexShrink:0, padding:'20px', background:'#f0e4cc' }}>
+              <div className="af-col" style={{ width:300, flexShrink:0, padding:'20px', background:'#f0e4cc' }}>
                 <div style={{ fontSize:12, fontWeight:700, color:'#78614a', marginBottom:10 }}>지도 미리보기</div>
                 <div style={{ height:160, borderRadius:8, border:'2px solid #8b6914', background:'#2a1a08', overflow:'hidden', marginBottom:12, display:'flex', alignItems:'center', justifyContent:'center' }}>
                   {form.exteriorPreview ? (
@@ -686,8 +694,8 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
 
           {/* ── STEP 4: 신청 확인 ── */}
           {step === 4 && (
-            <div style={{ display:'flex', gap:0, padding:0 }}>
-              <div style={{ flex:1, padding:'24px 20px' }}>
+            <div className="af-row" style={{ display:'flex', gap:0, padding:0 }}>
+              <div className="af-col" style={{ flex:1, padding:'24px 20px' }}>
                 <SectionTitle>입력 내용 확인</SectionTitle>
                 {[
                   { label:'위치', value:`${selectedCell.address} (${zone.label})` },
@@ -728,7 +736,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
               </div>
 
               {/* 유의사항 */}
-              <div style={{ width:220, flexShrink:0, padding:'24px 16px', background:'#f5ead5', borderLeft:'1px solid #d4b483' }}>
+              <div className="af-col" style={{ width:220, flexShrink:0, padding:'24px 16px', background:'#f5ead5', borderLeft:'1px solid #d4b483' }}>
                 <div style={{ fontSize:13, fontWeight:800, color:'#3d2a18', marginBottom:12 }}>유의사항</div>
                 <div style={{ fontSize:12, color:'#78614a', lineHeight:1.8 }}>
                   · 반드시 마지막 단계에서 결제를 완료해야 신청이 정상적으로 접수됩니다.<br /><br />
@@ -742,8 +750,8 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
           {/* ── STEP 5: 결제 ── */}
           {step === 5 && (
             <>
-            <div style={{ display:'flex', gap:0 }}>
-              <div style={{ flex:1, padding:'24px 20px', borderRight:'1px solid #d4b483' }}>
+            <div className="af-row" style={{ display:'flex', gap:0 }}>
+              <div className="af-col" style={{ flex:1, padding:'24px 20px', borderRight:'1px solid #d4b483' }}>
                 <SectionTitle>주문 정보</SectionTitle>
                 {[
                   { label:'위치', value:`${selectedCell.address} (${zone.label})` },
@@ -763,7 +771,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
 
               </div>
 
-              <div style={{ width:240, flexShrink:0, padding:'24px 16px', background:'#f5ead5' }}>
+              <div className="af-col" style={{ width:240, flexShrink:0, padding:'24px 16px', background:'#f5ead5' }}>
                 {paymentDone ? (
                   <>
                     <div style={{ textAlign:'center', marginBottom:16 }}>
