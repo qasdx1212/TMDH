@@ -295,6 +295,7 @@ export default async function TermsPage({ searchParams }: Props) {
                     ['사업자등록번호', '593-17-02833'],
                     ['통신판매업신고번호', '신고 중'],
                     ['주소', '경기도 의정부시 태평로 13, 14층 1401호'],
+                    ['전화', '0502-1946-1697'],
                     ['이메일', 'qasdx1212@gmail.com'],
                     ['서비스 도메인', 'zipzipworld.com'],
                     ['약관 시행일', '2025년 7월 1일'],

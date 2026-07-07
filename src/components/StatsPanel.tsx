@@ -190,7 +190,7 @@ export default function StatsPanel({ houses, mapViewport }: StatsPanelProps) {
       fontFamily:'"Noto Sans KR",-apple-system,sans-serif',
     }}>
       <strong style={{ color:'#c8a96e', fontWeight:700 }}>스트릿애드 (StreetAd)</strong>
-      {' · 대표 이승원 · 사업자등록번호 593-17-02833 · 경기도 의정부시 태평로 13, 14층 1401호 · '}
+      {' · 대표 이승원 · 사업자등록번호 593-17-02833 · 경기도 의정부시 태평로 13, 14층 1401호 · 전화 0502-1946-1697 · '}
       qasdx1212@gmail.com
       {' · 통신판매업신고 신고 중 · '}
       <strong style={{ color:'#c8a96e' }}>집.zip 디지털 공간 이용권 1칸(픽셀) 1,000원~ (이용기간 30일·90일·180일·365일·영구)</strong>

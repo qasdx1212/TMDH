@@ -291,6 +291,11 @@ export default function PrivacyPage() {
               경기도 의정부시 태평로 13, 14층 1401호
             </div>
             <div>
+              <span style={{ color: '#8b6914', fontWeight: 700 }}>전화</span>
+              <span style={{ color: '#7a5c3a', margin: '0 8px' }}>|</span>
+              0502-1946-1697
+            </div>
+            <div>
               <span style={{ color: '#8b6914', fontWeight: 700 }}>통신판매업신고번호</span>
               <span style={{ color: '#7a5c3a', margin: '0 8px' }}>|</span>
               신고 중
