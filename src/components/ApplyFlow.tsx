@@ -219,7 +219,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
 
       // card → CARD, 카카오페이/토스페이 → EASY_PAY (구체 간편결제사는 포트원 채널 설정으로 라우팅)
       const payMethodMap: Record<string, 'CARD' | 'EASY_PAY'> = {
-        card: 'CARD', kakaopay: 'EASY_PAY', tosspay: 'EASY_PAY',
+        card: 'CARD', kakaopay: 'EASY_PAY',
       }
 
       // orderId를 paymentId로 사용 (서버 검증 시 orders 조회 키와 일치)
@@ -799,7 +799,6 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                     {[
                       { id:'card', label:'💳 신용/체크카드' },
                       { id:'kakaopay', label:'💛 카카오페이' },
-                      { id:'tosspay', label:'🔵 토스페이' },
                     ].map(m => (
                       <div key={m.id} onClick={() => setPayMethod(m.id)} style={{
                         padding:'12px 14px', borderRadius:8, cursor:'pointer', marginBottom:8,
