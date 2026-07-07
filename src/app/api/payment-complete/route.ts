@@ -3,9 +3,9 @@ import { createClient } from '@supabase/supabase-js'
 import { calcPrice } from '@/lib/constants'
 
 export async function POST(req: NextRequest) {
-  const { paymentKey, orderId } = await req.json()
+  const { paymentId } = await req.json()
 
-  if (!paymentKey || !orderId) {
+  if (!paymentId) {
     return NextResponse.json({ error: '필수 파라미터 누락' }, { status: 400 })
   }
 
@@ -16,12 +16,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '인증 필요' }, { status: 401 })
   }
 
-  const secretKey = process.env.TOSS_SECRET_KEY
-  if (!secretKey) {
+  const apiSecret = process.env.PORTONE_V2_API_SECRET
+  if (!apiSecret) {
     return NextResponse.json({ error: '결제 설정 오류' }, { status: 500 })
   }
 
-  // 서비스 롤로 주문 조회 — 클라이언트가 보낸 금액은 사용하지 않음
   const admin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -33,17 +32,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '인증 실패' }, { status: 401 })
   }
 
+  // 2. 주문 조회 (orderId === paymentId)
   const { data: order, error: orderErr } = await admin
     .from('orders')
     .select('*')
-    .eq('id', orderId)
+    .eq('id', paymentId)
     .single()
 
   if (orderErr || !order) {
     return NextResponse.json({ error: '주문을 찾을 수 없습니다' }, { status: 404 })
   }
 
-  // 2. 주문 소유자 확인
+  // 3. 주문 소유자 확인
   if (order.user_id !== user.id) {
     return NextResponse.json({ error: '권한이 없습니다' }, { status: 403 })
   }
@@ -52,28 +52,32 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '이미 처리된 주문입니다' }, { status: 400 })
   }
 
-  // 3. 서버사이드 금액 독립 계산 + 검증 (DB 값 자체가 조작된 케이스 방어)
+  // 4. 서버사이드 금액 독립 계산 + 검증 (DB 값 자체가 조작된 케이스 방어)
   const expectedAmount = calcPrice(order.zone, order.width * order.height, order.days)
   if (expectedAmount !== order.amount) {
     return NextResponse.json({ error: '주문 금액 불일치' }, { status: 400 })
   }
 
-  // DB에 저장된 금액으로 Toss 승인 (클라이언트 금액 무시)
-  const encoded = Buffer.from(`${secretKey}:`).toString('base64')
-  const res = await fetch('https://api.tosspayments.com/v1/payments/confirm', {
-    method: 'POST',
-    headers: { Authorization: `Basic ${encoded}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ paymentKey, orderId, amount: order.amount }),
+  // 5. 포트원 결제 단건 조회로 실제 결제 검증
+  const res = await fetch(`https://api.portone.io/payments/${encodeURIComponent(paymentId)}`, {
+    headers: { Authorization: `PortOne ${apiSecret}` },
   })
-
-  const data = await res.json()
+  const payment = await res.json()
 
   if (!res.ok) {
-    return NextResponse.json({ error: data.message ?? '결제 승인 실패' }, { status: res.status })
+    return NextResponse.json({ error: '결제 조회에 실패했습니다' }, { status: 502 })
   }
 
-  await admin.from('orders').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', orderId)
+  // 6. 결제 상태 및 금액 위변조 검증
+  if (payment.status !== 'PAID') {
+    return NextResponse.json({ error: '결제가 완료되지 않았습니다' }, { status: 400 })
+  }
+  if (payment.amount?.total !== order.amount) {
+    return NextResponse.json({ error: '결제 금액이 일치하지 않습니다' }, { status: 400 })
+  }
 
-  // order를 함께 반환 — toss-success에서 sessionStorage 없이 사용
-  return NextResponse.json({ ...data, order })
+  await admin.from('orders').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', paymentId)
+
+  // order를 함께 반환 — payment-redirect에서 입주 처리에 사용
+  return NextResponse.json({ ok: true, order })
 }

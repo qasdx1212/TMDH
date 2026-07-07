@@ -206,36 +206,46 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
       })
       if (orderErr) { setErrorMsg('주문 저장 실패: ' + toUserMessage(orderErr)); setLoading(false); return }
 
-      // Toss SDK 동적 로드 후 결제창 오픈
-      const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || 'test_ck_6BYq7GWPVvPzgd4Jeo9n8NE5vbo1'
-
-      const { loadTossPayments } = await import('@tosspayments/tosspayments-sdk')
-      const tossPayments = await loadTossPayments(clientKey)
-      const payment = tossPayments.payment({ customerKey: userId })
-
-      // 카카오페이/토스페이는 CARD method + flowMode:DIRECT + easyPay 코드 조합
-      const easyPayCode: Record<string, string> = {
-        kakaopay: 'KAKAOPAY',
-        tosspay: 'TOSSPAY',
+      // 포트원 v2 SDK 동적 로드 후 결제창 오픈
+      const storeId = process.env.NEXT_PUBLIC_PORTONE_STORE_ID
+      const channelKey = process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY
+      if (!storeId || !channelKey) {
+        setErrorMsg('결제 설정이 준비 중이에요. 잠시 후 다시 시도해주세요.')
+        setLoading(false)
+        return
       }
 
-      await payment.requestPayment({
-        method: 'CARD',
-        amount: { currency: 'KRW', value: price },
-        orderId,
+      const PortOne = await import('@portone/browser-sdk/v2')
+
+      // card → CARD, 카카오페이/토스페이 → EASY_PAY (구체 간편결제사는 포트원 채널 설정으로 라우팅)
+      const payMethodMap: Record<string, 'CARD' | 'EASY_PAY'> = {
+        card: 'CARD', kakaopay: 'EASY_PAY', tosspay: 'EASY_PAY',
+      }
+
+      // orderId를 paymentId로 사용 (서버 검증 시 orders 조회 키와 일치)
+      const response = await PortOne.requestPayment({
+        storeId,
+        channelKey,
+        paymentId: orderId,
         orderName: `집.zip 입주 — ${selectedCell.address}`,
-        successUrl: `${window.location.origin}/toss-success`,
-        failUrl: `${window.location.origin}/toss-fail`,
-        ...(easyPayCode[payMethod] && {
-          card: { flowMode: 'DIRECT', easyPay: easyPayCode[payMethod] },
-        }),
+        totalAmount: price,
+        currency: 'CURRENCY_KRW',
+        payMethod: payMethodMap[payMethod] ?? 'CARD',
+        redirectUrl: `${window.location.origin}/payment-redirect`,
+        customer: { customerId: userId },
       })
-      // 여기까지 오면 Toss가 리다이렉트함 — 아래는 실행 안 됨
-    } catch (e: unknown) {
-      const err = e as { code?: string; message?: string }
-      if (err.code !== 'PAY_PROCESS_CANCELED') {
-        setErrorMsg(toUserMessage(e))
+
+      // 모바일은 redirectUrl로 이동(여기 도달 안 함). 데스크탑 팝업은 response로 반환됨.
+      if (response?.code !== undefined) {
+        // 결제 실패/취소
+        setErrorMsg(response.message ?? '결제가 취소되었어요.')
+        setLoading(false)
+        return
       }
+      // 성공 — 검증+입주 처리 페이지로 이동
+      window.location.href = `${window.location.origin}/payment-redirect?paymentId=${orderId}`
+    } catch (e: unknown) {
+      setErrorMsg(toUserMessage(e))
       setLoading(false)
     }
   }
