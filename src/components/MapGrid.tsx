@@ -116,9 +116,8 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
     if (!c) return { x, y }
     const { width: cw, height: ch } = c.getBoundingClientRect()
     const mapW = W * s, mapH = H * s
-    const minS = Math.max(cw / W, ch / H)
-    // 최소 스케일에서는 패닝 불가 — 항상 중앙 고정
-    if (s <= minS + 0.001) return { x: (cw - mapW) / 2, y: (ch - mapH) / 2 }
+    // 축별로 독립 처리: 지도가 화면보다 작으면 중앙 고정, 크면 가장자리까지 이동 허용
+    // (최소 스케일은 cover 기준이라 한쪽 축은 항상 넘침 → 그 축은 패닝 가능해야 함)
     const cx = mapW <= cw ? (cw - mapW) / 2 : Math.min(0, Math.max(cw - mapW, x))
     const cy = mapH <= ch ? (ch - mapH) / 2 : Math.min(0, Math.max(ch - mapH, y))
     return { x: cx, y: cy }
