@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { ZONES, ZONE_PRICES, DURATIONS, PERMANENT_DAYS, PERMANENT_MULTIPLIER, calcPrice, formatKRW, getAddress, getZone } from '@/lib/constants'
 import { hashPwd } from '@/lib/hash'
@@ -24,6 +24,8 @@ interface FormData {
   exteriorImage: File | null
   exteriorPreview: string | null
   exteriorFit: 'cover' | 'contain'
+  exteriorScale: number                       // 기본 맞춤 대비 확대 배율 (1 = 기본)
+  exteriorOffset: { x: number; y: number }    // 캔버스 크기 대비 정규화된 이동값
   interiorImage: File | null
   interiorPreview: string | null
   days: number
@@ -46,6 +48,8 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
     exteriorImage: null,
     exteriorPreview: isEdit ? (selectedCell.exterior_image_url ?? null) : null,
     exteriorFit: 'cover',
+    exteriorScale: 1,
+    exteriorOffset: { x: 0, y: 0 },
     interiorImage: null,
     interiorPreview: isEdit ? (selectedCell.interior_image_url ?? null) : null,
     days: PERMANENT_DAYS,
@@ -120,7 +124,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
     const file = e.target.files?.[0]
     if (!file) return
     const preview = URL.createObjectURL(file)
-    if (type === 'exterior') setForm(f => ({ ...f, exteriorImage: file, exteriorPreview: preview }))
+    if (type === 'exterior') setForm(f => ({ ...f, exteriorImage: file, exteriorPreview: preview, exteriorScale: 1, exteriorOffset: { x: 0, y: 0 } }))
     else setForm(f => ({ ...f, interiorImage: file, interiorPreview: preview }))
   }
 
@@ -131,12 +135,110 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
     return data.publicUrl
   }
 
+  /* ─── 외관 이미지 크롭 (미리보기 = 지도 = 업로드 결과가 동일) ─── */
+  const cw = selectedCell.width ?? 1
+  const ch = selectedCell.height ?? 1
+  const cellAR = cw / ch
+
+  // 선택 영역 비율에 맞춘 크롭 캔버스 크기 (에디터용)
+  const editW = cellAR >= 1 ? 300 : Math.round(200 * cellAR)
+  const editH = cellAR >= 1 ? Math.round(300 / cellAR) : 200
+  // 우측 지도 미리보기 캔버스 크기 (같은 비율)
+  let pvW = 240, pvH = Math.round(240 / cellAR)
+  if (pvH > 140) { pvH = 140; pvW = Math.round(140 * cellAR) }
+
+  const extImgRef = useRef<HTMLImageElement | null>(null)
+  const cropRef = useRef<HTMLCanvasElement>(null)
+  const mapPreviewRef = useRef<HTMLCanvasElement>(null)
+  const [imgReady, setImgReady] = useState(false)
+  const dragRef = useRef<{ x: number; y: number } | null>(null)
+
+  // 새로 고른 파일만 크롭 대상 (기존 저장된 URL은 CORS/변조 이슈로 제외)
+  const cropEnabled = !!form.exteriorImage && imgReady
+
+  // 공통 변환: 기본맞춤(cover/contain) × 사용자 배율 + 정규화 이동
+  const drawTransformed = useCallback((ctx: CanvasRenderingContext2D, img: HTMLImageElement, TW: number, TH: number) => {
+    const iw = img.naturalWidth, ih = img.naturalHeight
+    if (!iw || !ih) return
+    const base = form.exteriorFit === 'cover' ? Math.max(TW / iw, TH / ih) : Math.min(TW / iw, TH / ih)
+    const s = base * form.exteriorScale
+    const dw = iw * s, dh = ih * s
+    const dx = (TW - dw) / 2 + form.exteriorOffset.x * TW
+    const dy = (TH - dh) / 2 + form.exteriorOffset.y * TH
+    ctx.drawImage(img, dx, dy, dw, dh)
+  }, [form.exteriorFit, form.exteriorScale, form.exteriorOffset])
+
+  const paint = useCallback((canvas: HTMLCanvasElement | null) => {
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    const img = extImgRef.current
+    if (img) drawTransformed(ctx, img, canvas.width, canvas.height)
+  }, [drawTransformed])
+
+  // 파일 선택 시 이미지 로드
+  useEffect(() => {
+    if (!form.exteriorImage || !form.exteriorPreview) { extImgRef.current = null; setImgReady(false); return }
+    const im = new Image()
+    im.onload = () => { extImgRef.current = im; setImgReady(true) }
+    im.onerror = () => { extImgRef.current = null; setImgReady(false) }
+    im.src = form.exteriorPreview
+  }, [form.exteriorImage, form.exteriorPreview])
+
+  // 에디터 + 지도 미리보기 동시 렌더
+  useEffect(() => {
+    if (step !== 3) return
+    paint(cropRef.current)
+    paint(mapPreviewRef.current)
+  }, [step, imgReady, paint])
+
+  // 드래그로 위치 조정
+  const onCropDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!cropEnabled) return
+    e.currentTarget.setPointerCapture(e.pointerId)
+    dragRef.current = { x: e.clientX, y: e.clientY }
+  }
+  const onCropMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!dragRef.current || !cropEnabled) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    const dx = (e.clientX - dragRef.current.x) / rect.width
+    const dy = (e.clientY - dragRef.current.y) / rect.height
+    dragRef.current = { x: e.clientX, y: e.clientY }
+    setForm(f => ({ ...f, exteriorOffset: { x: f.exteriorOffset.x + dx, y: f.exteriorOffset.y + dy } }))
+  }
+  const onCropUp = () => { dragRef.current = null }
+
+  const resetCrop = () => setForm(f => ({ ...f, exteriorScale: 1, exteriorOffset: { x: 0, y: 0 } }))
+
+  // 조정한 그대로 구워낸 업로드용 파일 생성
+  const buildExteriorFile = async (): Promise<File | null> => {
+    if (!form.exteriorImage) return null
+    const img = extImgRef.current
+    if (!img || !img.naturalWidth) return form.exteriorImage // 폴백: 원본 그대로
+    const MAX = 1200
+    const ew = cellAR >= 1 ? MAX : Math.round(MAX * cellAR)
+    const eh = cellAR >= 1 ? Math.round(MAX / cellAR) : MAX
+    const cv = document.createElement('canvas')
+    cv.width = Math.max(1, ew); cv.height = Math.max(1, eh)
+    const ctx = cv.getContext('2d')
+    if (!ctx) return form.exteriorImage
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, cv.width, cv.height)
+    drawTransformed(ctx, img, cv.width, cv.height)
+    const blob: Blob | null = await new Promise(res => cv.toBlob(res, 'image/jpeg', 0.92))
+    if (!blob) return form.exteriorImage
+    return new File([blob], 'exterior.jpg', { type: 'image/jpeg' })
+  }
+
   // 수정 모드 저장
   const handleEditSave = async () => {
     setLoading(true); setErrorMsg(null)
     try {
       let exteriorUrl: string | null = selectedCell.exterior_image_url ?? null
-      if (form.exteriorImage) exteriorUrl = await uploadImage(form.exteriorImage, `${userId}/exterior-${selectedCell.address}.${form.exteriorImage.name.split('.').pop()}`)
+      const extFile = await buildExteriorFile()
+      if (extFile) exteriorUrl = await uploadImage(extFile, `${userId}/exterior-${selectedCell.address}.jpg`)
       let interiorUrl: string | null = selectedCell.interior_image_url ?? null
       if (form.interiorImage) interiorUrl = await uploadImage(form.interiorImage, `${userId}/interior-${selectedCell.address}.${form.interiorImage.name.split('.').pop()}`)
 
@@ -166,7 +268,8 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
     try {
       // 이미지 먼저 업로드 (Toss 리다이렉트 전에 완료해야 함)
       let exteriorUrl: string | null = selectedCell.exterior_image_url ?? null
-      if (form.exteriorImage) exteriorUrl = await uploadImage(form.exteriorImage, `${userId}/exterior-${selectedCell.address}.${form.exteriorImage.name.split('.').pop()}`)
+      const extFile = await buildExteriorFile()
+      if (extFile) exteriorUrl = await uploadImage(extFile, `${userId}/exterior-${selectedCell.address}.jpg`)
       let interiorUrl: string | null = selectedCell.interior_image_url ?? null
       if (form.interiorImage) interiorUrl = await uploadImage(form.interiorImage, `${userId}/interior-${selectedCell.address}.${form.interiorImage.name.split('.').pop()}`)
 
@@ -242,7 +345,8 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
 
       // 이미지 업로드
       let exteriorUrl: string | null = selectedCell.exterior_image_url ?? null
-      if (form.exteriorImage) exteriorUrl = await uploadImage(form.exteriorImage, `${userId}/exterior-${selectedCell.address}.${form.exteriorImage.name.split('.').pop()}`)
+      const extFile = await buildExteriorFile()
+      if (extFile) exteriorUrl = await uploadImage(extFile, `${userId}/exterior-${selectedCell.address}.jpg`)
       let interiorUrl: string | null = selectedCell.interior_image_url ?? null
       if (form.interiorImage) interiorUrl = await uploadImage(form.interiorImage, `${userId}/interior-${selectedCell.address}.${form.interiorImage.name.split('.').pop()}`)
 
@@ -599,16 +703,58 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                 </div>
 
                 <label style={{ display:'block', cursor:'pointer', marginBottom:16 }}>
-                  <div style={{ height:160, borderRadius:10, border:`1px dashed ${form.exteriorPreview ? '#1a1a1a' : '#d5d2ce'}`, background:'#faf9f8', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden' }}>
-                    {form.exteriorPreview ? <img src={form.exteriorPreview} alt="" style={{ width:'100%', height:'100%', objectFit: form.exteriorFit }} /> : (
-                      <div style={{ textAlign:'center', color:'#8c8a87' }}>
-                        <div style={{ fontSize:13, fontWeight:600 }}>이미지 업로드</div>
-                        <div style={{ fontSize:11, marginTop:4, color:'#b0aeaa' }}>JPG, PNG, WEBP (최대 10MB)</div>
-                      </div>
-                    )}
+                  <div style={{ height: form.exteriorPreview ? 56 : 160, borderRadius:10, border:`1px dashed ${form.exteriorPreview ? '#1a1a1a' : '#d5d2ce'}`, background:'#faf9f8', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden' }}>
+                    <div style={{ textAlign:'center', color:'#8c8a87' }}>
+                      <div style={{ fontSize:13, fontWeight:600 }}>{form.exteriorPreview ? '다른 이미지 선택' : '이미지 업로드'}</div>
+                      {!form.exteriorPreview && <div style={{ fontSize:11, marginTop:4, color:'#b0aeaa' }}>JPG, PNG, WEBP (최대 10MB)</div>}
+                    </div>
                   </div>
                   <input type="file" accept="image/*" onChange={handleFile('exterior')} style={{ display:'none' }} />
                 </label>
+
+                {/* 크롭 에디터 — 드래그로 위치, 슬라이더로 크기 */}
+                {cropEnabled && (
+                  <div style={{ marginBottom:16 }}>
+                    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
+                      <div style={{ fontSize:13, fontWeight:700, color:'#1a1a1a' }}>위치 · 크기 조정</div>
+                      <button type="button" onClick={resetCrop} style={{ padding:'5px 10px', borderRadius:8, border:'1px solid #e0ddd9', background:'#fff', color:'#1a1a1a', fontSize:11, fontWeight:600, cursor:'pointer' }}>초기화</button>
+                    </div>
+
+                    <div style={{ display:'flex', justifyContent:'center', marginBottom:10 }}>
+                      <canvas
+                        ref={cropRef}
+                        width={editW}
+                        height={editH}
+                        onPointerDown={onCropDown}
+                        onPointerMove={onCropMove}
+                        onPointerUp={onCropUp}
+                        onPointerCancel={onCropUp}
+                        style={{
+                          width: editW, height: editH, maxWidth:'100%',
+                          borderRadius:10, border:'1px solid #e9e7e4',
+                          cursor: dragRef.current ? 'grabbing' : 'grab', touchAction:'none', display:'block',
+                        }}
+                      />
+                    </div>
+                    <div style={{ fontSize:11, color:'#8c8a87', textAlign:'center', marginBottom:12 }}>
+                      드래그해서 위치를 옮기고, 아래 슬라이더로 크기를 조절하세요. 보이는 그대로 지도에 올라갑니다.
+                    </div>
+
+                    <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                      <span style={{ fontSize:11, color:'#8c8a87', flexShrink:0 }}>축소</span>
+                      <input
+                        type="range" min={0.5} max={3} step={0.01}
+                        value={form.exteriorScale}
+                        onChange={e => setForm(f => ({ ...f, exteriorScale: Number(e.target.value) }))}
+                        style={{ flex:1, accentColor:'#1c1c1e', cursor:'pointer' }}
+                      />
+                      <span style={{ fontSize:11, color:'#8c8a87', flexShrink:0 }}>확대</span>
+                      <span style={{ fontSize:11, fontWeight:600, color:'#1a1a1a', width:44, textAlign:'right', flexShrink:0 }}>
+                        {form.exteriorScale.toFixed(2)}×
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 {/* 권장 가이드 */}
                 <div style={{ padding:12, borderRadius:10, background:'#faf9f8', border:'1px solid #e9e7e4', fontSize:12, color:'#8c8a87', marginBottom:16 }}>
@@ -627,7 +773,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                   ].map(({ value, label, desc }) => {
                     const active = form.exteriorFit === value
                     return (
-                    <div key={value} onClick={() => setForm(f => ({ ...f, exteriorFit: value as 'cover'|'contain' }))} style={{
+                    <div key={value} onClick={() => setForm(f => ({ ...f, exteriorFit: value as 'cover'|'contain', exteriorScale: 1, exteriorOffset: { x: 0, y: 0 } }))} style={{
                       display:'flex', alignItems:'center', gap:12, padding:'12px 14px', borderRadius:10, cursor:'pointer', marginBottom:8,
                       border:`1px solid ${active ? '#1a1a1a' : '#e9e7e4'}`,
                       background:'#fff',
@@ -654,7 +800,9 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
               <div className="af-col" style={{ width:300, flexShrink:0, padding:'20px', background:'#faf9f8' }}>
                 <div style={{ fontSize:12, fontWeight:600, color:'#8c8a87', marginBottom:10 }}>지도 미리보기</div>
                 <div style={{ height:160, borderRadius:10, border:'1px solid #e9e7e4', background:'#fff', overflow:'hidden', marginBottom:12, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                  {form.exteriorPreview ? (
+                  {cropEnabled ? (
+                    <canvas ref={mapPreviewRef} width={pvW} height={pvH} style={{ width:pvW, height:pvH, maxWidth:'92%', maxHeight:'88%', borderRadius:6, border:'1px solid #e9e7e4', display:'block' }} />
+                  ) : form.exteriorPreview ? (
                     <img src={form.exteriorPreview} alt="" style={{ maxWidth:'80%', maxHeight:'80%', objectFit: form.exteriorFit, borderRadius:8, border:'1px solid #e9e7e4' }} />
                   ) : (
                     <div style={{ textAlign:'center', color:'#b0aeaa', fontSize:12 }}>이미지를 업로드하면<br/>미리보기가 표시됩니다</div>

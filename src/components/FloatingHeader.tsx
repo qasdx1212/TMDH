@@ -97,7 +97,7 @@ export default function FloatingHeader({
 
         {/* 통계 */}
         <div style={{ display:'flex', gap:24 }} className="hide-on-mobile">
-          <StatItem label="전체 면적" value="8,000,000 pixels" valueColor="#1a1a1a" />
+          <StatItem label="전체 면적" value={`${totalCells.toLocaleString()}칸`} valueColor="#1a1a1a" />
           <StatItem label="분양률" value={`${occupancyRate}%`} valueColor="#1a1a1a" />
           <StatItem label="누적 기부금" value={`₩ ${totalDonation.toLocaleString()}`} valueColor="#1a1a1a" />
         </div>
