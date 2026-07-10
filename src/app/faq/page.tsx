@@ -92,13 +92,13 @@ export default function FaqPage() {
         {/* 히어로 */}
         <div style={{ textAlign: 'center', marginBottom: 40 }}>
           <div style={{ fontSize: 26, fontWeight: 700, color: '#1a1a1a', marginBottom: 10 }}>자주 묻는 질문</div>
-          <div style={{ fontSize: 14, color: '#8c8a87' }}>집.zip 서비스에 대한 궁금한 점들을 모았어요</div>
+          <div style={{ fontSize: 14, color: '#6f6d6a' }}>집.zip 서비스에 대한 궁금한 점들을 모았어요</div>
         </div>
 
         {/* FAQ 목록 */}
         {FAQS.map(section => (
           <div key={section.category} style={{ marginBottom: 28 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#8c8a87', marginBottom: 12, paddingLeft: 2 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#6f6d6a', marginBottom: 12, paddingLeft: 2 }}>
               {section.category}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -126,7 +126,7 @@ export default function FaqPage() {
                       }}
                     >
                       <span style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.5 }}>{item.q}</span>
-                      <span style={{ fontSize: 13, color: '#b0aeaa', flexShrink: 0 }}>{isOpen ? '▴' : '▾'}</span>
+                      <span style={{ fontSize: 13, color: '#97948f', flexShrink: 0 }}>{isOpen ? '▴' : '▾'}</span>
                     </button>
                     {isOpen && (
                       <div style={{ padding: '0 18px 16px', borderTop: '1px solid #f0efec' }}>
@@ -150,7 +150,7 @@ export default function FaqPage() {
           </div>
         </div>
 
-        <div style={{ marginTop: 16, fontSize: 12, color: '#b0aeaa', textAlign: 'center' }}>
+        <div style={{ marginTop: 16, fontSize: 12, color: '#97948f', textAlign: 'center' }}>
           © 2025 집.zip (zipzipworld.com) — All rights reserved.
         </div>
       </div>

@@ -33,35 +33,33 @@ const DRAG_THRESHOLD = 4
 
 const ZONE_PREFIX: Record<string, string> = { neon:'N', riverside:'R', oldtown:'O', artdistrict:'A' }
 
-const rng = (x: number, y: number, s = 0) => {
-  const n = Math.sin(x * 127.1 + y * 311.7 + s * 74.3) * 43758.5453
-  return n - Math.floor(n)
-}
-
 function buildTerrainCanvas(): HTMLCanvasElement {
   const tc = document.createElement('canvas')
   tc.width = W * RS
   tc.height = H * RS
   const ctx = tc.getContext('2d')!
-  ctx.save(); ctx.scale(RS, RS)
 
-  // 통합 지도 — 밝은 중립 지형
-  for (let c = 0; c < GRID_COLS; c++) {
-    for (let r = 0; r < GRID_ROWS; r++) {
-      const bn = rng(Math.floor(c / 6), Math.floor(r / 6), 1)
-      const color = bn < 0.35 ? '#eceae6' : bn < 0.7 ? '#e7e5e1' : '#f0eeea'
-      ctx.fillStyle = color
-      ctx.fillRect(c * CELL, r * CELL, CELL, CELL)
-    }
-  }
+  // 디바이스 픽셀 좌표로 직접 그림 (scale 안 씀 → 선이 픽셀에 정확히 맞음)
+  ctx.fillStyle = '#eeece8'
+  ctx.fillRect(0, 0, tc.width, tc.height)
 
-  // 그리드 라인 (전체 동일)
-  ctx.lineWidth = 0.4
-  ctx.strokeStyle = ZONES.neon.gridColor
-  for (let c = 0; c <= GRID_COLS; c++) { ctx.beginPath(); ctx.moveTo(c*CELL,0); ctx.lineTo(c*CELL,H); ctx.stroke() }
-  for (let r = 0; r <= GRID_ROWS; r++) { ctx.beginPath(); ctx.moveTo(0,r*CELL); ctx.lineTo(GRID_COLS*CELL,r*CELL); ctx.stroke() }
+  const step = CELL * RS   // 1칸 = 10 디바이스 픽셀
+  ctx.lineWidth = 1        // 정확히 1 디바이스 픽셀
 
-  ctx.restore()
+  // 잔격자 — 아주 옅게. 축소 시엔 배경에 묻히고, 확대하면 또렷해짐
+  ctx.strokeStyle = '#e7e4e0'
+  ctx.beginPath()
+  for (let c = 0; c <= GRID_COLS; c++) { const x = c * step + 0.5; ctx.moveTo(x, 0); ctx.lineTo(x, tc.height) }
+  for (let r = 0; r <= GRID_ROWS; r++) { const y = r * step + 0.5; ctx.moveTo(0, y); ctx.lineTo(tc.width, y) }
+  ctx.stroke()
+
+  // 대격자 (10칸마다) — 축소해도 구조가 보이도록
+  ctx.strokeStyle = '#dcd8d2'
+  ctx.beginPath()
+  for (let c = 0; c <= GRID_COLS; c += 10) { const x = c * step + 0.5; ctx.moveTo(x, 0); ctx.lineTo(x, tc.height) }
+  for (let r = 0; r <= GRID_ROWS; r += 10) { const y = r * step + 0.5; ctx.moveTo(0, y); ctx.lineTo(tc.width, y) }
+  ctx.stroke()
+
   return tc
 }
 
@@ -513,7 +511,16 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       onContextMenu={handleContextMenu}
     >
       <div style={{ transform:`translate(${offset.x}px,${offset.y}px) scale(${scale})`, transformOrigin:'0 0' }}>
-        <canvas ref={canvasRef} width={W * RS} height={H * RS} style={{ display:'block', width:W, height:H }} />
+        <canvas
+          ref={canvasRef}
+          width={W * RS}
+          height={H * RS}
+          style={{
+            display:'block', width:W, height:H,
+            // 확대 시엔 픽셀 그대로(또렷), 축소 시엔 부드럽게(모아레 방지)
+            imageRendering: scale >= 1 ? 'pixelated' : 'auto',
+          }}
+        />
       </div>
 
       {/* 범위 선택 (모바일·데스크탑 공통 탭탭 방식) */}
@@ -537,7 +544,7 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
               {anchorUI ? '끝 칸을 탭하세요' : '시작 칸을 탭하세요'}
             </span>
             {anchorUI && (
-              <span style={{ fontSize:12, color:'#8c8a87', whiteSpace:'nowrap' }}>
+              <span style={{ fontSize:12, color:'#6f6d6a', whiteSpace:'nowrap' }}>
                 시작 {anchorUI.col},{anchorUI.row}
               </span>
             )}
@@ -579,7 +586,7 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
             overflow:'hidden', boxShadow:'0 4px 16px rgba(0,0,0,0.10)',
             minWidth:180, zIndex:491,
           }}>
-            <div style={{ padding:'10px 14px 9px', borderBottom:'1px solid #e9e7e4', fontSize:11, color:'#8c8a87', fontWeight:600, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+            <div style={{ padding:'10px 14px 9px', borderBottom:'1px solid #e9e7e4', fontSize:11, color:'#6f6d6a', fontWeight:600, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
               {contextMenu.cell.status === 'available' ? `빈 공간 · ${contextMenu.cell.address}` : `${contextMenu.cell.name ?? contextMenu.cell.address}`}
             </div>
             {contextMenu.cell.status === 'available' ? (

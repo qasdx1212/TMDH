@@ -250,7 +250,7 @@ export default function Home() {
             border:'1px solid #e9e7e4', boxShadow:'0 12px 40px rgba(0,0,0,0.14)',
           }}>
             <div style={{ fontSize:18, fontWeight:700, color:'#1a1a1a', marginBottom:8 }}>로그인이 필요해요</div>
-            <div style={{ fontSize:13, color:'#8c8a87', marginBottom:24, lineHeight:1.7 }}>입주 신청을 위해<br />구글 계정으로 로그인해 주세요.</div>
+            <div style={{ fontSize:13, color:'#6f6d6a', marginBottom:24, lineHeight:1.7 }}>입주 신청을 위해<br />구글 계정으로 로그인해 주세요.</div>
             <div style={{ display:'flex', gap:10 }}>
               <button onClick={() => setShowApply(false)} style={{ flex:1, padding:'12px', borderRadius:10, border:'1px solid #e0ddd9', background:'#ffffff', cursor:'pointer', fontSize:13, fontWeight:600, color:'#1a1a1a' }}>취소</button>
               <button

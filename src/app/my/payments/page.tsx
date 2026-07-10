@@ -60,7 +60,7 @@ export default function PaymentsPage() {
             { label: '입주 횟수', value: `${payments.filter(p => p.type === 'move_in').length}회` },
           ].map(({ label, value }) => (
             <div key={label} style={{ background: '#ffffff', border: '1px solid #e9e7e4', borderRadius: 14, boxShadow: '0 1px 3px rgba(0,0,0,0.05)', padding: '16px 18px' }}>
-              <div style={{ fontSize: 12, color: '#8c8a87', marginBottom: 6, fontWeight: 500 }}>{label}</div>
+              <div style={{ fontSize: 12, color: '#6f6d6a', marginBottom: 6, fontWeight: 500 }}>{label}</div>
               <div style={{ fontSize: 22, fontWeight: 700, color: '#1a1a1a' }}>{value}</div>
             </div>
           ))}
@@ -69,11 +69,11 @@ export default function PaymentsPage() {
         {/* 테이블 */}
         <div style={{ background: '#ffffff', border: '1px solid #e9e7e4', borderRadius: 14, boxShadow: '0 1px 3px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
           {loading ? (
-            <div style={{ padding: 48, textAlign: 'center', color: '#8c8a87' }}>불러오는 중...</div>
+            <div style={{ padding: 48, textAlign: 'center', color: '#6f6d6a' }}>불러오는 중...</div>
           ) : payments.length === 0 ? (
             <div style={{ padding: '56px 24px', textAlign: 'center' }}>
               <div style={{ fontSize: 15, fontWeight: 600, color: '#1a1a1a', marginBottom: 6 }}>결제 내역이 없어요</div>
-              <div style={{ fontSize: 13, color: '#8c8a87' }}>입주 신청 후 여기서 내역을 확인할 수 있어요.</div>
+              <div style={{ fontSize: 13, color: '#6f6d6a' }}>입주 신청 후 여기서 내역을 확인할 수 있어요.</div>
               <a href="/" style={{ display: 'inline-block', marginTop: 18, padding: '11px 24px', background: '#1c1c1e', color: '#fff', fontSize: 13, fontWeight: 600, textDecoration: 'none', borderRadius: 10 }}>
                 지도에서 입주 신청하기 →
               </a>
@@ -84,14 +84,14 @@ export default function PaymentsPage() {
                 <thead>
                   <tr style={{ background: '#faf9f7' }}>
                     {['날짜', '구분', '주소', '금액', '결제 수단', '상태'].map(h => (
-                      <th key={h} style={{ padding: '12px 14px', textAlign: 'left', color: '#8c8a87', fontWeight: 600, fontSize: 12, whiteSpace: 'nowrap', borderBottom: '1px solid #e9e7e4' }}>{h}</th>
+                      <th key={h} style={{ padding: '12px 14px', textAlign: 'left', color: '#6f6d6a', fontWeight: 600, fontSize: 12, whiteSpace: 'nowrap', borderBottom: '1px solid #e9e7e4' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {payments.map((p) => (
                     <tr key={p.id} style={{ borderBottom: '1px solid #f0efec' }}>
-                      <td style={{ padding: '13px 14px', color: '#8c8a87', whiteSpace: 'nowrap' }}>{p.created_at.slice(0, 10)}</td>
+                      <td style={{ padding: '13px 14px', color: '#6f6d6a', whiteSpace: 'nowrap' }}>{p.created_at.slice(0, 10)}</td>
                       <td style={{ padding: '13px 14px', whiteSpace: 'nowrap' }}>
                         <span style={{ fontSize: 12, padding: '3px 10px', borderRadius: 999, fontWeight: 500, whiteSpace: 'nowrap', background: '#faf9f7', color: '#575654', border: '1px solid #e9e7e4' }}>
                           {p.type === 'move_in' ? '신규 입주' : '수정'}
@@ -117,8 +117,8 @@ export default function PaymentsPage() {
 
         {payments.length > 0 && (
           <div style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ fontSize: 12, color: '#8c8a87' }}>{payments.length}건의 내역</div>
-            <div style={{ fontSize: 12, color: '#8c8a87' }}>현재 테스트 모드 — 실제 결제 없음</div>
+            <div style={{ fontSize: 12, color: '#6f6d6a' }}>{payments.length}건의 내역</div>
+            <div style={{ fontSize: 12, color: '#6f6d6a' }}>현재 테스트 모드 — 실제 결제 없음</div>
           </div>
         )}
       </div>

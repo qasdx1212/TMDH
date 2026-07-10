@@ -121,7 +121,7 @@ export default function AdminPage() {
 
   if (!authChecked) {
     return (
-      <div style={{ minHeight: '100vh', background: '#f4f3f1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8c8a87' }}>
+      <div style={{ minHeight: '100vh', background: '#f4f3f1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6f6d6a' }}>
         인증 확인 중...
       </div>
     )
@@ -200,9 +200,9 @@ export default function AdminPage() {
             { label: '총 방문', value: totalVisits.toLocaleString(), color: '#1a1a1a', sub: `♥ ${totalLikes.toLocaleString()}` },
           ].map(({ label, value, color, sub }) => (
             <div key={label} style={{ background: '#ffffff', border: '1px solid #e9e7e4', borderRadius: 14, boxShadow: '0 1px 3px rgba(0,0,0,0.05)', padding: '16px' }}>
-              <div style={{ fontSize: 11, color: '#8c8a87', marginBottom: 6, fontWeight: 500 }}>{label}</div>
+              <div style={{ fontSize: 11, color: '#6f6d6a', marginBottom: 6, fontWeight: 500 }}>{label}</div>
               <div style={{ fontSize: 22, fontWeight: 700, color }}>{value}</div>
-              <div style={{ fontSize: 11, color: '#b0aeaa', marginTop: 3 }}>{sub}</div>
+              <div style={{ fontSize: 11, color: '#97948f', marginTop: 3 }}>{sub}</div>
             </div>
           ))}
         </div>
@@ -228,13 +228,13 @@ export default function AdminPage() {
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                   <span style={{ fontSize: 12, color: '#1a1a1a', fontWeight: 600 }}>{zone.label}</span>
-                  <span style={{ fontSize: 11, color: '#8c8a87' }}>방문 {visits.toLocaleString()}</span>
+                  <span style={{ fontSize: 11, color: '#6f6d6a' }}>방문 {visits.toLocaleString()}</span>
                 </div>
                 <div style={{ fontSize: 22, fontWeight: 700, color: '#1a1a1a' }}>{count}채</div>
                 <div style={{ marginTop: 8, height: 6, background: '#f0efec', borderRadius: 999, overflow: 'hidden' }}>
                   <div style={{ height: '100%', width: `${rate}%`, background: zone.color, borderRadius: 999 }} />
                 </div>
-                <div style={{ fontSize: 11, color: '#b0aeaa', marginTop: 5 }}>{rate}% 분양</div>
+                <div style={{ fontSize: 11, color: '#97948f', marginTop: 5 }}>{rate}% 분양</div>
               </div>
             )
           })}
@@ -299,26 +299,26 @@ export default function AdminPage() {
                 <thead>
                   <tr style={{ background: '#faf9f7' }}>
                     {['날짜', '신고된 집', '구역', '사유', '상세 내용', '작업'].map(h => (
-                      <th key={h} style={{ padding: '11px 12px', textAlign: 'left', color: '#8c8a87', fontWeight: 600, fontSize: 12, whiteSpace: 'nowrap', borderBottom: '1px solid #e9e7e4' }}>{h}</th>
+                      <th key={h} style={{ padding: '11px 12px', textAlign: 'left', color: '#6f6d6a', fontWeight: 600, fontSize: 12, whiteSpace: 'nowrap', borderBottom: '1px solid #e9e7e4' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {reportsLoading ? (
-                    <tr><td colSpan={6} style={{ padding: 48, textAlign: 'center', color: '#8c8a87' }}>불러오는 중...</td></tr>
+                    <tr><td colSpan={6} style={{ padding: 48, textAlign: 'center', color: '#6f6d6a' }}>불러오는 중...</td></tr>
                   ) : reports.length === 0 ? (
-                    <tr><td colSpan={6} style={{ padding: 48, textAlign: 'center', color: '#8c8a87' }}>신고 내역이 없어요</td></tr>
+                    <tr><td colSpan={6} style={{ padding: 48, textAlign: 'center', color: '#6f6d6a' }}>신고 내역이 없어요</td></tr>
                   ) : reports.map((r) => {
                     const houseData = r.house
                     const zone = houseData ? ZONES[houseData.zone as keyof typeof ZONES] : null
                     const houseInList = houseData ? houses.find(h => h.id === r.house_id) : null
                     return (
                       <tr key={r.id} style={{ borderBottom: '1px solid #f0efec' }}>
-                        <td style={{ padding: '11px 12px', color: '#8c8a87', whiteSpace: 'nowrap' }}>{r.created_at.slice(0, 10)}</td>
+                        <td style={{ padding: '11px 12px', color: '#6f6d6a', whiteSpace: 'nowrap' }}>{r.created_at.slice(0, 10)}</td>
                         <td style={{ padding: '11px 12px', whiteSpace: 'nowrap' }}>
                           {houseData
-                            ? <><span style={{ color: '#1a1a1a', fontWeight: 600 }}>{houseData.address}</span><span style={{ color: '#8c8a87', marginLeft: 6 }}>{houseData.name ?? '—'}</span></>
-                            : <span style={{ color: '#8c8a87' }}>삭제된 집</span>}
+                            ? <><span style={{ color: '#1a1a1a', fontWeight: 600 }}>{houseData.address}</span><span style={{ color: '#6f6d6a', marginLeft: 6 }}>{houseData.name ?? '—'}</span></>
+                            : <span style={{ color: '#6f6d6a' }}>삭제된 집</span>}
                         </td>
                         <td style={{ padding: '11px 12px', whiteSpace: 'nowrap' }}>
                           {zone && <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 999, background: '#faf9f7', color: '#575654', border: '1px solid #e9e7e4', fontWeight: 500 }}>{zone.label}</span>}
@@ -327,7 +327,7 @@ export default function AdminPage() {
                           <span style={{ fontSize: 12, color: '#dc2626', fontWeight: 500 }}>{REASON_LABEL[r.reason] ?? r.reason}</span>
                         </td>
                         <td style={{ padding: '11px 12px', color: '#575654', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {r.description ?? <span style={{ color: '#8c8a87' }}>—</span>}
+                          {r.description ?? <span style={{ color: '#6f6d6a' }}>—</span>}
                         </td>
                         <td style={{ padding: '11px 12px', whiteSpace: 'nowrap' }}>
                           {houseInList ? (
@@ -337,7 +337,7 @@ export default function AdminPage() {
                               style={{ padding: '6px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 600, borderRadius: 10, background: '#dc2626', border: 'none', color: '#fff' }}
                             >{vacatingId === houseInList.id ? '처리중...' : '강제퇴거'}</button>
                           ) : (
-                            <span style={{ fontSize: 12, color: '#8c8a87' }}>이미 퇴거됨</span>
+                            <span style={{ fontSize: 12, color: '#6f6d6a' }}>이미 퇴거됨</span>
                           )}
                         </td>
                       </tr>
@@ -356,15 +356,15 @@ export default function AdminPage() {
               <thead>
                 <tr style={{ background: '#faf9f7' }}>
                   {['주소', '집 이름', '닉네임', '구역', '크기', '입주일', '만료일 / 상태', '방문 / 좋아요', '링크', '작업'].map(h => (
-                    <th key={h} style={{ padding: '11px 12px', textAlign: 'left', color: '#8c8a87', fontWeight: 600, fontSize: 12, whiteSpace: 'nowrap', borderBottom: '1px solid #e9e7e4' }}>{h}</th>
+                    <th key={h} style={{ padding: '11px 12px', textAlign: 'left', color: '#6f6d6a', fontWeight: 600, fontSize: 12, whiteSpace: 'nowrap', borderBottom: '1px solid #e9e7e4' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={10} style={{ padding: 48, textAlign: 'center', color: '#8c8a87' }}>불러오는 중...</td></tr>
+                  <tr><td colSpan={10} style={{ padding: 48, textAlign: 'center', color: '#6f6d6a' }}>불러오는 중...</td></tr>
                 ) : filtered.length === 0 ? (
-                  <tr><td colSpan={10} style={{ padding: 48, textAlign: 'center', color: '#8c8a87' }}>해당하는 집이 없어요</td></tr>
+                  <tr><td colSpan={10} style={{ padding: 48, textAlign: 'center', color: '#6f6d6a' }}>해당하는 집이 없어요</td></tr>
                 ) : filtered.map((h) => {
                   const zone = ZONES[h.zone as keyof typeof ZONES]
                   const daysLeft = h.is_permanent || !h.expires_at
@@ -384,14 +384,14 @@ export default function AdminPage() {
                       <td style={{ padding: '11px 12px', color: '#1a1a1a', fontWeight: 600, whiteSpace: 'nowrap' }}>{h.address}</td>
                       <td style={{ padding: '11px 12px', color: '#1a1a1a', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {h.exterior_image_url && <img src={h.exterior_image_url} alt="" style={{ width: 24, height: 24, objectFit: 'cover', borderRadius: 6, border: '1px solid #e9e7e4', marginRight: 6, verticalAlign: 'middle' }} />}
-                        {h.name ?? <span style={{ color: '#8c8a87' }}>—</span>}
+                        {h.name ?? <span style={{ color: '#6f6d6a' }}>—</span>}
                       </td>
                       <td style={{ padding: '11px 12px', color: '#575654' }}>{h.nickname ?? '—'}</td>
                       <td style={{ padding: '11px 12px' }}>
                         <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 999, background: '#faf9f7', color: '#575654', border: '1px solid #e9e7e4', whiteSpace: 'nowrap', fontWeight: 500 }}>{zone.label}</span>
                       </td>
-                      <td style={{ padding: '11px 12px', color: '#8c8a87', whiteSpace: 'nowrap' }}>{(h.width ?? 1)}×{(h.height ?? 1)}</td>
-                      <td style={{ padding: '11px 12px', color: '#8c8a87', whiteSpace: 'nowrap' }}>{h.occupied_at?.slice(0, 10) ?? '—'}</td>
+                      <td style={{ padding: '11px 12px', color: '#6f6d6a', whiteSpace: 'nowrap' }}>{(h.width ?? 1)}×{(h.height ?? 1)}</td>
+                      <td style={{ padding: '11px 12px', color: '#6f6d6a', whiteSpace: 'nowrap' }}>{h.occupied_at?.slice(0, 10) ?? '—'}</td>
                       <td style={{ padding: '11px 12px', whiteSpace: 'nowrap' }}>
                         {h.is_permanent
                           ? <span style={{ color: '#1a1a1a', fontSize: 12, fontWeight: 600 }}>영구</span>
@@ -399,15 +399,15 @@ export default function AdminPage() {
                           ? <span style={{ color: '#dc2626', fontWeight: 600 }}>만료됨</span>
                           : isExpiring
                           ? <span style={{ color: '#dc2626', fontWeight: 600 }}>D-{daysLeft} ({h.expires_at?.slice(0, 10)})</span>
-                          : <span style={{ color: '#8c8a87' }}>D-{daysLeft} ({h.expires_at?.slice(0, 10)})</span>}
+                          : <span style={{ color: '#6f6d6a' }}>D-{daysLeft} ({h.expires_at?.slice(0, 10)})</span>}
                       </td>
-                      <td style={{ padding: '11px 12px', color: '#8c8a87', whiteSpace: 'nowrap' }}>
+                      <td style={{ padding: '11px 12px', color: '#6f6d6a', whiteSpace: 'nowrap' }}>
                         방문 {h.visit_count.toLocaleString()} / ♥ {h.like_count.toLocaleString()}
                       </td>
                       <td style={{ padding: '11px 12px' }}>
                         {h.link_url
                           ? <a href={h.link_url} target="_blank" rel="noopener noreferrer" style={{ color: '#1a1a1a', fontSize: 12, textDecoration: 'underline', fontWeight: 500 }}>방문</a>
-                          : <span style={{ color: '#8c8a87' }}>—</span>}
+                          : <span style={{ color: '#6f6d6a' }}>—</span>}
                       </td>
                       <td style={{ padding: '11px 12px', whiteSpace: 'nowrap' }}>
                         <button
@@ -429,11 +429,11 @@ export default function AdminPage() {
         )}
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
-          <div style={{ fontSize: 12, color: '#8c8a87' }}>
+          <div style={{ fontSize: 12, color: '#6f6d6a' }}>
             {tab === 'reports' ? `${reports.length}건의 신고` : `${filtered.length}건 표시 중 / 전체 ${houses.length}건`}
           </div>
           {filterZone && tab !== 'reports' && (
-            <button onClick={() => setFilterZone(null)} style={{ fontSize: 12, color: '#8c8a87', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500 }}>
+            <button onClick={() => setFilterZone(null)} style={{ fontSize: 12, color: '#6f6d6a', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500 }}>
               구역 필터 초기화 ×
             </button>
           )}

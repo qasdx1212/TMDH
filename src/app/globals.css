@@ -13,7 +13,6 @@ html, body {
   font-family: 'Pretendard', 'Noto Sans KR', -apple-system, 'Malgun Gothic', sans-serif;
   background: #f4f3f1;
   color: #1a1a1a;
-  -webkit-font-smoothing: antialiased;
 }
 
 /* 빈 셀 — 존 구분 없이 통일 */

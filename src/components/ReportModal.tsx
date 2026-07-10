@@ -56,18 +56,18 @@ export default function ReportModal({ house, userId, onClose }: ReportModalProps
       >
         <div style={{ padding: '16px 20px', borderBottom: '1px solid #e9e7e4', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a' }}>신고하기</div>
-          <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 10, background: '#f4f3f1', border: '1px solid #e9e7e4', color: '#8c8a87', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>×</button>
+          <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 10, background: '#f4f3f1', border: '1px solid #e9e7e4', color: '#6f6d6a', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>×</button>
         </div>
 
         <div style={{ padding: 20, overflowY: 'auto', flex: 1 }}>
           {done ? (
             <div style={{ textAlign: 'center', padding: '24px 0' }}>
               <div style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a' }}>신고가 접수되었어요</div>
-              <div style={{ fontSize: 13, color: '#8c8a87', marginTop: 8 }}>검토 후 적절한 조치를 취하겠습니다.</div>
+              <div style={{ fontSize: 13, color: '#6f6d6a', marginTop: 8 }}>검토 후 적절한 조치를 취하겠습니다.</div>
             </div>
           ) : (
             <>
-              <div style={{ fontSize: 13, color: '#8c8a87', marginBottom: 16, padding: '10px 14px', background: '#f4f3f1', borderRadius: 10, border: '1px solid #e9e7e4' }}>
+              <div style={{ fontSize: 13, color: '#6f6d6a', marginBottom: 16, padding: '10px 14px', background: '#f4f3f1', borderRadius: 10, border: '1px solid #e9e7e4' }}>
                 신고 대상: <strong style={{ color: '#1a1a1a', fontWeight: 600 }}>{house.name ?? house.address}</strong>
               </div>
 
@@ -107,7 +107,7 @@ export default function ReportModal({ house, userId, onClose }: ReportModalProps
                   maxLength={300}
                   style={{ width: '100%', height: 80, padding: '10px 12px', borderRadius: 10, boxSizing: 'border-box', border: '1px solid #e0ddd9', background: '#ffffff', color: '#1a1a1a', fontSize: 13, outline: 'none', resize: 'none' }}
                 />
-                <div style={{ fontSize: 11, color: '#b0aeaa', textAlign: 'right', marginTop: 2 }}>{description.length}/300</div>
+                <div style={{ fontSize: 11, color: '#97948f', textAlign: 'right', marginTop: 2 }}>{description.length}/300</div>
               </div>
 
               <div style={{ display: 'flex', gap: 8 }}>

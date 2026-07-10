@@ -46,7 +46,7 @@ export default function CertificateModal({ house, onClose }: CertificateModalPro
     ctx.stroke()
 
     // 헤더
-    ctx.fillStyle = '#8c8a87'
+    ctx.fillStyle = '#6f6d6a'
     ctx.font = `600 13px ${SANS}`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
@@ -88,7 +88,7 @@ export default function CertificateModal({ house, onClose }: CertificateModalPro
 
     details.forEach(([label, value], i) => {
       const y = 238 + i * 30
-      ctx.fillStyle = '#8c8a87'; ctx.font = `12px ${SANS}`; ctx.textAlign = 'right'; ctx.textBaseline = 'middle'
+      ctx.fillStyle = '#6f6d6a'; ctx.font = `12px ${SANS}`; ctx.textAlign = 'right'; ctx.textBaseline = 'middle'
       ctx.fillText(label, W / 2 - 16, y)
       ctx.fillStyle = '#1a1a1a'; ctx.font = `600 13px ${SANS}`; ctx.textAlign = 'left'
       ctx.fillText(value, W / 2 + 16, y)
@@ -99,7 +99,7 @@ export default function CertificateModal({ house, onClose }: CertificateModalPro
     ctx.beginPath(); ctx.moveTo(70, 360); ctx.lineTo(W - 70, 360); ctx.stroke()
 
     // 푸터
-    ctx.fillStyle = '#b0aeaa'; ctx.font = `10px ${SANS}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+    ctx.fillStyle = '#97948f'; ctx.font = `10px ${SANS}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
     ctx.fillText('이 증서는 집.zip (zipzipworld.com) 에서 디지털 공간을 분양받은 증서입니다.', W / 2, 382)
     ctx.fillText(`발급일: ${new Date().toLocaleDateString('ko-KR')}`, W / 2, 399)
 
@@ -108,7 +108,7 @@ export default function CertificateModal({ house, onClose }: CertificateModalPro
     ctx.translate(W - 74, H - 116)
     ctx.strokeStyle = '#d5d2ce'; ctx.lineWidth = 1.5
     ctx.beginPath(); ctx.arc(0, 0, 26, 0, Math.PI * 2); ctx.stroke()
-    ctx.fillStyle = '#b0aeaa'; ctx.font = `600 12px ${SANS}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+    ctx.fillStyle = '#97948f'; ctx.font = `600 12px ${SANS}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
     ctx.fillText('확인', 0, 0)
     ctx.restore()
   }, [house])
@@ -159,7 +159,7 @@ export default function CertificateModal({ house, onClose }: CertificateModalPro
       >
         <div style={{ padding: '16px 20px', borderBottom: '1px solid #e9e7e4', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a' }}>기부 증서</div>
-          <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 10, background: '#f4f3f1', border: '1px solid #e9e7e4', color: '#8c8a87', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>×</button>
+          <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 10, background: '#f4f3f1', border: '1px solid #e9e7e4', color: '#6f6d6a', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>×</button>
         </div>
 
         <div style={{ padding: 20, overflowY: 'auto', flex: 1 }}>

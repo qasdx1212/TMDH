@@ -413,7 +413,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
           .af-row { flex-direction: column !important; }
           .af-col { width: 100% !important; border-right: none !important; }
         }
-        .af-modal input::placeholder, .af-modal textarea::placeholder { color:#b0aeaa; }
+        .af-modal input::placeholder, .af-modal textarea::placeholder { color:#97948f; }
         @keyframes af-spin { to { transform: rotate(360deg); } }
       `}</style>
       <div className="af-modal" style={{
@@ -434,7 +434,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
           }}>
             <div style={{ width:44, height:44, borderRadius:'50%', border:'3px solid #e9e7e4', borderTopColor:'#1c1c1e', animation:'af-spin 0.8s linear infinite' }} />
             <div style={{ fontSize:18, fontWeight:700, color:'#1a1a1a' }}>AI 콘텐츠 검사 중</div>
-            <div style={{ fontSize:13, color:'#8c8a87', textAlign:'center', lineHeight:1.8 }}>
+            <div style={{ fontSize:13, color:'#6f6d6a', textAlign:'center', lineHeight:1.8 }}>
               업로드된 이미지와 텍스트를<br />AI가 검토하고 있어요.
             </div>
             <div style={{ width:200, height:6, borderRadius:10, background:'#f4f3f1', overflow:'hidden', marginTop:4 }}>
@@ -458,7 +458,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
             <div style={{ fontSize:24, fontWeight:800, color:'#1a1a1a' }}>
               {isEdit ? '수정 완료' : '입주 완료'}
             </div>
-            <div style={{ fontSize:14, color:'#8c8a87', textAlign:'center', lineHeight:1.8 }}>
+            <div style={{ fontSize:14, color:'#6f6d6a', textAlign:'center', lineHeight:1.8 }}>
               {isEdit
                 ? '집 정보가 성공적으로 업데이트되었습니다.'
                 : '지도에 당신의 집이 생겼어요\n잠시 후 지도에 반영됩니다.'}
@@ -471,10 +471,10 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
           <div style={{ display:'flex', alignItems:'center', gap:12 }}>
             <div>
               <div style={{ fontSize:17, fontWeight:700, color:'#1a1a1a' }}>{isEdit ? '집 정보 수정' : '입주 신청'}</div>
-              <div style={{ fontSize:12, color:'#8c8a87', fontWeight:500, marginTop:3 }}>{isMultiZone ? '복합 구역' : zone.label} · {selectedCell.address} · {cellCount}칸</div>
+              <div style={{ fontSize:12, color:'#6f6d6a', fontWeight:500, marginTop:3 }}>{isMultiZone ? '복합 구역' : zone.label} · {selectedCell.address} · {cellCount}칸</div>
             </div>
           </div>
-          <button onClick={onClose} style={{ width:32, height:32, borderRadius:10, background:'#ffffff', border:'1px solid #e9e7e4', color:'#8c8a87', fontSize:20, fontWeight:500, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>×</button>
+          <button onClick={onClose} style={{ width:32, height:32, borderRadius:10, background:'#ffffff', border:'1px solid #e9e7e4', color:'#6f6d6a', fontSize:20, fontWeight:500, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>×</button>
         </div>
 
         {/* 스텝 인디케이터 */}
@@ -484,7 +484,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
             if (isEdit && (s === 1 || s === 5)) return null
             const isDone = step > s, isActive = step === s
             return (
-              <div key={i} style={{ flex:1, padding:'12px 4px', textAlign:'center', fontSize:11, fontWeight:isActive?700:isDone?600:500, color:isActive?'#1a1a1a':isDone?'#1a1a1a':'#b0aeaa', borderBottom:isActive?'2px solid #1a1a1a':'2px solid transparent' }}>
+              <div key={i} style={{ flex:1, padding:'12px 4px', textAlign:'center', fontSize:11, fontWeight:isActive?700:isDone?600:500, color:isActive?'#1a1a1a':isDone?'#1a1a1a':'#97948f', borderBottom:isActive?'2px solid #1a1a1a':'2px solid transparent' }}>
                 {label}
               </div>
             )
@@ -522,12 +522,12 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                   { label:'선택 총액', value: `${formatKRW(calcTotalPrice(PERMANENT_DAYS))} (영구)`, color: '#1a1a1a' },
                 ].map(({ label, value, color }) => (
                   <div key={label} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 0', borderBottom:'1px solid #e9e7e4' }}>
-                    <span style={{ fontSize:13, color:'#8c8a87' }}>{label}</span>
+                    <span style={{ fontSize:13, color:'#6f6d6a' }}>{label}</span>
                     <span style={{ fontSize:13, fontWeight:700, color: color ?? '#1a1a1a' }}>{value}</span>
                   </div>
                 ))}
                 {isMultiZone && (
-                  <div style={{ marginTop:10, padding:12, borderRadius:10, background:'#faf9f8', border:'1px solid #e9e7e4', fontSize:12, color:'#8c8a87', lineHeight:1.8 }}>
+                  <div style={{ marginTop:10, padding:12, borderRadius:10, background:'#faf9f8', border:'1px solid #e9e7e4', fontSize:12, color:'#6f6d6a', lineHeight:1.8 }}>
                     <div style={{ fontWeight:700, marginBottom:4, color:'#1a1a1a' }}>구역별 구성</div>
                     {Object.entries(zoneBreakdown).map(([z, count]) => (
                       <div key={z} style={{ display:'flex', justifyContent:'space-between' }}>
@@ -537,7 +537,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                     ))}
                   </div>
                 )}
-                <div style={{ marginTop:16, padding:14, borderRadius:10, background:'#faf9f8', border:'1px solid #e9e7e4', fontSize:12, color:'#8c8a87', lineHeight:1.7 }}>
+                <div style={{ marginTop:16, padding:14, borderRadius:10, background:'#faf9f8', border:'1px solid #e9e7e4', fontSize:12, color:'#6f6d6a', lineHeight:1.7 }}>
                   선택한 위치와 면적은 이후 변경할 수 없습니다.
                 </div>
               </div>
@@ -561,24 +561,24 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
 
                 <div style={{ marginTop:4, marginBottom:16 }}>
                   <div style={{ fontSize:14, fontWeight:700, color:'#1a1a1a', marginBottom:4 }}>링크 설정</div>
-                  <div style={{ fontSize:11, color:'#8c8a87', marginBottom:8 }}>집에 연결할 링크를 설정해주세요. (최대 1개)</div>
+                  <div style={{ fontSize:11, color:'#6f6d6a', marginBottom:8 }}>집에 연결할 링크를 설정해주세요. (최대 1개)</div>
                   <Field label="집 놀러가기 링크" hint="">
                     <input style={inputStyle} placeholder="https://" type="url" value={form.linkUrl} onChange={e => setForm(f => ({ ...f, linkUrl: e.target.value }))} />
                   </Field>
-                  <div style={{ fontSize:11, color:'#8c8a87', marginTop:4 }}>방문객이 클릭하면 이 링크로 이동해요!</div>
+                  <div style={{ fontSize:11, color:'#6f6d6a', marginTop:4 }}>방문객이 클릭하면 이 링크로 이동해요!</div>
                 </div>
 
                 <div style={{ marginTop:4, marginBottom:16 }}>
                   <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8, flexWrap:'wrap' }}>
                     <span style={{ fontSize:14, fontWeight:700, color:'#1a1a1a' }}>내부 인테리어 이미지 등록</span>
-                    <span style={{ fontSize:11, color:'#8c8a87', background:'#f4f3f1', padding:'3px 8px', borderRadius:8 }}>집을 열었을 때 가장 크게 보이는 사진이에요.</span>
+                    <span style={{ fontSize:11, color:'#6f6d6a', background:'#f4f3f1', padding:'3px 8px', borderRadius:8 }}>집을 열었을 때 가장 크게 보이는 사진이에요.</span>
                   </div>
                   <label style={{ display:'block', cursor:'pointer' }}>
                     <div style={{ height:120, borderRadius:10, border:`1px dashed ${form.interiorPreview ? '#1a1a1a' : '#d5d2ce'}`, background:'#faf9f8', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden' }}>
                       {form.interiorPreview ? <img src={form.interiorPreview} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} /> : (
-                        <div style={{ textAlign:'center', color:'#8c8a87' }}>
+                        <div style={{ textAlign:'center', color:'#6f6d6a' }}>
                           <div style={{ fontSize:12, fontWeight:600 }}>이미지 선택 또는 드래그</div>
-                          <div style={{ fontSize:10, marginTop:3, color:'#b0aeaa' }}>JPG, PNG, WEBP (최대 10MB)</div>
+                          <div style={{ fontSize:10, marginTop:3, color:'#97948f' }}>JPG, PNG, WEBP (최대 10MB)</div>
                         </div>
                       )}
                     </div>
@@ -596,9 +596,9 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                   <div style={{ fontSize:13, fontWeight:700, color:'#1a1a1a', marginBottom:6 }}>
                     비밀번호 설정
                     {!isEdit && <span style={{ fontSize:11, fontWeight:700, color:'#dc2626', marginLeft:6 }}>* 필수</span>}
-                    {isEdit && <span style={{ fontSize:11, fontWeight:500, color:'#8c8a87', marginLeft:6 }}>(변경 선택사항)</span>}
+                    {isEdit && <span style={{ fontSize:11, fontWeight:500, color:'#6f6d6a', marginLeft:6 }}>(변경 선택사항)</span>}
                   </div>
-                  <div style={{ fontSize:11, color:'#8c8a87', marginBottom:10, lineHeight:1.6 }}>
+                  <div style={{ fontSize:11, color:'#6f6d6a', marginBottom:10, lineHeight:1.6 }}>
                     {isEdit ? '변경하려면 새 비밀번호를 입력하세요.' : '수정·삭제 시 필요한 비밀번호를 설정해주세요.'}
                   </div>
                   {isEdit && selectedCell.has_password && (
@@ -640,15 +640,15 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
 
               {/* 오른쪽: 라이브 미리보기 */}
               <div className="af-col" style={{ width:280, flexShrink:0, padding:'16px', background:'#faf9f8', display:'flex', flexDirection:'column', gap:8 }}>
-                <div style={{ fontSize:11, fontWeight:600, color:'#8c8a87', textAlign:'center' }}>집을 클릭하면 이렇게 보여요!</div>
+                <div style={{ fontSize:11, fontWeight:600, color:'#6f6d6a', textAlign:'center' }}>집을 클릭하면 이렇게 보여요!</div>
                 <div style={{ background:'#fff', borderRadius:12, border:'1px solid #e9e7e4', overflow:'hidden', fontSize:12, position:'relative', boxShadow:'0 1px 3px rgba(0,0,0,0.05)' }}>
                   {/* 닫기 */}
-                  <div style={{ position:'absolute', top:8, right:8, width:18, height:18, borderRadius:6, background:'#f4f3f1', display:'flex', alignItems:'center', justifyContent:'center', color:'#8c8a87', fontSize:12, fontWeight:500 }}>×</div>
+                  <div style={{ position:'absolute', top:8, right:8, width:18, height:18, borderRadius:6, background:'#f4f3f1', display:'flex', alignItems:'center', justifyContent:'center', color:'#6f6d6a', fontSize:12, fontWeight:500 }}>×</div>
                   {/* 미리보기 헤더 */}
                   <div style={{ background:'#faf9f8', padding:'10px 28px 10px 10px', borderBottom:'1px solid #e9e7e4', display:'flex', alignItems:'center', gap:8 }}>
                     <div>
                       <div style={{ display:'flex', gap:4, marginBottom:3, flexWrap:'wrap' }}>
-                        <span style={{ fontSize:9, padding:'2px 6px', borderRadius:6, background:'#f4f3f1', color:'#8c8a87' }}>{selectedCell.address}</span>
+                        <span style={{ fontSize:9, padding:'2px 6px', borderRadius:6, background:'#f4f3f1', color:'#6f6d6a' }}>{selectedCell.address}</span>
                         {form.nickname && <span style={{ fontSize:9, padding:'2px 6px', borderRadius:6, background:'#1c1c1e', color:'#fff', fontWeight:600 }}>{form.nickname}</span>}
                       </div>
                       <div style={{ fontSize:13, fontWeight:700, color:'#1a1a1a' }}>{form.name || '집 이름'}</div>
@@ -659,13 +659,13 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                     <div style={{ flex:1, padding:'10px' }}>
                       {form.description && (
                         <div style={{ marginBottom:8 }}>
-                          <span style={{ fontSize:9, fontWeight:600, padding:'2px 6px', borderRadius:6, background:'#f4f3f1', color:'#8c8a87', marginBottom:4, display:'inline-block' }}>소개글</span>
-                          <div style={{ fontSize:11, color:'#8c8a87', lineHeight:1.6, marginTop:4 }}>{form.description}</div>
+                          <span style={{ fontSize:9, fontWeight:600, padding:'2px 6px', borderRadius:6, background:'#f4f3f1', color:'#6f6d6a', marginBottom:4, display:'inline-block' }}>소개글</span>
+                          <div style={{ fontSize:11, color:'#6f6d6a', lineHeight:1.6, marginTop:4 }}>{form.description}</div>
                         </div>
                       )}
                       {form.linkUrl && (
                         <div>
-                          <span style={{ fontSize:9, fontWeight:600, padding:'2px 6px', borderRadius:6, background:'#f4f3f1', color:'#8c8a87', marginBottom:4, display:'inline-block' }}>링크</span>
+                          <span style={{ fontSize:9, fontWeight:600, padding:'2px 6px', borderRadius:6, background:'#f4f3f1', color:'#6f6d6a', marginBottom:4, display:'inline-block' }}>링크</span>
                           <div style={{ marginTop:4 }}><span style={{ fontSize:10, padding:'4px 8px', borderRadius:8, background:'#f4f3f1', color:'#1a1a1a', fontWeight:600 }}>홈페이지</span></div>
                         </div>
                       )}
@@ -678,14 +678,14 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                   </div>
                   {/* 미리보기 통계 */}
                   <div style={{ display:'flex', borderTop:'1px solid #e9e7e4', background:'#faf9f8' }}>
-                    <div style={{ flex:1, padding:'8px', textAlign:'center', fontSize:11, fontWeight:600, color:'#8c8a87' }}>좋아요 0</div>
+                    <div style={{ flex:1, padding:'8px', textAlign:'center', fontSize:11, fontWeight:600, color:'#6f6d6a' }}>좋아요 0</div>
                     <div style={{ width:1, background:'#e9e7e4' }} />
-                    <div style={{ flex:1, padding:'8px', textAlign:'center', fontSize:11, fontWeight:600, color:'#8c8a87' }}>방문 0</div>
+                    <div style={{ flex:1, padding:'8px', textAlign:'center', fontSize:11, fontWeight:600, color:'#6f6d6a' }}>방문 0</div>
                     <div style={{ width:1, background:'#e9e7e4' }} />
-                    <div style={{ flex:1, padding:'8px', textAlign:'center', fontSize:10, color:'#8c8a87' }}>오늘</div>
+                    <div style={{ flex:1, padding:'8px', textAlign:'center', fontSize:10, color:'#6f6d6a' }}>오늘</div>
                   </div>
                 </div>
-                <div style={{ fontSize:10, color:'#b0aeaa', textAlign:'center', lineHeight:1.6 }}>
+                <div style={{ fontSize:10, color:'#97948f', textAlign:'center', lineHeight:1.6 }}>
                   *예시이미지
                 </div>
               </div>
@@ -698,15 +698,15 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
               {/* 왼쪽 */}
               <div className="af-col" style={{ flex:1, padding:'20px', borderRight:'1px solid #e9e7e4', overflowY:'auto', maxHeight:'calc(92vh - 160px)' }}>
                 <SectionTitle>건물 외관 이미지 등록</SectionTitle>
-                <div style={{ fontSize:12, color:'#8c8a87', marginBottom:16, lineHeight:1.6 }}>
+                <div style={{ fontSize:12, color:'#6f6d6a', marginBottom:16, lineHeight:1.6 }}>
                   사람들이 지도에서 가장 먼저 보게 되는 이미지예요.
                 </div>
 
                 <label style={{ display:'block', cursor:'pointer', marginBottom:16 }}>
                   <div style={{ height: form.exteriorPreview ? 56 : 160, borderRadius:10, border:`1px dashed ${form.exteriorPreview ? '#1a1a1a' : '#d5d2ce'}`, background:'#faf9f8', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden' }}>
-                    <div style={{ textAlign:'center', color:'#8c8a87' }}>
+                    <div style={{ textAlign:'center', color:'#6f6d6a' }}>
                       <div style={{ fontSize:13, fontWeight:600 }}>{form.exteriorPreview ? '다른 이미지 선택' : '이미지 업로드'}</div>
-                      {!form.exteriorPreview && <div style={{ fontSize:11, marginTop:4, color:'#b0aeaa' }}>JPG, PNG, WEBP (최대 10MB)</div>}
+                      {!form.exteriorPreview && <div style={{ fontSize:11, marginTop:4, color:'#97948f' }}>JPG, PNG, WEBP (최대 10MB)</div>}
                     </div>
                   </div>
                   <input type="file" accept="image/*" onChange={handleFile('exterior')} style={{ display:'none' }} />
@@ -736,19 +736,19 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                         }}
                       />
                     </div>
-                    <div style={{ fontSize:11, color:'#8c8a87', textAlign:'center', marginBottom:12 }}>
+                    <div style={{ fontSize:11, color:'#6f6d6a', textAlign:'center', marginBottom:12 }}>
                       드래그해서 위치를 옮기고, 아래 슬라이더로 크기를 조절하세요. 보이는 그대로 지도에 올라갑니다.
                     </div>
 
                     <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                      <span style={{ fontSize:11, color:'#8c8a87', flexShrink:0 }}>축소</span>
+                      <span style={{ fontSize:11, color:'#6f6d6a', flexShrink:0 }}>축소</span>
                       <input
                         type="range" min={0.5} max={3} step={0.01}
                         value={form.exteriorScale}
                         onChange={e => setForm(f => ({ ...f, exteriorScale: Number(e.target.value) }))}
                         style={{ flex:1, accentColor:'#1c1c1e', cursor:'pointer' }}
                       />
-                      <span style={{ fontSize:11, color:'#8c8a87', flexShrink:0 }}>확대</span>
+                      <span style={{ fontSize:11, color:'#6f6d6a', flexShrink:0 }}>확대</span>
                       <span style={{ fontSize:11, fontWeight:600, color:'#1a1a1a', width:44, textAlign:'right', flexShrink:0 }}>
                         {form.exteriorScale.toFixed(2)}×
                       </span>
@@ -757,7 +757,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                 )}
 
                 {/* 권장 가이드 */}
-                <div style={{ padding:12, borderRadius:10, background:'#faf9f8', border:'1px solid #e9e7e4', fontSize:12, color:'#8c8a87', marginBottom:16 }}>
+                <div style={{ padding:12, borderRadius:10, background:'#faf9f8', border:'1px solid #e9e7e4', fontSize:12, color:'#6f6d6a', marginBottom:16 }}>
                   <div style={{ fontWeight:700, marginBottom:6, color:'#1a1a1a' }}>권장 가이드</div>
                   <div>· 권장 비율: 선택한 영역 비율과 비슷하게</div>
                   <div>· 권장 해상도: 1000px 이상</div>
@@ -781,7 +781,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                       <RadioDot active={active} />
                       <div>
                         <div style={{ fontSize:13, fontWeight:600, color:'#1a1a1a' }}>{label}</div>
-                        <div style={{ fontSize:11, color:'#8c8a87', marginTop:2 }}>{desc}</div>
+                        <div style={{ fontSize:11, color:'#6f6d6a', marginTop:2 }}>{desc}</div>
                       </div>
                     </div>
                     )
@@ -789,7 +789,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                 </div>
 
                 {/* 이미지 수정 정책 */}
-                <div style={{ padding:12, borderRadius:10, background:'#faf9f8', border:'1px solid #e9e7e4', fontSize:12, color:'#8c8a87' }}>
+                <div style={{ padding:12, borderRadius:10, background:'#faf9f8', border:'1px solid #e9e7e4', fontSize:12, color:'#6f6d6a' }}>
                   <div style={{ fontWeight:700, marginBottom:4, color:'#1a1a1a' }}>수정 정책</div>
                   <div>· 집 정보와 이미지는 언제든지 수정 가능합니다.</div>
                   <div>· 위치와 면적은 변경할 수 없습니다.</div>
@@ -798,14 +798,14 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
 
               {/* 오른쪽: 지도 미리보기 */}
               <div className="af-col" style={{ width:300, flexShrink:0, padding:'20px', background:'#faf9f8' }}>
-                <div style={{ fontSize:12, fontWeight:600, color:'#8c8a87', marginBottom:10 }}>지도 미리보기</div>
+                <div style={{ fontSize:12, fontWeight:600, color:'#6f6d6a', marginBottom:10 }}>지도 미리보기</div>
                 <div style={{ height:160, borderRadius:10, border:'1px solid #e9e7e4', background:'#fff', overflow:'hidden', marginBottom:12, display:'flex', alignItems:'center', justifyContent:'center' }}>
                   {cropEnabled ? (
                     <canvas ref={mapPreviewRef} width={pvW} height={pvH} style={{ width:pvW, height:pvH, maxWidth:'92%', maxHeight:'88%', borderRadius:6, border:'1px solid #e9e7e4', display:'block' }} />
                   ) : form.exteriorPreview ? (
                     <img src={form.exteriorPreview} alt="" style={{ maxWidth:'80%', maxHeight:'80%', objectFit: form.exteriorFit, borderRadius:8, border:'1px solid #e9e7e4' }} />
                   ) : (
-                    <div style={{ textAlign:'center', color:'#b0aeaa', fontSize:12 }}>이미지를 업로드하면<br/>미리보기가 표시됩니다</div>
+                    <div style={{ textAlign:'center', color:'#97948f', fontSize:12 }}>이미지를 업로드하면<br/>미리보기가 표시됩니다</div>
                   )}
                 </div>
 
@@ -853,7 +853,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                 {/* 대표 이미지 썸네일 */}
                 {(form.exteriorPreview || form.interiorPreview) && (
                   <div style={{ marginTop:16 }}>
-                    <div style={{ fontSize:12, color:'#8c8a87', marginBottom:8, fontWeight:600 }}>대표 이미지</div>
+                    <div style={{ fontSize:12, color:'#6f6d6a', marginBottom:8, fontWeight:600 }}>대표 이미지</div>
                     <div style={{ display:'flex', gap:10 }}>
                       {form.interiorPreview && <img src={form.interiorPreview} alt="내부" style={{ width:80, height:80, objectFit:'cover', borderRadius:10, border:'1px solid #e9e7e4' }} />}
                       {form.exteriorPreview && (
@@ -870,7 +870,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                   <div style={{ marginTop:20, padding:'16px 18px', borderRadius:12, background:'#faf9f8', border:'1px solid #e9e7e4', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
                     <div>
                       <div style={{ fontSize:13, fontWeight:700, color:'#1a1a1a' }}>영구 입주</div>
-                      <div style={{ fontSize:11, color:'#8c8a87', marginTop:3 }}>한번 입주하면 영구적으로 유지됩니다.</div>
+                      <div style={{ fontSize:11, color:'#6f6d6a', marginTop:3 }}>한번 입주하면 영구적으로 유지됩니다.</div>
                     </div>
                     <div style={{ fontSize:18, fontWeight:800, color:'#1a1a1a' }}>{formatKRW(calcTotalPrice(PERMANENT_DAYS))}</div>
                   </div>
@@ -880,7 +880,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
               {/* 유의사항 */}
               <div className="af-col" style={{ width:220, flexShrink:0, padding:'24px 16px', background:'#faf9f8', borderLeft:'1px solid #e9e7e4' }}>
                 <div style={{ fontSize:13, fontWeight:700, color:'#1a1a1a', marginBottom:12 }}>유의사항</div>
-                <div style={{ fontSize:12, color:'#8c8a87', lineHeight:1.8 }}>
+                <div style={{ fontSize:12, color:'#6f6d6a', lineHeight:1.8 }}>
                   · 반드시 마지막 단계에서 결제를 완료해야 신청이 정상적으로 접수됩니다.<br /><br />
                   · 결제 완료 후 즉시 입주 처리됩니다.<br /><br />
                   · 영구 입주로 만료일이 없습니다.
@@ -902,7 +902,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                 ].map(({ label, value, highlight }) => (
                   <InfoRow key={label} label={label} value={value} highlight={highlight} />
                 ))}
-                <div style={{ marginTop:16, fontSize:12, color:'#8c8a87', lineHeight:1.8 }}>
+                <div style={{ marginTop:16, fontSize:12, color:'#6f6d6a', lineHeight:1.8 }}>
                   · 결제 완료 후 즉시 입주가 확정됩니다.<br />
                   · 영구 입주로 만료일이 없습니다.
                 </div>
@@ -921,9 +921,9 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
                       </div>
                       <div style={{ fontSize:14, fontWeight:700, color:'#1a1a1a' }}>결제 완료</div>
-                      <div style={{ fontSize:11, color:'#8c8a87', marginTop:4 }}>이제 입주하기 버튼을 눌러주세요.</div>
+                      <div style={{ fontSize:11, color:'#6f6d6a', marginTop:4 }}>이제 입주하기 버튼을 눌러주세요.</div>
                     </div>
-                    <div style={{ padding:'10px 12px', borderRadius:10, background:'#fff', border:'1px solid #e9e7e4', fontSize:11, color:'#8c8a87', lineHeight:1.7 }}>
+                    <div style={{ padding:'10px 12px', borderRadius:10, background:'#fff', border:'1px solid #e9e7e4', fontSize:11, color:'#6f6d6a', lineHeight:1.7 }}>
                       입주하기 클릭 시 AI 콘텐츠 검사 후<br />지도에 반영됩니다.
                     </div>
                   </>
@@ -1021,7 +1021,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
             style={{
               flex:2, padding:'13px', borderRadius:10, cursor: loading || !canNext() ? 'not-allowed' : 'pointer',
               background: loading || !canNext() ? '#e9e7e4' : '#1c1c1e',
-              color: loading || !canNext() ? '#b0aeaa' : '#ffffff', fontSize:14, fontWeight:700,
+              color: loading || !canNext() ? '#97948f' : '#ffffff', fontSize:14, fontWeight:700,
               border:'none',
             }}
           >
@@ -1064,7 +1064,7 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
     <div style={{ marginBottom:16 }}>
       <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
         <span style={{ fontSize:13, fontWeight:600, color:'#1a1a1a' }}>{label}</span>
-        {hint && <span style={{ fontSize:11, color:'#8c8a87' }}>{hint}</span>}
+        {hint && <span style={{ fontSize:11, color:'#6f6d6a' }}>{hint}</span>}
       </div>
       {children}
     </div>
@@ -1072,13 +1072,13 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 }
 
 function CharCount({ cur, max }: { cur: number; max: number }) {
-  return <div style={{ fontSize:11, color: cur >= max ? '#dc2626' : '#b0aeaa', textAlign:'right', marginTop:4 }}>{cur}/{max}</div>
+  return <div style={{ fontSize:11, color: cur >= max ? '#dc2626' : '#97948f', textAlign:'right', marginTop:4 }}>{cur}/{max}</div>
 }
 
 function InfoRow({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   return (
     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 0', borderBottom:'1px solid #e9e7e4' }}>
-      <span style={{ fontSize:13, color:'#8c8a87' }}>{label}</span>
+      <span style={{ fontSize:13, color:'#6f6d6a' }}>{label}</span>
       <span style={{ fontSize:13, fontWeight: highlight ? 800 : 600, color:'#1a1a1a' }}>{value}</span>
     </div>
   )

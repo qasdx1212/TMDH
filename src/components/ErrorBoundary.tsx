@@ -123,7 +123,7 @@ export default class ErrorBoundary extends React.Component<
               <a
                 href="/"
                 style={{
-                  color: '#8c8a87',
+                  color: '#6f6d6a',
                   fontSize: '13px',
                   fontWeight: 500,
                   textDecoration: 'underline',

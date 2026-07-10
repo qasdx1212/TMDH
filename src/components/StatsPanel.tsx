@@ -144,7 +144,7 @@ export default function StatsPanel({ houses, mapViewport }: StatsPanelProps) {
             ].map(item => (
               <div key={item.label} style={{ display:'flex', alignItems:'center', gap:6 }}>
                 <div style={{ width:8, height:8, borderRadius:'50%', background:item.color, flexShrink:0 }} />
-                <span style={{ fontSize:10, color:'#8c8a87', flex:1 }}>{item.label}</span>
+                <span style={{ fontSize:10, color:'#6f6d6a', flex:1 }}>{item.label}</span>
                 <span style={{ fontSize:11, fontWeight:600, color:'#1a1a1a' }}>{((item.value/totalCells)*100).toFixed(1)}%</span>
               </div>
             ))}
@@ -156,13 +156,13 @@ export default function StatsPanel({ houses, mapViewport }: StatsPanelProps) {
       <div style={{ padding:'10px 16px', borderRight:'1px solid #e9e7e4', display:'flex', flexDirection:'column', gap:5 }}>
         <PanelLabel>인기 지역 TOP 5 (방문자 수 기준)</PanelLabel>
         {topAreas.length === 0 ? (
-          <div style={{ fontSize:11, color:'#8c8a87', marginTop:8 }}>아직 방문 데이터가 없어요</div>
+          <div style={{ fontSize:11, color:'#6f6d6a', marginTop:8 }}>아직 방문 데이터가 없어요</div>
         ) : topAreas.map(area => (
           <div key={area.rank} style={{ display:'flex', alignItems:'center', gap:8 }}>
             <span style={{ fontSize:10, fontWeight:700, width:18, height:18, borderRadius:'50%', background:'#f4f3f1', color:'#1a1a1a', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>{area.rank}</span>
             <span style={{ fontSize:9, color:ZONES[area.zone as keyof typeof ZONES]?.color ?? '#1a1a1a' }}>●</span>
             <span style={{ fontSize:11, color:'#1a1a1a', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{area.name}</span>
-            <span style={{ fontSize:10, color:'#8c8a87', flexShrink:0 }}>{area.count.toLocaleString()}</span>
+            <span style={{ fontSize:10, color:'#6f6d6a', flexShrink:0 }}>{area.count.toLocaleString()}</span>
           </div>
         ))}
       </div>
@@ -171,12 +171,12 @@ export default function StatsPanel({ houses, mapViewport }: StatsPanelProps) {
       <div style={{ padding:'10px 16px', display:'flex', flexDirection:'column', gap:5 }}>
         <PanelLabel>최근 입주자</PanelLabel>
         {recentHouses.length === 0 ? (
-          <div style={{ fontSize:11, color:'#8c8a87', marginTop:8 }}>첫 번째 입주자가 되어보세요!</div>
+          <div style={{ fontSize:11, color:'#6f6d6a', marginTop:8 }}>첫 번째 입주자가 되어보세요!</div>
         ) : recentHouses.map(h => (
           <div key={h.id} style={{ display:'flex', alignItems:'center', gap:8 }}>
-            <span style={{ fontSize:9, fontWeight:600, padding:'1px 7px', borderRadius:8, background:'#f4f3f1', color:'#8c8a87', border:'1px solid #e9e7e4', flexShrink:0 }}>new</span>
+            <span style={{ fontSize:9, fontWeight:600, padding:'1px 7px', borderRadius:8, background:'#f4f3f1', color:'#6f6d6a', border:'1px solid #e9e7e4', flexShrink:0 }}>new</span>
             <span style={{ fontSize:11, color:'#1a1a1a', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{h.name ?? h.nickname ?? '이름 없음'}</span>
-            <span style={{ fontSize:10, color:'#8c8a87', flexShrink:0 }}>{h.occupied_at ? getTimeAgo(h.occupied_at) : ''}</span>
+            <span style={{ fontSize:10, color:'#6f6d6a', flexShrink:0 }}>{h.occupied_at ? getTimeAgo(h.occupied_at) : ''}</span>
           </div>
         ))}
       </div>
@@ -184,7 +184,7 @@ export default function StatsPanel({ houses, mapViewport }: StatsPanelProps) {
     {/* 사업자정보 + 상품/요금 (PG 심사·전자상거래법 표기) */}
     <div style={{
       background:'#ffffff', borderTop:'1px solid #e9e7e4',
-      padding:'8px 16px', fontSize:10, color:'#8c8a87',
+      padding:'8px 16px', fontSize:10, color:'#6f6d6a',
       whiteSpace:'nowrap', overflowX:'auto', minWidth:580,
     }}>
       <strong style={{ color:'#1a1a1a', fontWeight:600 }}>스트릿애드 (StreetAd)</strong>
@@ -193,18 +193,18 @@ export default function StatsPanel({ houses, mapViewport }: StatsPanelProps) {
       {' · 통신판매업신고 신고 중 · '}
       <strong style={{ color:'#1a1a1a', fontWeight:600 }}>집.zip 디지털 공간 이용권 1칸(픽셀) 1,000원~ (이용기간 30일·90일·180일·365일·영구)</strong>
       {' · '}
-      <a href="/terms" style={{ color:'#8c8a87', textDecoration:'none' }}>이용약관</a>
+      <a href="/terms" style={{ color:'#6f6d6a', textDecoration:'none' }}>이용약관</a>
       {' · '}
-      <a href="/privacy" style={{ color:'#8c8a87', textDecoration:'none' }}>개인정보처리방침</a>
+      <a href="/privacy" style={{ color:'#6f6d6a', textDecoration:'none' }}>개인정보처리방침</a>
       {' · '}
-      <a href="/terms?tab=refund" style={{ color:'#8c8a87', textDecoration:'none' }}>환불정책</a>
+      <a href="/terms?tab=refund" style={{ color:'#6f6d6a', textDecoration:'none' }}>환불정책</a>
     </div>
     </div>
   )
 }
 
 function PanelLabel({ children }: { children: React.ReactNode }) {
-  return <div style={{ fontSize:10, fontWeight:600, color:'#8c8a87', letterSpacing:'0.01em', marginBottom:4 }}>{children}</div>
+  return <div style={{ fontSize:10, fontWeight:600, color:'#6f6d6a', letterSpacing:'0.01em', marginBottom:4 }}>{children}</div>
 }
 
 function getTimeAgo(dateStr: string): string {

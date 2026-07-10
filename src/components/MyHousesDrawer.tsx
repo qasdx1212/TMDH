@@ -82,12 +82,12 @@ export default function MyHousesDrawer({ userId, isAdmin, onClose, onEdit, onRef
         }}>
           <div>
             <div style={{ fontSize: 18, fontWeight: 700, color: '#1a1a1a' }}>내 집</div>
-            <div style={{ fontSize: 12, color: '#8c8a87', marginTop: 3 }}>총 {houses.length}채 입주 중</div>
+            <div style={{ fontSize: 12, color: '#6f6d6a', marginTop: 3 }}>총 {houses.length}채 입주 중</div>
           </div>
           <button onClick={onClose} style={{
             width: 32, height: 32, borderRadius: 10,
             background: '#f4f3f1', border: '1px solid #e9e7e4',
-            color: '#8c8a87', fontSize: 18, cursor: 'pointer',
+            color: '#6f6d6a', fontSize: 18, cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
           }}>×</button>
         </div>
@@ -95,18 +95,18 @@ export default function MyHousesDrawer({ userId, isAdmin, onClose, onEdit, onRef
         {/* 리스트 */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
           {loading ? (
-            <div style={{ textAlign: 'center', padding: 40, color: '#8c8a87', fontSize: 14 }}>불러오는 중...</div>
+            <div style={{ textAlign: 'center', padding: 40, color: '#6f6d6a', fontSize: 14 }}>불러오는 중...</div>
           ) : houses.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px 20px' }}>
               <div style={{ fontSize: 15, fontWeight: 600, color: '#1a1a1a', marginBottom: 8 }}>아직 입주한 집이 없어요</div>
-              <div style={{ fontSize: 13, color: '#8c8a87', lineHeight: 1.7 }}>지도에서 빈 칸을 클릭해<br />입주 신청을 해보세요!</div>
+              <div style={{ fontSize: 13, color: '#6f6d6a', lineHeight: 1.7 }}>지도에서 빈 칸을 클릭해<br />입주 신청을 해보세요!</div>
             </div>
           ) : houses.map(h => {
             const zone = ZONES[h.zone]
             const daysLeft = getDaysLeft(h.expires_at, h.is_permanent)
             const isExpiringSoon = daysLeft !== null && daysLeft <= 7
             const isExpired = daysLeft !== null && daysLeft <= 0
-            const statusColor = isExpired ? '#dc2626' : isExpiringSoon ? '#8c8a87' : '#8c8a87'
+            const statusColor = isExpired ? '#dc2626' : isExpiringSoon ? '#6f6d6a' : '#6f6d6a'
             const isVisible = h.is_visible !== false
 
             return (
@@ -137,11 +137,11 @@ export default function MyHousesDrawer({ userId, isAdmin, onClose, onEdit, onRef
                 <div style={{ padding: '12px 14px' }}>
                   {/* 구역 배지 */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 8, background: '#f4f3f1', color: '#8c8a87', border: '1px solid #e9e7e4' }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 8, background: '#f4f3f1', color: '#6f6d6a', border: '1px solid #e9e7e4' }}>
                       {zone.label}
                     </span>
-                    <span style={{ fontSize: 11, color: '#8c8a87' }}>{h.address}</span>
-                    <span style={{ fontSize: 11, color: '#b0aeaa', marginLeft: 'auto' }}>
+                    <span style={{ fontSize: 11, color: '#6f6d6a' }}>{h.address}</span>
+                    <span style={{ fontSize: 11, color: '#97948f', marginLeft: 'auto' }}>
                       {(h.width ?? 1) * (h.height ?? 1)}칸
                     </span>
                   </div>
@@ -152,7 +152,7 @@ export default function MyHousesDrawer({ userId, isAdmin, onClose, onEdit, onRef
 
                   {h.description && (
                     <div style={{
-                      fontSize: 12, color: '#8c8a87', marginBottom: 8, lineHeight: 1.5,
+                      fontSize: 12, color: '#6f6d6a', marginBottom: 8, lineHeight: 1.5,
                       display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
                     }}>
                       {h.description}
@@ -160,7 +160,7 @@ export default function MyHousesDrawer({ userId, isAdmin, onClose, onEdit, onRef
                   )}
 
                   {/* 통계 */}
-                  <div style={{ display: 'flex', gap: 12, fontSize: 12, color: '#8c8a87', marginBottom: 10 }}>
+                  <div style={{ display: 'flex', gap: 12, fontSize: 12, color: '#6f6d6a', marginBottom: 10 }}>
                     <span>❤️ {h.like_count.toLocaleString()}</span>
                     <span>방문 {h.visit_count.toLocaleString()}</span>
                   </div>
@@ -191,7 +191,7 @@ export default function MyHousesDrawer({ userId, isAdmin, onClose, onEdit, onRef
                         flex: 1, padding: '9px', borderRadius: 10,
                         border: '1px solid #e0ddd9',
                         background: '#ffffff',
-                        color: isVisible ? '#1a1a1a' : '#8c8a87',
+                        color: isVisible ? '#1a1a1a' : '#6f6d6a',
                         fontSize: 11, fontWeight: 600, cursor: 'pointer',
                       }}
                     >{togglingId === h.id ? '...' : isVisible ? '공개' : '비공개'}</button>
@@ -233,7 +233,7 @@ export default function MyHousesDrawer({ userId, isAdmin, onClose, onEdit, onRef
         {/* 하단 */}
         <div>
           <div style={{ padding: '12px 20px', borderTop: '1px solid #e9e7e4', background: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 12, color: '#8c8a87' }}>영구 입주 · 만료일 없음</span>
+            <span style={{ fontSize: 12, color: '#6f6d6a' }}>영구 입주 · 만료일 없음</span>
             <a href="/my/payments" style={{ fontSize: 12, color: '#1a1a1a', fontWeight: 600, textDecoration: 'none', padding: '6px 12px', borderRadius: 10, border: '1px solid #e0ddd9', background: '#ffffff' }}>결제 내역</a>
           </div>
         </div>

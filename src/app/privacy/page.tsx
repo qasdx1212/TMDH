@@ -63,7 +63,7 @@ export default function PrivacyPage() {
           <div style={{ fontSize: 24, fontWeight: 700, color: '#1a1a1a', marginBottom: 14 }}>
             개인정보처리방침
           </div>
-          <div style={{ fontSize: 13.5, color: '#8c8a87', lineHeight: 1.8 }}>
+          <div style={{ fontSize: 13.5, color: '#6f6d6a', lineHeight: 1.8 }}>
             스트릿애드(StreetAd)가 운영하는 집.zip(zipzipworld.com)은 이용자의 개인정보를 소중히
             여기며, 「개인정보 보호법」 등 관련 법령을 준수합니다.
           </div>
@@ -279,13 +279,13 @@ export default function PrivacyPage() {
             ].map(([label, value]) => (
               <div key={label}>
                 <span style={{ color: '#1a1a1a', fontWeight: 600 }}>{label}</span>
-                <span style={{ color: '#b0aeaa', margin: '0 8px' }}>|</span>
+                <span style={{ color: '#97948f', margin: '0 8px' }}>|</span>
                 {value}
               </div>
             ))}
             <div>
               <span style={{ color: '#1a1a1a', fontWeight: 600 }}>이메일</span>
-              <span style={{ color: '#b0aeaa', margin: '0 8px' }}>|</span>
+              <span style={{ color: '#97948f', margin: '0 8px' }}>|</span>
               <a
                 href="mailto:qasdx1212@gmail.com"
                 style={{ color: '#1a1a1a', textDecoration: 'underline', fontWeight: 600 }}
@@ -350,7 +350,7 @@ export default function PrivacyPage() {
           </div>
         </div>
 
-        <div style={{ marginTop: 16, fontSize: 12, color: '#b0aeaa', textAlign: 'center' }}>
+        <div style={{ marginTop: 16, fontSize: 12, color: '#97948f', textAlign: 'center' }}>
           © 2026 집.zip (zipzipworld.com) · 스트릿애드(StreetAd) — All rights reserved.
         </div>
       </div>
@@ -406,7 +406,7 @@ function SubTitle({ children }: { children: React.ReactNode }) {
       style={{
         fontSize: 12.5,
         fontWeight: 700,
-        color: '#8c8a87',
+        color: '#6f6d6a',
         marginTop: 8,
         marginBottom: -4,
       }}

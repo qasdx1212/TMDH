@@ -69,7 +69,7 @@ export default async function TermsPage({ searchParams }: Props) {
           <div style={{ fontSize: 24, fontWeight: 700, color: '#1a1a1a', marginBottom: 10 }}>
             집.zip 이용약관
           </div>
-          <div style={{ fontSize: 13.5, color: '#8c8a87' }}>
+          <div style={{ fontSize: 13.5, color: '#6f6d6a' }}>
             zipzipworld.com 서비스 이용에 관한 약관 및 환불정책을 안내합니다
           </div>
         </div>
@@ -92,7 +92,7 @@ export default async function TermsPage({ searchParams }: Props) {
               fontSize: 14,
               fontWeight: activeTab === 'terms' ? 700 : 500,
               textDecoration: 'none',
-              color: activeTab === 'terms' ? '#1a1a1a' : '#8c8a87',
+              color: activeTab === 'terms' ? '#1a1a1a' : '#6f6d6a',
               borderBottom: activeTab === 'terms' ? '2px solid #1a1a1a' : '2px solid transparent',
               marginBottom: -1,
             }}
@@ -108,7 +108,7 @@ export default async function TermsPage({ searchParams }: Props) {
               fontSize: 14,
               fontWeight: activeTab === 'refund' ? 700 : 500,
               textDecoration: 'none',
-              color: activeTab === 'refund' ? '#1a1a1a' : '#8c8a87',
+              color: activeTab === 'refund' ? '#1a1a1a' : '#6f6d6a',
               borderBottom: activeTab === 'refund' ? '2px solid #1a1a1a' : '2px solid transparent',
               marginBottom: -1,
             }}
@@ -333,7 +333,7 @@ export default async function TermsPage({ searchParams }: Props) {
                 style={{
                   fontSize: 13,
                   fontWeight: 700,
-                  color: '#8c8a87',
+                  color: '#6f6d6a',
                   marginBottom: 10,
                 }}
               >
@@ -465,7 +465,7 @@ export default async function TermsPage({ searchParams }: Props) {
                   콘텐츠산업 진흥법 제28조 (콘텐츠 이용자 보호)
                 </li>
               </ul>
-              <p style={{ color: '#8c8a87', fontSize: 12.5, marginTop: 8 }}>
+              <p style={{ color: '#6f6d6a', fontSize: 12.5, marginTop: 8 }}>
                 * 소비자 분쟁이 발생한 경우 공정거래위원회의 소비자분쟁해결기준에 따라 처리됩니다.
                 한국소비자원(1372) 또는 전자거래분쟁조정위원회(1661-5714)에 분쟁 조정을 신청할 수
                 있습니다.
@@ -500,7 +500,7 @@ export default async function TermsPage({ searchParams }: Props) {
         )}
 
         {/* 하단 공통 */}
-        <div style={{ marginTop: 40, fontSize: 12, color: '#b0aeaa', textAlign: 'center' }}>
+        <div style={{ marginTop: 40, fontSize: 12, color: '#97948f', textAlign: 'center' }}>
           © 2025 집.zip (zipzipworld.com) — 스트릿애드 (StreetAd) · All rights reserved.
         </div>
       </div>

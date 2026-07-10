@@ -131,18 +131,18 @@ export default function HousePopup({ house, currentUserId, isAdmin, isOwnHouse, 
           }}
         >
           {/* 닫기 */}
-          <button onClick={onClose} style={{ position: 'absolute', top: 14, right: 14, zIndex: 10, width: 32, height: 32, borderRadius: 10, background: '#f4f3f1', border: '1px solid #e9e7e4', color: '#8c8a87', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>×</button>
+          <button onClick={onClose} style={{ position: 'absolute', top: 14, right: 14, zIndex: 10, width: 32, height: 32, borderRadius: 10, background: '#f4f3f1', border: '1px solid #e9e7e4', color: '#6f6d6a', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>×</button>
 
           {/* 헤더 */}
           <div style={{ padding: '22px 56px 20px 24px', borderBottom: '1px solid #e9e7e4', display: 'flex', alignItems: 'center', gap: 16 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 8, background: '#f4f3f1', color: '#8c8a87', border: '1px solid #e9e7e4' }}>{house.address}</span>
+                <span style={{ fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 8, background: '#f4f3f1', color: '#6f6d6a', border: '1px solid #e9e7e4' }}>{house.address}</span>
                 {house.nickname && (
                   <span style={{ fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 8, background: '#1c1c1e', color: '#ffffff' }}>문패 {house.nickname}</span>
                 )}
                 {house.is_visible === false && (
-                  <span style={{ fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 8, background: '#f4f3f1', color: '#8c8a87', border: '1px solid #e9e7e4' }}>비공개</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 8, background: '#f4f3f1', color: '#6f6d6a', border: '1px solid #e9e7e4' }}>비공개</span>
                 )}
               </div>
               <div style={{ fontSize: 24, fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.02em', lineHeight: 1.25 }}>
@@ -155,7 +155,7 @@ export default function HousePopup({ house, currentUserId, isAdmin, isOwnHouse, 
           {/* 바디 */}
           {isAvailable ? (
             <div style={{ textAlign: 'center', padding: '48px 24px' }}>
-              <div style={{ fontSize: 15, color: '#8c8a87', lineHeight: 1.8, marginBottom: 28 }}>
+              <div style={{ fontSize: 15, color: '#6f6d6a', lineHeight: 1.8, marginBottom: 28 }}>
                 아직 아무도 살지 않는 빈 공간이에요.<br />당신만의 공간으로 꾸며보세요!
               </div>
               <button onClick={() => onBuy(house)} style={{ padding: '13px 32px', borderRadius: 10, cursor: 'pointer', background: '#1c1c1e', color: '#ffffff', border: 'none', fontSize: 15, fontWeight: 600 }}>입주 신청하기</button>
@@ -164,27 +164,27 @@ export default function HousePopup({ house, currentUserId, isAdmin, isOwnHouse, 
             /* 비공개 집 */
             <div style={{ textAlign: 'center', padding: '52px 24px' }}>
               <div style={{ fontSize: 16, fontWeight: 600, color: '#1a1a1a', marginBottom: 8 }}>비공개 집입니다</div>
-              <div style={{ fontSize: 14, color: '#8c8a87', lineHeight: 1.7 }}>이 집은 주인이 비공개로 설정해두었어요.</div>
+              <div style={{ fontSize: 14, color: '#6f6d6a', lineHeight: 1.7 }}>이 집은 주인이 비공개로 설정해두었어요.</div>
             </div>
           ) : (
             <div style={{ display: 'flex', minHeight: 180, overflowY: 'auto', flex: 1 }}>
               <div style={{ flex: 1, padding: '22px 24px', minWidth: 0 }}>
                 {house.description && (
                   <div style={{ marginBottom: 20 }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: '#b0aeaa', marginBottom: 8 }}>소개글</div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: '#97948f', marginBottom: 8 }}>소개글</div>
                     <div style={{ fontSize: 14, color: '#1a1a1a', lineHeight: 1.9 }}>{house.description}</div>
                   </div>
                 )}
                 {house.link_url && (
                   <div>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: '#b0aeaa', marginBottom: 8 }}>링크</div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: '#97948f', marginBottom: 8 }}>링크</div>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                       <a href={house.link_url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 10, background: '#ffffff', color: '#1a1a1a', fontSize: 13, fontWeight: 600, textDecoration: 'none', border: '1px solid #e0ddd9' }}>공식 홈페이지 ↗</a>
                     </div>
                   </div>
                 )}
                 {!house.description && !house.link_url && (
-                  <div style={{ color: '#8c8a87', fontSize: 14, marginTop: 8 }}>소개글이 아직 없어요.</div>
+                  <div style={{ color: '#6f6d6a', fontSize: 14, marginTop: 8 }}>소개글이 아직 없어요.</div>
                 )}
               </div>
               {displayImage && (
@@ -202,14 +202,14 @@ export default function HousePopup({ house, currentUserId, isAdmin, isOwnHouse, 
                 <button
                   onClick={toggleLike}
                   disabled={likeLoading}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, padding: 0, fontSize: 15, fontWeight: 600, color: liked ? '#dc2626' : '#8c8a87' }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, padding: 0, fontSize: 15, fontWeight: 600, color: liked ? '#dc2626' : '#6f6d6a' }}
                 >
                   {liked ? '❤️' : '🤍'} {likeCount.toLocaleString()}
                 </button>
               </StatCell>
               <div style={{ width: 1, background: '#e9e7e4', margin: '12px 0' }} />
               <StatCell>
-                <span style={{ fontSize: 14, fontWeight: 500, color: '#8c8a87', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 14, fontWeight: 500, color: '#6f6d6a', display: 'flex', alignItems: 'center', gap: 6 }}>
                   방문 {(house.visit_count + 1).toLocaleString()}
                 </span>
               </StatCell>
@@ -217,11 +217,11 @@ export default function HousePopup({ house, currentUserId, isAdmin, isOwnHouse, 
               <StatCell>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
                   {house.occupied_at && (
-                    <span style={{ fontSize: 13, color: '#8c8a87', fontWeight: 500 }}>
+                    <span style={{ fontSize: 13, color: '#6f6d6a', fontWeight: 500 }}>
                       {house.occupied_at.slice(0, 10)}
                     </span>
                   )}
-                  <button onClick={handleShare} style={{ padding: '5px 12px', borderRadius: 10, border: '1px solid #e0ddd9', background: '#ffffff', color: copied ? '#1a1a1a' : '#8c8a87', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                  <button onClick={handleShare} style={{ padding: '5px 12px', borderRadius: 10, border: '1px solid #e0ddd9', background: '#ffffff', color: copied ? '#1a1a1a' : '#6f6d6a', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                     {copied ? '복사됨' : '공유'}
                   </button>
                   {/* 신고하기 — 본인 집이 아니고 로그인한 경우만 */}
@@ -238,8 +238,8 @@ export default function HousePopup({ house, currentUserId, isAdmin, isOwnHouse, 
           {/* 내 집 관리 바 */}
           {isOwnHouse && !isAvailable && (
             <div style={{ padding: '10px 16px', background: '#f4f3f1', borderTop: '1px solid #e9e7e4', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 12, color: '#8c8a87', fontWeight: 600, flex: 1 }}>
-                내 집 {house.has_password && <span style={{ color: '#b0aeaa' }}>· 잠금</span>}
+              <span style={{ fontSize: 12, color: '#6f6d6a', fontWeight: 600, flex: 1 }}>
+                내 집 {house.has_password && <span style={{ color: '#97948f' }}>· 잠금</span>}
               </span>
               <button onClick={() => requirePassword('edit')} style={{ padding: '8px 18px', borderRadius: 10, background: '#1c1c1e', border: 'none', color: '#ffffff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>수정</button>
               <button onClick={() => requirePassword('vacate')} style={{ padding: '8px 16px', borderRadius: 10, background: '#ffffff', border: '1px solid #e0ddd9', color: '#dc2626', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>퇴거</button>
@@ -249,7 +249,7 @@ export default function HousePopup({ house, currentUserId, isAdmin, isOwnHouse, 
           {/* 관리자 삭제 바 */}
           {isAdmin && !isAvailable && (
             <div style={{ padding: '10px 16px', background: '#f4f3f1', borderTop: '1px solid #e9e7e4', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 12, color: '#8c8a87', fontWeight: 600 }}>관리자 모드</span>
+              <span style={{ fontSize: 12, color: '#6f6d6a', fontWeight: 600 }}>관리자 모드</span>
               <button onClick={handleAdminDelete} style={{ padding: '8px 18px', borderRadius: 10, background: '#dc2626', border: 'none', color: '#ffffff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>강제 퇴거</button>
             </div>
           )}
@@ -266,7 +266,7 @@ export default function HousePopup({ house, currentUserId, isAdmin, isOwnHouse, 
             <div style={{ fontSize:17, fontWeight:700, color:'#1a1a1a', textAlign:'center', marginBottom:6 }}>
               {pwdModal === 'edit' ? '수정하기' : '퇴거하기'}
             </div>
-            <div style={{ fontSize:13, color:'#8c8a87', textAlign:'center', marginBottom:20, lineHeight:1.7 }}>
+            <div style={{ fontSize:13, color:'#6f6d6a', textAlign:'center', marginBottom:20, lineHeight:1.7 }}>
               이 집에 설정된 비밀번호를 입력해주세요.
             </div>
             <input

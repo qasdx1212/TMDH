@@ -164,7 +164,7 @@ function PaymentRedirectContent() {
       }}>
         {status === 'processing' && (
           <>
-            <div style={{ display: 'inline-block', fontSize: 12.5, fontWeight: 600, color: '#8c8a87', background: '#faf9f7', border: '1px solid #e9e7e4', borderRadius: 999, padding: '5px 14px', marginBottom: 20 }}>처리 중</div>
+            <div style={{ display: 'inline-block', fontSize: 12.5, fontWeight: 600, color: '#6f6d6a', background: '#faf9f7', border: '1px solid #e9e7e4', borderRadius: 999, padding: '5px 14px', marginBottom: 20 }}>처리 중</div>
             <div style={{ fontSize: 20, fontWeight: 700, color: '#1a1a1a', marginBottom: 10 }}>처리 중...</div>
             <div style={{ fontSize: 13, color: '#575654', lineHeight: 1.9 }}>
               결제를 확인하고 입주 처리 중이에요.<br />잠시만 기다려 주세요.
@@ -183,7 +183,7 @@ function PaymentRedirectContent() {
             <div style={{ fontSize: 13.5, color: '#575654', lineHeight: 1.9, marginBottom: 24 }}>
               <strong style={{ color: '#1a1a1a', background: '#faf9f7', padding: '2px 8px', borderRadius: 6, border: '1px solid #e9e7e4' }}>{address}</strong>에<br />
               당신의 집이 생겼어요<br />
-              <span style={{ color: '#8c8a87' }}>3초 후 지도로 이동합니다...</span>
+              <span style={{ color: '#6f6d6a' }}>3초 후 지도로 이동합니다...</span>
             </div>
             <a href={`/?house=${address}`} style={{
               display: 'inline-block', padding: '12px 28px',
@@ -200,7 +200,7 @@ function PaymentRedirectContent() {
             <div style={{ fontSize: 20, fontWeight: 700, color: '#1a1a1a', marginBottom: 10 }}>결제가 취소되었어요</div>
             <div style={{ fontSize: 13, color: '#575654', lineHeight: 1.9, marginBottom: 24 }}>
               {errorMsg}<br />
-              <span style={{ color: '#8c8a87', fontSize: 12 }}>다시 시도하시거나 다른 결제수단을 이용해주세요.</span>
+              <span style={{ color: '#6f6d6a', fontSize: 12 }}>다시 시도하시거나 다른 결제수단을 이용해주세요.</span>
             </div>
             <a href="/" style={{
               display: 'inline-block', padding: '12px 24px',
@@ -216,7 +216,7 @@ function PaymentRedirectContent() {
             <div style={{ fontSize: 20, fontWeight: 700, color: '#1a1a1a', marginBottom: 10 }}>오류가 발생했어요</div>
             <div style={{ fontSize: 13, color: '#575654', lineHeight: 1.9, marginBottom: 24 }}>
               {errorMsg}<br />
-              <span style={{ color: '#8c8a87', fontSize: 12 }}>결제가 완료됐다면 고객센터로 연락해주세요.</span>
+              <span style={{ color: '#6f6d6a', fontSize: 12 }}>결제가 완료됐다면 고객센터로 연락해주세요.</span>
             </div>
             <a href="/" style={{
               display: 'inline-block', padding: '12px 24px',
@@ -233,7 +233,7 @@ function PaymentRedirectContent() {
 export default function PaymentRedirectPage() {
   return (
     <Suspense fallback={
-      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f4f3f1', color: '#8c8a87' }}>
+      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f4f3f1', color: '#6f6d6a' }}>
         결제 확인 중...
       </div>
     }>

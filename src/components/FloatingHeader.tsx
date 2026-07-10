@@ -89,9 +89,9 @@ export default function FloatingHeader({
           <div className="hide-on-mobile">
             <div style={{ display:'flex', alignItems:'center', gap:7 }}>
               <span style={{ fontSize:18, fontWeight:800, color:'#1a1a1a', letterSpacing:'-0.03em' }}>집.zip</span>
-              <span style={{ fontSize:10, fontWeight:600, color:'#8c8a87', background:'#f4f3f1', padding:'1px 6px', borderRadius:6, border:'1px solid #e9e7e4' }}>beta</span>
+              <span style={{ fontSize:10, fontWeight:600, color:'#6f6d6a', background:'#f4f3f1', padding:'1px 6px', borderRadius:6, border:'1px solid #e9e7e4' }}>beta</span>
             </div>
-            <div style={{ fontSize:11, color:'#b0aeaa', marginTop:1 }}>당신만의 공간, 집.zip</div>
+            <div style={{ fontSize:11, color:'#97948f', marginTop:1 }}>당신만의 공간, 집.zip</div>
           </div>
         </div>
 
@@ -135,13 +135,13 @@ export default function FloatingHeader({
                   onMouseLeave={e => (e.currentTarget.style.background='transparent')}
                 >
                   <div style={{ fontSize:12, fontWeight:600 }}>{h.nickname ? `${h.name} (${h.nickname})` : (h.name ?? h.address)}</div>
-                  <div style={{ fontSize:10, color:'#8c8a87', marginTop:2 }}>{h.address}</div>
+                  <div style={{ fontSize:10, color:'#6f6d6a', marginTop:2 }}>{h.address}</div>
                 </button>
               ))}
             </div>
           )}
           {searchFocused && searchQuery.trim().length >= 1 && results.length === 0 && (
-            <div style={{ position:'absolute', top:'calc(100% + 6px)', left:0, right:0, background:'#ffffff', border:'1px solid #e9e7e4', borderRadius:12, padding:'14px', fontSize:12, color:'#8c8a87', zIndex:400, textAlign:'center', boxShadow:'0 1px 3px rgba(0,0,0,0.05)' }}>
+            <div style={{ position:'absolute', top:'calc(100% + 6px)', left:0, right:0, background:'#ffffff', border:'1px solid #e9e7e4', borderRadius:12, padding:'14px', fontSize:12, color:'#6f6d6a', zIndex:400, textAlign:'center', boxShadow:'0 1px 3px rgba(0,0,0,0.05)' }}>
               검색 결과가 없어요
             </div>
           )}
@@ -217,12 +217,12 @@ export default function FloatingHeader({
                   width:26, height:26, borderRadius:'50%',
                   background:'#f4f3f1',
                   border:'1px solid #e0ddd9',
-                  display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:700, color:'#8c8a87', flexShrink:0,
+                  display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:700, color:'#6f6d6a', flexShrink:0,
                 }}>{(isAdmin ? '관리자' : (userEmail?.split('@')[0] ?? '내 계정')).charAt(0).toUpperCase()}</div>
                 <span className="fh-profile-meta" style={{ fontSize:12, fontWeight:600, maxWidth:100, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                   {isAdmin ? '관리자' : (userEmail?.split('@')[0] ?? '내 계정')}
                 </span>
-                <span className="fh-profile-meta" style={{ fontSize:9, color:'#b0aeaa' }}>{profileOpen ? '▲' : '▼'}</span>
+                <span className="fh-profile-meta" style={{ fontSize:9, color:'#97948f' }}>{profileOpen ? '▲' : '▼'}</span>
               </button>
               {profileOpen && (
                 <div style={{
@@ -232,9 +232,9 @@ export default function FloatingHeader({
                   boxShadow:'0 1px 3px rgba(0,0,0,0.05)',
                 }}>
                   <div style={{ padding:'12px 14px', borderBottom:'1px solid #e9e7e4', background:'#f4f3f1' }}>
-                    <div style={{ fontSize:10, color:'#8c8a87', marginBottom:3 }}>로그인된 계정</div>
+                    <div style={{ fontSize:10, color:'#6f6d6a', marginBottom:3 }}>로그인된 계정</div>
                     <div style={{ fontSize:12, color:'#1a1a1a', fontWeight:600, wordBreak:'break-all' }}>{userEmail}</div>
-                    {isAdmin && <div style={{ marginTop:5, fontSize:10, color:'#8c8a87', fontWeight:600 }}>관리자 계정</div>}
+                    {isAdmin && <div style={{ marginTop:5, fontSize:10, color:'#6f6d6a', fontWeight:600 }}>관리자 계정</div>}
                   </div>
                   <button onClick={() => { setProfileOpen(false); onMyHouseClick() }} style={{
                     display:'flex', alignItems:'center', gap:10, width:'100%',
@@ -248,7 +248,7 @@ export default function FloatingHeader({
                   <a href="/terms" style={{
                     display:'flex', alignItems:'center', gap:10, width:'100%',
                     padding:'10px 14px', background:'transparent',
-                    borderBottom:'1px solid #e9e7e4', color:'#8c8a87',
+                    borderBottom:'1px solid #e9e7e4', color:'#6f6d6a',
                     fontSize:12, textDecoration:'none',
                   }}>이용약관 · 개인정보처리방침</a>
                   <button onClick={() => { setProfileOpen(false); onLogout() }} style={{
@@ -302,7 +302,7 @@ export default function FloatingHeader({
                   color:'#1a1a1a', cursor:'pointer', textAlign:'left',
                 }}>
                   <div style={{ fontSize:12, fontWeight:600 }}>{h.nickname ? `${h.name} (${h.nickname})` : (h.name ?? h.address)}</div>
-                  <div style={{ fontSize:10, color:'#8c8a87', marginTop:2 }}>{h.address}</div>
+                  <div style={{ fontSize:10, color:'#6f6d6a', marginTop:2 }}>{h.address}</div>
                 </button>
               ))}
             </div>
@@ -311,16 +311,16 @@ export default function FloatingHeader({
 
         {/* 링크 */}
         <div style={{ display:'flex', alignItems:'center', gap:8 }} className="hide-on-mobile">
-          <a href="/terms" style={{ fontSize:10, color:'#8c8a87', textDecoration:'none' }}>이용약관</a>
-          <span style={{ fontSize:10, color:'#b0aeaa' }}>·</span>
-          <a href="/privacy" style={{ fontSize:10, color:'#8c8a87', textDecoration:'none' }}>개인정보처리방침</a>
-          <span style={{ fontSize:10, color:'#b0aeaa' }}>·</span>
-          <span style={{ fontSize:10, color:'#8c8a87' }}>스트릿애드</span>
+          <a href="/terms" style={{ fontSize:10, color:'#6f6d6a', textDecoration:'none' }}>이용약관</a>
+          <span style={{ fontSize:10, color:'#97948f' }}>·</span>
+          <a href="/privacy" style={{ fontSize:10, color:'#6f6d6a', textDecoration:'none' }}>개인정보처리방침</a>
+          <span style={{ fontSize:10, color:'#97948f' }}>·</span>
+          <span style={{ fontSize:10, color:'#6f6d6a' }}>스트릿애드</span>
         </div>
 
         {/* 줌 컨트롤 */}
         <div style={{ display:'flex', alignItems:'center', gap:6, flexShrink:0 }}>
-          <span style={{ fontSize:10, color:'#8c8a87', marginRight:4 }} className="hide-on-mobile">지도 확대/축소</span>
+          <span style={{ fontSize:10, color:'#6f6d6a', marginRight:4 }} className="hide-on-mobile">지도 확대/축소</span>
           <button onClick={onZoomIn} style={zoomBtnStyle} title="확대">+</button>
           <button onClick={onZoomOut} style={zoomBtnStyle} title="축소">−</button>
           <button onClick={onFitView} style={{ ...zoomBtnStyle, fontSize:14 }} title="전체 보기">⤢</button>
@@ -341,7 +341,7 @@ const zoomBtnStyle: React.CSSProperties = {
 function StatItem({ label, value, valueColor }: { label: string; value: string; valueColor: string }) {
   return (
     <div>
-      <div style={{ fontSize:10, color:'#8c8a87', fontWeight:500, letterSpacing:'0.01em', marginBottom:2 }}>{label}</div>
+      <div style={{ fontSize:10, color:'#6f6d6a', fontWeight:500, letterSpacing:'0.01em', marginBottom:2 }}>{label}</div>
       <div style={{ fontSize:14, fontWeight:700, color:valueColor, letterSpacing:'-0.01em' }}>{value}</div>
     </div>
   )

@@ -31,7 +31,7 @@ export function GET() {
 
         <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'0px', zIndex:1 }}>
           <div style={{ fontSize:'86px', fontWeight:800, color:'#1a1a1a', letterSpacing:'-3px', display:'flex', lineHeight:'1' }}>집.zip</div>
-          <div style={{ fontSize:'26px', color:'#8c8a87', marginTop:'18px', display:'flex' }}>Your Digital Home on the Map</div>
+          <div style={{ fontSize:'26px', color:'#6f6d6a', marginTop:'18px', display:'flex' }}>Your Digital Home on the Map</div>
           <div style={{
             marginTop:'28px',
             padding:'14px 44px',
@@ -44,9 +44,9 @@ export function GET() {
             gap:'32px',
           }}>
             <span>400 × 200 Grid</span>
-            <span style={{ color:'#b0aeaa' }}>·</span>
+            <span style={{ color:'#97948f' }}>·</span>
             <span>80,000 Houses</span>
-            <span style={{ color:'#b0aeaa' }}>·</span>
+            <span style={{ color:'#97948f' }}>·</span>
             <span>zipzipworld.com</span>
           </div>
         </div>
