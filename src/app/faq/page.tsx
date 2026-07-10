@@ -78,32 +78,30 @@ export default function FaqPage() {
   }
 
   return (
-    <div style={{ height: '100vh', overflowY: 'auto', background: '#0f0906', fontFamily: '"Noto Sans KR", -apple-system, sans-serif', color: '#fdf6e3' }}>
+    <div style={{ height: '100vh', overflowY: 'auto', background: '#f4f3f1', color: '#1a1a1a' }}>
       {/* 헤더 */}
-      <div style={{ background: 'linear-gradient(180deg,#2c1a08,#1e1005)', borderBottom: '3px solid #6b4c2a', padding: '0 24px', position: 'sticky', top: 0, zIndex: 10 }}>
+      <div style={{ background: '#ffffff', borderBottom: '1px solid #e9e7e4', padding: '0 24px', position: 'sticky', top: 0, zIndex: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, height: 60, maxWidth: 800, margin: '0 auto' }}>
-          <a href="/" style={{ color: '#c8a96e', textDecoration: 'none', fontSize: 13, padding: '6px 12px', borderRadius: 6, border: '1px solid #4a3010', background: 'rgba(255,255,255,0.04)' }}>← 지도</a>
-          <div style={{ width: 1, height: 20, background: '#4a3010' }} />
-          <div style={{ fontSize: 18, fontWeight: 900 }}>❓ 자주 묻는 질문</div>
+          <a href="/" style={{ color: '#1a1a1a', textDecoration: 'none', fontSize: 13, padding: '7px 14px', border: '1px solid #e0ddd9', borderRadius: 10, background: '#ffffff', fontWeight: 600 }}>← 지도</a>
+          <div style={{ width: 1, height: 20, background: '#e9e7e4' }} />
+          <div style={{ fontSize: 16, fontWeight: 700 }}>자주 묻는 질문</div>
         </div>
       </div>
 
       <div style={{ maxWidth: 800, margin: '0 auto', padding: '32px 24px' }}>
         {/* 히어로 */}
         <div style={{ textAlign: 'center', marginBottom: 40 }}>
-          <div style={{ fontSize: 52, marginBottom: 12 }}>🏠</div>
-          <div style={{ fontSize: 26, fontWeight: 900, color: '#fdf6e3', marginBottom: 8 }}>자주 묻는 질문</div>
-          <div style={{ fontSize: 14, color: '#7a5c3a' }}>집.zip 서비스에 대한 궁금한 점들을 모았어요</div>
+          <div style={{ fontSize: 26, fontWeight: 700, color: '#1a1a1a', marginBottom: 10 }}>자주 묻는 질문</div>
+          <div style={{ fontSize: 14, color: '#8c8a87' }}>집.zip 서비스에 대한 궁금한 점들을 모았어요</div>
         </div>
 
         {/* FAQ 목록 */}
         {FAQS.map(section => (
-          <div key={section.category} style={{ marginBottom: 32 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, paddingBottom: 10, borderBottom: '2px solid #3d2a08' }}>
-              <span style={{ fontSize: 18 }}>{section.emoji}</span>
-              <span style={{ fontSize: 15, fontWeight: 800, color: '#c8a96e' }}>{section.category}</span>
+          <div key={section.category} style={{ marginBottom: 28 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#8c8a87', marginBottom: 12, paddingLeft: 2 }}>
+              {section.category}
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {section.items.map((item, i) => {
                 const key = `${section.category}-${i}`
                 const isOpen = openItems.has(key)
@@ -111,27 +109,29 @@ export default function FaqPage() {
                   <div
                     key={key}
                     style={{
-                      background: isOpen ? '#2a1a08' : '#1a0f05',
-                      border: `1.5px solid ${isOpen ? '#8b6914' : '#3d2a08'}`,
-                      borderRadius: 10, overflow: 'hidden', transition: 'all 0.12s',
+                      background: '#ffffff',
+                      border: '1px solid #e9e7e4',
+                      borderRadius: 14,
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                      overflow: 'hidden',
                     }}
                   >
                     <button
                       onClick={() => toggle(key)}
                       style={{
-                        width: '100%', padding: '14px 18px',
+                        width: '100%', padding: '16px 18px',
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-                        background: 'none', border: 'none', cursor: 'pointer',
-                        color: '#fdf6e3', fontFamily: 'inherit', textAlign: 'left',
+                        background: 'transparent', border: 'none', cursor: 'pointer',
+                        color: '#1a1a1a', textAlign: 'left',
                       }}
                     >
-                      <span style={{ fontSize: 14, fontWeight: isOpen ? 700 : 500, lineHeight: 1.4 }}>Q. {item.q}</span>
-                      <span style={{ fontSize: 18, color: '#8b6914', flexShrink: 0, transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>▾</span>
+                      <span style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.5 }}>{item.q}</span>
+                      <span style={{ fontSize: 13, color: '#b0aeaa', flexShrink: 0 }}>{isOpen ? '▴' : '▾'}</span>
                     </button>
                     {isOpen && (
-                      <div style={{ padding: '0 18px 16px', borderTop: '1px solid #3d2a08' }}>
-                        <div style={{ paddingTop: 12, fontSize: 13, color: '#a08060', lineHeight: 1.8 }}>
-                          A. {item.a}
+                      <div style={{ padding: '0 18px 16px', borderTop: '1px solid #f0efec' }}>
+                        <div style={{ paddingTop: 12, fontSize: 13.5, color: '#575654', lineHeight: 1.9 }}>
+                          {item.a}
                         </div>
                       </div>
                     )}
@@ -143,14 +143,14 @@ export default function FaqPage() {
         ))}
 
         {/* 하단 */}
-        <div style={{ marginTop: 40, padding: '24px', background: '#1a0f05', border: '1.5px solid #3d2a08', borderRadius: 12, textAlign: 'center' }}>
-          <div style={{ fontSize: 13, color: '#7a5c3a', lineHeight: 1.8 }}>
+        <div style={{ marginTop: 36, padding: '24px', background: '#ffffff', border: '1px solid #e9e7e4', borderRadius: 14, boxShadow: '0 1px 3px rgba(0,0,0,0.05)', textAlign: 'center' }}>
+          <div style={{ fontSize: 14, color: '#575654', lineHeight: 1.9 }}>
             더 궁금한 점이 있으신가요?<br />
-            <a href="/" style={{ color: '#c8a96e', textDecoration: 'none', fontWeight: 700 }}>지도로 돌아가서</a> 직접 체험해보세요!
+            <a href="/" style={{ color: '#1a1a1a', textDecoration: 'underline', fontWeight: 600 }}>지도로 돌아가서</a> 직접 체험해보세요!
           </div>
         </div>
 
-        <div style={{ marginTop: 16, fontSize: 11, color: '#3d2a08', textAlign: 'center' }}>
+        <div style={{ marginTop: 16, fontSize: 12, color: '#b0aeaa', textAlign: 'center' }}>
           © 2025 집.zip (zipzipworld.com) — All rights reserved.
         </div>
       </div>

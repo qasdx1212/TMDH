@@ -154,23 +154,23 @@ function PaymentRedirectContent() {
   return (
     <div style={{
       height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: '#0f0906', fontFamily: '"Noto Sans KR", sans-serif', color: '#fdf6e3',
+      background: '#f4f3f1', color: '#1a1a1a', padding: '20px',
     }}>
       <div style={{
         width: 400, maxWidth: '92vw', textAlign: 'center',
-        background: '#1e1005', borderRadius: 16,
-        border: '3px solid #4a3010', padding: '48px 32px',
-        boxShadow: '0 24px 60px rgba(0,0,0,0.5)',
+        background: '#ffffff',
+        border: '1px solid #e9e7e4', borderRadius: 14, padding: '44px 32px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
       }}>
         {status === 'processing' && (
           <>
-            <div style={{ fontSize: 64, marginBottom: 20 }}>⏳</div>
-            <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 10 }}>처리 중...</div>
-            <div style={{ fontSize: 13, color: '#7a5c3a', lineHeight: 1.8 }}>
+            <div style={{ display: 'inline-block', fontSize: 12.5, fontWeight: 600, color: '#8c8a87', background: '#faf9f7', border: '1px solid #e9e7e4', borderRadius: 999, padding: '5px 14px', marginBottom: 20 }}>처리 중</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: '#1a1a1a', marginBottom: 10 }}>처리 중...</div>
+            <div style={{ fontSize: 13, color: '#575654', lineHeight: 1.9 }}>
               결제를 확인하고 입주 처리 중이에요.<br />잠시만 기다려 주세요.
             </div>
-            <div style={{ marginTop: 24, width: '100%', height: 4, borderRadius: 2, background: '#2a1a08', overflow: 'hidden' }}>
-              <div style={{ height: '100%', background: 'linear-gradient(90deg,#8b6914,#c8a96e)', borderRadius: 2, animation: 'pay-loading 2s ease-in-out infinite' }} />
+            <div style={{ marginTop: 24, width: '100%', height: 8, background: '#f0efec', borderRadius: 999, overflow: 'hidden' }}>
+              <div style={{ height: '100%', background: '#1c1c1e', borderRadius: 999, animation: 'pay-loading 2s ease-in-out infinite' }} />
             </div>
             <style>{`@keyframes pay-loading { 0%,100%{width:20%} 50%{width:80%} }`}</style>
           </>
@@ -178,50 +178,50 @@ function PaymentRedirectContent() {
 
         {status === 'done' && (
           <>
-            <div style={{ fontSize: 72, marginBottom: 16 }}>🎉</div>
-            <div style={{ fontSize: 24, fontWeight: 900, color: '#fdf6e3', marginBottom: 10 }}>입주 완료!</div>
-            <div style={{ fontSize: 13, color: '#c8a96e', lineHeight: 1.8, marginBottom: 24 }}>
-              <strong style={{ color: '#ffd700' }}>{address}</strong>에<br />
-              당신의 집이 생겼어요 🏠<br />
-              <span style={{ color: '#7a5c3a' }}>3초 후 지도로 이동합니다...</span>
+            <div style={{ display: 'inline-block', fontSize: 12.5, fontWeight: 600, color: '#16a34a', background: '#eaf6ee', border: '1px solid #d4ead9', borderRadius: 999, padding: '5px 14px', marginBottom: 16 }}>입주 완료</div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: '#1a1a1a', marginBottom: 10 }}>입주 완료!</div>
+            <div style={{ fontSize: 13.5, color: '#575654', lineHeight: 1.9, marginBottom: 24 }}>
+              <strong style={{ color: '#1a1a1a', background: '#faf9f7', padding: '2px 8px', borderRadius: 6, border: '1px solid #e9e7e4' }}>{address}</strong>에<br />
+              당신의 집이 생겼어요<br />
+              <span style={{ color: '#8c8a87' }}>3초 후 지도로 이동합니다...</span>
             </div>
             <a href={`/?house=${address}`} style={{
-              display: 'inline-block', padding: '12px 32px', borderRadius: 10,
-              background: 'linear-gradient(180deg,#8b6914,#6b4c10)',
-              color: '#fdf6e3', fontSize: 14, fontWeight: 700, textDecoration: 'none',
-              border: '2px solid #c8a96e', boxShadow: '0 4px 0 #3d2a08',
+              display: 'inline-block', padding: '12px 28px',
+              background: '#1c1c1e',
+              color: '#fff', fontSize: 14, fontWeight: 600, textDecoration: 'none',
+              borderRadius: 10,
             }}>지도에서 내 집 보기 →</a>
           </>
         )}
 
         {status === 'failed' && (
           <>
-            <div style={{ fontSize: 64, marginBottom: 16 }}>🚫</div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: '#f97316', marginBottom: 10 }}>결제가 취소되었어요</div>
-            <div style={{ fontSize: 13, color: '#a08060', lineHeight: 1.8, marginBottom: 24 }}>
+            <div style={{ display: 'inline-block', fontSize: 12.5, fontWeight: 600, color: '#dc2626', background: '#fdecec', border: '1px solid #f5d5d5', borderRadius: 999, padding: '5px 14px', marginBottom: 16 }}>결제 취소</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: '#1a1a1a', marginBottom: 10 }}>결제가 취소되었어요</div>
+            <div style={{ fontSize: 13, color: '#575654', lineHeight: 1.9, marginBottom: 24 }}>
               {errorMsg}<br />
-              <span style={{ color: '#5a3e1a', fontSize: 11 }}>다시 시도하시거나 다른 결제수단을 이용해주세요.</span>
+              <span style={{ color: '#8c8a87', fontSize: 12 }}>다시 시도하시거나 다른 결제수단을 이용해주세요.</span>
             </div>
             <a href="/" style={{
-              display: 'inline-block', padding: '12px 24px', borderRadius: 8,
-              background: 'linear-gradient(180deg,#8b6914,#6b4c10)', color: '#fdf6e3', fontSize: 13, fontWeight: 700,
-              textDecoration: 'none', border: '2px solid #c8a96e', boxShadow: '0 4px 0 #3d2a08',
+              display: 'inline-block', padding: '12px 24px',
+              background: '#1c1c1e', color: '#fff', fontSize: 13, fontWeight: 600,
+              textDecoration: 'none', borderRadius: 10,
             }}>← 다시 시도하기</a>
           </>
         )}
 
         {status === 'error' && (
           <>
-            <div style={{ fontSize: 64, marginBottom: 16 }}>⚠️</div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: '#ef4444', marginBottom: 10 }}>오류가 발생했어요</div>
-            <div style={{ fontSize: 13, color: '#a08060', lineHeight: 1.8, marginBottom: 24 }}>
+            <div style={{ display: 'inline-block', fontSize: 12.5, fontWeight: 600, color: '#dc2626', background: '#fdecec', border: '1px solid #f5d5d5', borderRadius: 999, padding: '5px 14px', marginBottom: 16 }}>오류</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: '#1a1a1a', marginBottom: 10 }}>오류가 발생했어요</div>
+            <div style={{ fontSize: 13, color: '#575654', lineHeight: 1.9, marginBottom: 24 }}>
               {errorMsg}<br />
-              <span style={{ color: '#5a3e1a', fontSize: 11 }}>결제가 완료됐다면 고객센터로 연락해주세요.</span>
+              <span style={{ color: '#8c8a87', fontSize: 12 }}>결제가 완료됐다면 고객센터로 연락해주세요.</span>
             </div>
             <a href="/" style={{
-              display: 'inline-block', padding: '12px 24px', borderRadius: 8,
-              background: '#1a0f05', color: '#c8a96e', fontSize: 13, fontWeight: 600,
-              textDecoration: 'none', border: '2px solid #4a3010',
+              display: 'inline-block', padding: '12px 24px',
+              background: '#ffffff', color: '#1a1a1a', fontSize: 13, fontWeight: 600,
+              textDecoration: 'none', border: '1px solid #e0ddd9', borderRadius: 10,
             }}>← 지도로 돌아가기</a>
           </>
         )}
@@ -233,7 +233,7 @@ function PaymentRedirectContent() {
 export default function PaymentRedirectPage() {
   return (
     <Suspense fallback={
-      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0f0906', color: '#c8a96e', fontFamily: 'sans-serif' }}>
+      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f4f3f1', color: '#8c8a87' }}>
         결제 확인 중...
       </div>
     }>

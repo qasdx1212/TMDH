@@ -22,11 +22,11 @@ interface Report {
 }
 
 const REASON_LABEL: Record<string, string> = {
-  inappropriate_image: '🔞 부적절한 이미지',
-  illegal_ad: '🚫 불법 광고',
-  copyright: '📋 저작권 침해',
-  impersonation: '🎭 사칭',
-  other: '💬 기타',
+  inappropriate_image: '부적절한 이미지',
+  illegal_ad: '불법 광고',
+  copyright: '저작권 침해',
+  impersonation: '사칭',
+  other: '기타',
 }
 
 export default function AdminPage() {
@@ -121,7 +121,7 @@ export default function AdminPage() {
 
   if (!authChecked) {
     return (
-      <div style={{ minHeight: '100vh', background: '#0f0906', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c8a96e', fontFamily: 'sans-serif' }}>
+      <div style={{ minHeight: '100vh', background: '#f4f3f1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8c8a87' }}>
         인증 확인 중...
       </div>
     )
@@ -171,18 +171,18 @@ export default function AdminPage() {
   const occupancyRate = ((houses.length / 20000) * 100).toFixed(2)
 
   return (
-    <div style={{ height: '100vh', overflowY: 'auto', background: '#0f0906', fontFamily: '"Noto Sans KR", -apple-system, sans-serif', color: '#fdf6e3' }}>
+    <div style={{ height: '100vh', overflowY: 'auto', background: '#f4f3f1', color: '#1a1a1a' }}>
 
       {/* 헤더 */}
-      <div style={{ background: 'linear-gradient(180deg,#2c1a08,#1e1005)', borderBottom: '3px solid #6b4c2a', padding: '0 24px', position: 'sticky', top: 0, zIndex: 10 }}>
+      <div style={{ background: '#ffffff', borderBottom: '1px solid #e9e7e4', padding: '0 24px', position: 'sticky', top: 0, zIndex: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60, maxWidth: 1400, margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <a href="/" style={{ color: '#c8a96e', textDecoration: 'none', fontSize: 13, padding: '6px 12px', borderRadius: 6, border: '1px solid #4a3010', background: 'rgba(255,255,255,0.04)' }}>← 지도</a>
-            <div style={{ width: 1, height: 20, background: '#4a3010' }} />
-            <div style={{ fontSize: 18, fontWeight: 900 }}>🔑 관리자 대시보드</div>
+            <a href="/" style={{ color: '#1a1a1a', textDecoration: 'none', fontSize: 13, padding: '7px 14px', border: '1px solid #e0ddd9', borderRadius: 10, background: '#ffffff', fontWeight: 600 }}>← 지도</a>
+            <div style={{ width: 1, height: 20, background: '#e9e7e4' }} />
+            <div style={{ fontSize: 16, fontWeight: 700 }}>관리자 대시보드</div>
           </div>
-          <button onClick={fetchHouses} style={{ padding: '6px 14px', borderRadius: 6, border: '1.5px solid #4a3010', background: 'rgba(255,255,255,0.06)', color: '#a08060', cursor: 'pointer', fontSize: 12 }}>
-            🔄 새로고침
+          <button onClick={fetchHouses} style={{ padding: '8px 16px', border: '1px solid #e0ddd9', borderRadius: 10, background: '#ffffff', color: '#1a1a1a', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+            새로고침
           </button>
         </div>
       </div>
@@ -192,17 +192,17 @@ export default function AdminPage() {
         {/* 핵심 통계 */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 12, marginBottom: 20 }}>
           {[
-            { label: '총 입주', value: `${houses.length.toLocaleString()}채`, color: '#4ade80', sub: `/ 20,000칸` },
-            { label: '분양률', value: `${occupancyRate}%`, color: '#f59e0b', sub: '전체 대비' },
-            { label: '영구 입주', value: `${permanentCount}채`, color: '#c084fc', sub: '만료 없음' },
-            { label: '만료 임박', value: `${expiringCount}채`, color: '#f97316', sub: '7일 이내' },
-            { label: '기간 만료', value: `${expiredCount}채`, color: '#ef4444', sub: '처리 필요' },
-            { label: '총 방문', value: totalVisits.toLocaleString(), color: '#34d399', sub: `❤️ ${totalLikes.toLocaleString()}` },
+            { label: '총 입주', value: `${houses.length.toLocaleString()}채`, color: '#1a1a1a', sub: `/ 20,000칸` },
+            { label: '분양률', value: `${occupancyRate}%`, color: '#1a1a1a', sub: '전체 대비' },
+            { label: '영구 입주', value: `${permanentCount}채`, color: '#1a1a1a', sub: '만료 없음' },
+            { label: '만료 임박', value: `${expiringCount}채`, color: '#dc2626', sub: '7일 이내' },
+            { label: '기간 만료', value: `${expiredCount}채`, color: '#dc2626', sub: '처리 필요' },
+            { label: '총 방문', value: totalVisits.toLocaleString(), color: '#1a1a1a', sub: `♥ ${totalLikes.toLocaleString()}` },
           ].map(({ label, value, color, sub }) => (
-            <div key={label} style={{ background: 'linear-gradient(180deg,#2a1a08,#1e1005)', border: '1.5px solid #4a3010', borderRadius: 10, padding: '14px 16px' }}>
-              <div style={{ fontSize: 10, color: '#7a5c3a', marginBottom: 5 }}>{label}</div>
-              <div style={{ fontSize: 22, fontWeight: 900, color }}>{value}</div>
-              <div style={{ fontSize: 10, color: '#5a3e1a', marginTop: 3 }}>{sub}</div>
+            <div key={label} style={{ background: '#ffffff', border: '1px solid #e9e7e4', borderRadius: 14, boxShadow: '0 1px 3px rgba(0,0,0,0.05)', padding: '16px' }}>
+              <div style={{ fontSize: 11, color: '#8c8a87', marginBottom: 6, fontWeight: 500 }}>{label}</div>
+              <div style={{ fontSize: 22, fontWeight: 700, color }}>{value}</div>
+              <div style={{ fontSize: 11, color: '#b0aeaa', marginTop: 3 }}>{sub}</div>
             </div>
           ))}
         </div>
@@ -214,26 +214,27 @@ export default function AdminPage() {
             const count = zoneHouses.length
             const rate = ((count / 5000) * 100).toFixed(1)
             const visits = zoneHouses.reduce((s, h) => s + h.visit_count, 0)
+            const selected = filterZone === key
             return (
               <div
                 key={key}
                 onClick={() => setFilterZone(filterZone === key ? null : key)}
                 style={{
-                  padding: '12px 16px', borderRadius: 8, cursor: 'pointer',
-                  border: `2px solid ${filterZone === key ? zone.color : '#4a3010'}`,
-                  background: filterZone === key ? zone.color + '15' : '#1a0f05',
-                  transition: 'all 0.12s',
+                  padding: '14px 16px', cursor: 'pointer', borderRadius: 14,
+                  border: selected ? '1px solid #1a1a1a' : '1px solid #e9e7e4',
+                  background: selected ? '#faf9f7' : '#ffffff',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <span style={{ fontSize: 11, color: zone.color, fontWeight: 700 }}>{zone.label}</span>
-                  <span style={{ fontSize: 10, color: '#5a3e1a' }}>👣 {visits.toLocaleString()}</span>
+                  <span style={{ fontSize: 12, color: '#1a1a1a', fontWeight: 600 }}>{zone.label}</span>
+                  <span style={{ fontSize: 11, color: '#8c8a87' }}>방문 {visits.toLocaleString()}</span>
                 </div>
-                <div style={{ fontSize: 22, fontWeight: 900, color: '#fdf6e3' }}>{count}채</div>
-                <div style={{ marginTop: 6, height: 4, borderRadius: 2, background: '#2a1a08' }}>
-                  <div style={{ height: '100%', borderRadius: 2, width: `${rate}%`, background: zone.color }} />
+                <div style={{ fontSize: 22, fontWeight: 700, color: '#1a1a1a' }}>{count}채</div>
+                <div style={{ marginTop: 8, height: 6, background: '#f0efec', borderRadius: 999, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${rate}%`, background: zone.color, borderRadius: 999 }} />
                 </div>
-                <div style={{ fontSize: 10, color: '#5a3e1a', marginTop: 4 }}>{rate}% 분양</div>
+                <div style={{ fontSize: 11, color: '#b0aeaa', marginTop: 5 }}>{rate}% 분양</div>
               </div>
             )
           })}
@@ -246,15 +247,19 @@ export default function AdminPage() {
               { id: 'all', label: `전체 ${houses.length}` },
               { id: 'expiring', label: `만료 임박 ${expiringCount}` },
               { id: 'expired', label: `기간 만료 ${expiredCount}` },
-              { id: 'reports', label: `🚨 신고` },
-            ] as const).map(t => (
-              <button key={t.id} onClick={() => setTab(t.id)} style={{
-                padding: '7px 16px', borderRadius: 7, cursor: 'pointer', fontSize: 12, fontWeight: tab === t.id ? 700 : 500,
-                border: `2px solid ${tab === t.id ? (t.id === 'reports' ? '#ef4444' : '#c8a96e') : '#4a3010'}`,
-                background: tab === t.id ? (t.id === 'reports' ? '#3d0a0a' : '#3d2a08') : 'transparent',
-                color: tab === t.id ? '#fdf6e3' : '#7a5c3a',
-              }}>{t.label}</button>
-            ))}
+              { id: 'reports', label: `신고` },
+            ] as const).map(t => {
+              const active = tab === t.id
+              const isReports = t.id === 'reports'
+              return (
+                <button key={t.id} onClick={() => setTab(t.id)} style={{
+                  padding: '8px 16px', cursor: 'pointer', fontSize: 13, fontWeight: active ? 600 : 500, borderRadius: 10,
+                  border: active ? '1px solid #1a1a1a' : '1px solid #e0ddd9',
+                  background: active ? '#1c1c1e' : '#ffffff',
+                  color: active ? '#fff' : (isReports ? '#dc2626' : '#575654'),
+                }}>{t.label}</button>
+              )
+            })}
           </div>
 
           <div style={{ flex: 1 }} />
@@ -264,7 +269,7 @@ export default function AdminPage() {
               <select
                 value={sortBy}
                 onChange={e => setSortBy(e.target.value as typeof sortBy)}
-                style={{ padding: '7px 12px', borderRadius: 7, background: '#2a1a08', border: '1.5px solid #4a3010', color: '#c8a96e', fontSize: 12, cursor: 'pointer', outline: 'none' }}
+                style={{ padding: '8px 12px', background: '#ffffff', border: '1px solid #e0ddd9', borderRadius: 10, color: '#1a1a1a', fontSize: 13, cursor: 'pointer', outline: 'none', fontWeight: 500 }}
               >
                 <option value="occupied_at">최신 입주순</option>
                 <option value="expires_at">만료일 임박순</option>
@@ -275,11 +280,11 @@ export default function AdminPage() {
               <input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="🔍 이름 / 닉네임 / 주소"
+                placeholder="이름 / 닉네임 / 주소 검색"
                 style={{
-                  padding: '7px 14px', borderRadius: 7, width: 220, fontSize: 12,
-                  background: '#2a1a08', border: '1.5px solid #4a3010',
-                  color: '#fdf6e3', outline: 'none', fontFamily: 'inherit',
+                  padding: '8px 14px', width: 220, fontSize: 13,
+                  background: '#ffffff', border: '1px solid #e0ddd9', borderRadius: 10,
+                  color: '#1a1a1a', outline: 'none',
                 }}
               />
             </>
@@ -288,51 +293,51 @@ export default function AdminPage() {
 
         {/* 신고 탭 */}
         {tab === 'reports' ? (
-          <div style={{ background: '#1a0f05', border: '1.5px solid #4a3010', borderRadius: 10, overflow: 'hidden' }}>
+          <div style={{ background: '#ffffff', border: '1px solid #e9e7e4', borderRadius: 14, boxShadow: '0 1px 3px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
                 <thead>
-                  <tr style={{ background: '#3d0a0a', borderBottom: '1.5px solid #7f1d1d' }}>
+                  <tr style={{ background: '#faf9f7' }}>
                     {['날짜', '신고된 집', '구역', '사유', '상세 내용', '작업'].map(h => (
-                      <th key={h} style={{ padding: '10px 12px', textAlign: 'left', color: '#f87171', fontWeight: 700, fontSize: 11, whiteSpace: 'nowrap' }}>{h}</th>
+                      <th key={h} style={{ padding: '11px 12px', textAlign: 'left', color: '#8c8a87', fontWeight: 600, fontSize: 12, whiteSpace: 'nowrap', borderBottom: '1px solid #e9e7e4' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {reportsLoading ? (
-                    <tr><td colSpan={6} style={{ padding: 48, textAlign: 'center', color: '#5a3e1a' }}>불러오는 중...</td></tr>
+                    <tr><td colSpan={6} style={{ padding: 48, textAlign: 'center', color: '#8c8a87' }}>불러오는 중...</td></tr>
                   ) : reports.length === 0 ? (
-                    <tr><td colSpan={6} style={{ padding: 48, textAlign: 'center', color: '#5a3e1a' }}>신고 내역이 없어요 ✅</td></tr>
-                  ) : reports.map((r, i) => {
+                    <tr><td colSpan={6} style={{ padding: 48, textAlign: 'center', color: '#8c8a87' }}>신고 내역이 없어요</td></tr>
+                  ) : reports.map((r) => {
                     const houseData = r.house
                     const zone = houseData ? ZONES[houseData.zone as keyof typeof ZONES] : null
                     const houseInList = houseData ? houses.find(h => h.id === r.house_id) : null
                     return (
-                      <tr key={r.id} style={{ borderBottom: '1px solid #2a1a0840', background: i % 2 === 0 ? 'transparent' : '#1e100522' }}>
-                        <td style={{ padding: '10px 12px', color: '#7a5c3a', whiteSpace: 'nowrap' }}>{r.created_at.slice(0, 10)}</td>
-                        <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                      <tr key={r.id} style={{ borderBottom: '1px solid #f0efec' }}>
+                        <td style={{ padding: '11px 12px', color: '#8c8a87', whiteSpace: 'nowrap' }}>{r.created_at.slice(0, 10)}</td>
+                        <td style={{ padding: '11px 12px', whiteSpace: 'nowrap' }}>
                           {houseData
-                            ? <><span style={{ color: '#c8a96e', fontWeight: 700 }}>{houseData.address}</span><span style={{ color: '#7a5c3a', marginLeft: 6 }}>{houseData.name ?? '—'}</span></>
-                            : <span style={{ color: '#4a3010' }}>삭제된 집</span>}
+                            ? <><span style={{ color: '#1a1a1a', fontWeight: 600 }}>{houseData.address}</span><span style={{ color: '#8c8a87', marginLeft: 6 }}>{houseData.name ?? '—'}</span></>
+                            : <span style={{ color: '#8c8a87' }}>삭제된 집</span>}
                         </td>
-                        <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
-                          {zone && <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 4, background: zone.color + '20', color: zone.color, border: `1px solid ${zone.color}44` }}>{zone.label}</span>}
+                        <td style={{ padding: '11px 12px', whiteSpace: 'nowrap' }}>
+                          {zone && <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 999, background: '#faf9f7', color: '#575654', border: '1px solid #e9e7e4', fontWeight: 500 }}>{zone.label}</span>}
                         </td>
-                        <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
-                          <span style={{ fontSize: 11, color: '#f87171', fontWeight: 600 }}>{REASON_LABEL[r.reason] ?? r.reason}</span>
+                        <td style={{ padding: '11px 12px', whiteSpace: 'nowrap' }}>
+                          <span style={{ fontSize: 12, color: '#dc2626', fontWeight: 500 }}>{REASON_LABEL[r.reason] ?? r.reason}</span>
                         </td>
-                        <td style={{ padding: '10px 12px', color: '#a08060', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {r.description ?? <span style={{ color: '#4a3010' }}>—</span>}
+                        <td style={{ padding: '11px 12px', color: '#575654', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {r.description ?? <span style={{ color: '#8c8a87' }}>—</span>}
                         </td>
-                        <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                        <td style={{ padding: '11px 12px', whiteSpace: 'nowrap' }}>
                           {houseInList ? (
                             <button
                               onClick={() => handleVacate(houseInList)}
                               disabled={vacatingId === houseInList.id}
-                              style={{ padding: '5px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 11, fontWeight: 700, background: '#ef4444', border: '1.5px solid #b91c1c', color: '#fff' }}
+                              style={{ padding: '6px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 600, borderRadius: 10, background: '#dc2626', border: 'none', color: '#fff' }}
                             >{vacatingId === houseInList.id ? '처리중...' : '강제퇴거'}</button>
                           ) : (
-                            <span style={{ fontSize: 11, color: '#4a3010' }}>이미 퇴거됨</span>
+                            <span style={{ fontSize: 12, color: '#8c8a87' }}>이미 퇴거됨</span>
                           )}
                         </td>
                       </tr>
@@ -345,22 +350,22 @@ export default function AdminPage() {
         ) : (
 
         /* 일반 집 테이블 */
-        <div style={{ background: '#1a0f05', border: '1.5px solid #4a3010', borderRadius: 10, overflow: 'hidden' }}>
+        <div style={{ background: '#ffffff', border: '1px solid #e9e7e4', borderRadius: 14, boxShadow: '0 1px 3px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
               <thead>
-                <tr style={{ background: '#2a1a08', borderBottom: '1.5px solid #4a3010' }}>
+                <tr style={{ background: '#faf9f7' }}>
                   {['주소', '집 이름', '닉네임', '구역', '크기', '입주일', '만료일 / 상태', '방문 / 좋아요', '링크', '작업'].map(h => (
-                    <th key={h} style={{ padding: '10px 12px', textAlign: 'left', color: '#8b6914', fontWeight: 700, fontSize: 11, whiteSpace: 'nowrap' }}>{h}</th>
+                    <th key={h} style={{ padding: '11px 12px', textAlign: 'left', color: '#8c8a87', fontWeight: 600, fontSize: 12, whiteSpace: 'nowrap', borderBottom: '1px solid #e9e7e4' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={10} style={{ padding: 48, textAlign: 'center', color: '#5a3e1a' }}>불러오는 중...</td></tr>
+                  <tr><td colSpan={10} style={{ padding: 48, textAlign: 'center', color: '#8c8a87' }}>불러오는 중...</td></tr>
                 ) : filtered.length === 0 ? (
-                  <tr><td colSpan={10} style={{ padding: 48, textAlign: 'center', color: '#5a3e1a' }}>해당하는 집이 없어요</td></tr>
-                ) : filtered.map((h, i) => {
+                  <tr><td colSpan={10} style={{ padding: 48, textAlign: 'center', color: '#8c8a87' }}>해당하는 집이 없어요</td></tr>
+                ) : filtered.map((h) => {
                   const zone = ZONES[h.zone as keyof typeof ZONES]
                   const daysLeft = h.is_permanent || !h.expires_at
                     ? null
@@ -372,45 +377,45 @@ export default function AdminPage() {
                     <tr
                       key={h.id}
                       style={{
-                        borderBottom: '1px solid #2a1a0840',
-                        background: isExpired ? '#3d0a0a22' : isExpiring ? '#3d2a0822' : i % 2 === 0 ? 'transparent' : '#1e100522',
+                        borderBottom: '1px solid #f0efec',
+                        background: isExpired ? '#fdecec' : isExpiring ? '#fdf4e3' : '#ffffff',
                       }}
                     >
-                      <td style={{ padding: '10px 12px', color: '#c8a96e', fontWeight: 700, whiteSpace: 'nowrap' }}>{h.address}</td>
-                      <td style={{ padding: '10px 12px', color: '#fdf6e3', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {h.exterior_image_url && <img src={h.exterior_image_url} alt="" style={{ width: 24, height: 24, objectFit: 'cover', borderRadius: 3, marginRight: 6, verticalAlign: 'middle' }} />}
-                        {h.name ?? <span style={{ color: '#4a3010' }}>—</span>}
+                      <td style={{ padding: '11px 12px', color: '#1a1a1a', fontWeight: 600, whiteSpace: 'nowrap' }}>{h.address}</td>
+                      <td style={{ padding: '11px 12px', color: '#1a1a1a', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {h.exterior_image_url && <img src={h.exterior_image_url} alt="" style={{ width: 24, height: 24, objectFit: 'cover', borderRadius: 6, border: '1px solid #e9e7e4', marginRight: 6, verticalAlign: 'middle' }} />}
+                        {h.name ?? <span style={{ color: '#8c8a87' }}>—</span>}
                       </td>
-                      <td style={{ padding: '10px 12px', color: '#a08060' }}>{h.nickname ?? '—'}</td>
-                      <td style={{ padding: '10px 12px' }}>
-                        <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 4, background: zone.color + '20', color: zone.color, border: `1px solid ${zone.color}44`, whiteSpace: 'nowrap' }}>{zone.label}</span>
+                      <td style={{ padding: '11px 12px', color: '#575654' }}>{h.nickname ?? '—'}</td>
+                      <td style={{ padding: '11px 12px' }}>
+                        <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 999, background: '#faf9f7', color: '#575654', border: '1px solid #e9e7e4', whiteSpace: 'nowrap', fontWeight: 500 }}>{zone.label}</span>
                       </td>
-                      <td style={{ padding: '10px 12px', color: '#7a5c3a', whiteSpace: 'nowrap' }}>{(h.width ?? 1)}×{(h.height ?? 1)}</td>
-                      <td style={{ padding: '10px 12px', color: '#7a5c3a', whiteSpace: 'nowrap' }}>{h.occupied_at?.slice(0, 10) ?? '—'}</td>
-                      <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                      <td style={{ padding: '11px 12px', color: '#8c8a87', whiteSpace: 'nowrap' }}>{(h.width ?? 1)}×{(h.height ?? 1)}</td>
+                      <td style={{ padding: '11px 12px', color: '#8c8a87', whiteSpace: 'nowrap' }}>{h.occupied_at?.slice(0, 10) ?? '—'}</td>
+                      <td style={{ padding: '11px 12px', whiteSpace: 'nowrap' }}>
                         {h.is_permanent
-                          ? <span style={{ color: '#c084fc', fontSize: 11, fontWeight: 700 }}>♾ 영구</span>
+                          ? <span style={{ color: '#1a1a1a', fontSize: 12, fontWeight: 600 }}>영구</span>
                           : isExpired
-                          ? <span style={{ color: '#ef4444', fontWeight: 700 }}>⚠️ 만료됨</span>
+                          ? <span style={{ color: '#dc2626', fontWeight: 600 }}>만료됨</span>
                           : isExpiring
-                          ? <span style={{ color: '#f97316', fontWeight: 700 }}>D-{daysLeft} ({h.expires_at?.slice(0, 10)})</span>
-                          : <span style={{ color: '#7a5c3a' }}>D-{daysLeft} ({h.expires_at?.slice(0, 10)})</span>}
+                          ? <span style={{ color: '#dc2626', fontWeight: 600 }}>D-{daysLeft} ({h.expires_at?.slice(0, 10)})</span>
+                          : <span style={{ color: '#8c8a87' }}>D-{daysLeft} ({h.expires_at?.slice(0, 10)})</span>}
                       </td>
-                      <td style={{ padding: '10px 12px', color: '#7a5c3a', whiteSpace: 'nowrap' }}>
-                        👣 {h.visit_count.toLocaleString()} / ❤️ {h.like_count.toLocaleString()}
+                      <td style={{ padding: '11px 12px', color: '#8c8a87', whiteSpace: 'nowrap' }}>
+                        방문 {h.visit_count.toLocaleString()} / ♥ {h.like_count.toLocaleString()}
                       </td>
-                      <td style={{ padding: '10px 12px' }}>
+                      <td style={{ padding: '11px 12px' }}>
                         {h.link_url
-                          ? <a href={h.link_url} target="_blank" rel="noopener noreferrer" style={{ color: '#34d399', fontSize: 11, textDecoration: 'none' }}>🔗 방문</a>
-                          : <span style={{ color: '#4a3010' }}>—</span>}
+                          ? <a href={h.link_url} target="_blank" rel="noopener noreferrer" style={{ color: '#1a1a1a', fontSize: 12, textDecoration: 'underline', fontWeight: 500 }}>방문</a>
+                          : <span style={{ color: '#8c8a87' }}>—</span>}
                       </td>
-                      <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                      <td style={{ padding: '11px 12px', whiteSpace: 'nowrap' }}>
                         <button
                           onClick={() => handleVacate(h)}
                           disabled={vacatingId === h.id}
                           style={{
-                            padding: '5px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 11, fontWeight: 700,
-                            background: '#fef2f2', border: '1.5px solid #ef444466', color: '#ef4444',
+                            padding: '6px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 600, borderRadius: 10,
+                            background: '#dc2626', border: 'none', color: '#fff',
                           }}
                         >{vacatingId === h.id ? '처리중...' : '강제퇴거'}</button>
                       </td>
@@ -423,12 +428,12 @@ export default function AdminPage() {
         </div>
         )}
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
-          <div style={{ fontSize: 11, color: '#4a3010' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
+          <div style={{ fontSize: 12, color: '#8c8a87' }}>
             {tab === 'reports' ? `${reports.length}건의 신고` : `${filtered.length}건 표시 중 / 전체 ${houses.length}건`}
           </div>
           {filterZone && tab !== 'reports' && (
-            <button onClick={() => setFilterZone(null)} style={{ fontSize: 11, color: '#c8a96e', background: 'none', border: 'none', cursor: 'pointer' }}>
+            <button onClick={() => setFilterZone(null)} style={{ fontSize: 12, color: '#8c8a87', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500 }}>
               구역 필터 초기화 ×
             </button>
           )}

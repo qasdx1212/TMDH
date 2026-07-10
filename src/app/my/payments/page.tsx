@@ -15,9 +15,9 @@ interface Payment {
 }
 
 const METHOD_LABEL: Record<string, string> = {
-  card: '💳 카드',
-  kakaopay: '💛 카카오페이',
-  tosspay: '🔵 토스페이',
+  card: '카드',
+  kakaopay: '카카오페이',
+  tosspay: '토스페이',
 }
 
 export default function PaymentsPage() {
@@ -41,13 +41,13 @@ export default function PaymentsPage() {
   const totalAmount = payments.filter(p => p.status === 'completed').reduce((s, p) => s + p.amount, 0)
 
   return (
-    <div style={{ height: '100vh', overflowY: 'auto', background: '#0f0906', fontFamily: '"Noto Sans KR", -apple-system, sans-serif', color: '#fdf6e3' }}>
+    <div style={{ height: '100vh', overflowY: 'auto', background: '#f4f3f1', color: '#1a1a1a' }}>
       {/* 헤더 */}
-      <div style={{ background: 'linear-gradient(180deg,#2c1a08,#1e1005)', borderBottom: '3px solid #6b4c2a', padding: '0 24px', position: 'sticky', top: 0, zIndex: 10 }}>
+      <div style={{ background: '#ffffff', borderBottom: '1px solid #e9e7e4', padding: '0 24px', position: 'sticky', top: 0, zIndex: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, height: 60, maxWidth: 860, margin: '0 auto' }}>
-          <a href="/" style={{ color: '#c8a96e', textDecoration: 'none', fontSize: 13, padding: '6px 12px', borderRadius: 6, border: '1px solid #4a3010', background: 'rgba(255,255,255,0.04)' }}>← 지도</a>
-          <div style={{ width: 1, height: 20, background: '#4a3010' }} />
-          <div style={{ fontSize: 18, fontWeight: 900 }}>🧾 결제 내역</div>
+          <a href="/" style={{ color: '#1a1a1a', textDecoration: 'none', fontSize: 13, padding: '7px 14px', border: '1px solid #e0ddd9', borderRadius: 10, background: '#ffffff', fontWeight: 600 }}>← 지도</a>
+          <div style={{ width: 1, height: 20, background: '#e9e7e4' }} />
+          <div style={{ fontSize: 16, fontWeight: 700 }}>결제 내역</div>
         </div>
       </div>
 
@@ -55,27 +55,26 @@ export default function PaymentsPage() {
         {/* 요약 카드 */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 24 }}>
           {[
-            { label: '총 결제 건수', value: `${payments.length}건`, color: '#4ade80' },
-            { label: '총 결제 금액', value: `₩${totalAmount.toLocaleString()}`, color: '#fbbf24' },
-            { label: '입주 횟수', value: `${payments.filter(p => p.type === 'move_in').length}회`, color: '#c084fc' },
-          ].map(({ label, value, color }) => (
-            <div key={label} style={{ background: 'linear-gradient(180deg,#2a1a08,#1e1005)', border: '1.5px solid #4a3010', borderRadius: 10, padding: '14px 18px' }}>
-              <div style={{ fontSize: 10, color: '#7a5c3a', marginBottom: 5 }}>{label}</div>
-              <div style={{ fontSize: 22, fontWeight: 900, color }}>{value}</div>
+            { label: '총 결제 건수', value: `${payments.length}건` },
+            { label: '총 결제 금액', value: `₩${totalAmount.toLocaleString()}` },
+            { label: '입주 횟수', value: `${payments.filter(p => p.type === 'move_in').length}회` },
+          ].map(({ label, value }) => (
+            <div key={label} style={{ background: '#ffffff', border: '1px solid #e9e7e4', borderRadius: 14, boxShadow: '0 1px 3px rgba(0,0,0,0.05)', padding: '16px 18px' }}>
+              <div style={{ fontSize: 12, color: '#8c8a87', marginBottom: 6, fontWeight: 500 }}>{label}</div>
+              <div style={{ fontSize: 22, fontWeight: 700, color: '#1a1a1a' }}>{value}</div>
             </div>
           ))}
         </div>
 
         {/* 테이블 */}
-        <div style={{ background: '#1a0f05', border: '1.5px solid #4a3010', borderRadius: 10, overflow: 'hidden' }}>
+        <div style={{ background: '#ffffff', border: '1px solid #e9e7e4', borderRadius: 14, boxShadow: '0 1px 3px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
           {loading ? (
-            <div style={{ padding: 48, textAlign: 'center', color: '#5a3e1a' }}>불러오는 중...</div>
+            <div style={{ padding: 48, textAlign: 'center', color: '#8c8a87' }}>불러오는 중...</div>
           ) : payments.length === 0 ? (
             <div style={{ padding: '56px 24px', textAlign: 'center' }}>
-              <div style={{ fontSize: 48, marginBottom: 14 }}>🧾</div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: '#5a3e1a', marginBottom: 6 }}>결제 내역이 없어요</div>
-              <div style={{ fontSize: 12, color: '#3d2a08' }}>입주 신청 후 여기서 내역을 확인할 수 있어요.</div>
-              <a href="/" style={{ display: 'inline-block', marginTop: 18, padding: '10px 24px', borderRadius: 8, background: 'linear-gradient(180deg,#8b6914,#6b4c10)', color: '#fdf6e3', fontSize: 13, fontWeight: 700, textDecoration: 'none', border: '2px solid #c8a96e' }}>
+              <div style={{ fontSize: 15, fontWeight: 600, color: '#1a1a1a', marginBottom: 6 }}>결제 내역이 없어요</div>
+              <div style={{ fontSize: 13, color: '#8c8a87' }}>입주 신청 후 여기서 내역을 확인할 수 있어요.</div>
+              <a href="/" style={{ display: 'inline-block', marginTop: 18, padding: '11px 24px', background: '#1c1c1e', color: '#fff', fontSize: 13, fontWeight: 600, textDecoration: 'none', borderRadius: 10 }}>
                 지도에서 입주 신청하기 →
               </a>
             </div>
@@ -83,28 +82,28 @@ export default function PaymentsPage() {
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
-                  <tr style={{ background: '#2a1a08', borderBottom: '1.5px solid #4a3010' }}>
+                  <tr style={{ background: '#faf9f7' }}>
                     {['날짜', '구분', '주소', '금액', '결제 수단', '상태'].map(h => (
-                      <th key={h} style={{ padding: '11px 14px', textAlign: 'left', color: '#8b6914', fontWeight: 700, fontSize: 11, whiteSpace: 'nowrap' }}>{h}</th>
+                      <th key={h} style={{ padding: '12px 14px', textAlign: 'left', color: '#8c8a87', fontWeight: 600, fontSize: 12, whiteSpace: 'nowrap', borderBottom: '1px solid #e9e7e4' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {payments.map((p, i) => (
-                    <tr key={p.id} style={{ borderBottom: '1px solid #2a1a0840', background: i % 2 === 0 ? 'transparent' : '#1e100522' }}>
-                      <td style={{ padding: '12px 14px', color: '#7a5c3a', whiteSpace: 'nowrap' }}>{p.created_at.slice(0, 10)}</td>
-                      <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
-                        <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4, fontWeight: 700, whiteSpace: 'nowrap', background: p.type === 'move_in' ? '#22c55e22' : '#3b82f622', color: p.type === 'move_in' ? '#22c55e' : '#3b82f6', border: `1px solid ${p.type === 'move_in' ? '#22c55e44' : '#3b82f644'}` }}>
+                  {payments.map((p) => (
+                    <tr key={p.id} style={{ borderBottom: '1px solid #f0efec' }}>
+                      <td style={{ padding: '13px 14px', color: '#8c8a87', whiteSpace: 'nowrap' }}>{p.created_at.slice(0, 10)}</td>
+                      <td style={{ padding: '13px 14px', whiteSpace: 'nowrap' }}>
+                        <span style={{ fontSize: 12, padding: '3px 10px', borderRadius: 999, fontWeight: 500, whiteSpace: 'nowrap', background: '#faf9f7', color: '#575654', border: '1px solid #e9e7e4' }}>
                           {p.type === 'move_in' ? '신규 입주' : '수정'}
                         </span>
                       </td>
-                      <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
-                        <a href={`/?house=${p.house_address}`} style={{ color: '#c8a96e', fontWeight: 700, textDecoration: 'none' }}>{p.house_address}</a>
+                      <td style={{ padding: '13px 14px', whiteSpace: 'nowrap' }}>
+                        <a href={`/?house=${p.house_address}`} style={{ color: '#1a1a1a', fontWeight: 600, textDecoration: 'underline' }}>{p.house_address}</a>
                       </td>
-                      <td style={{ padding: '12px 14px', color: '#fbbf24', fontWeight: 700, whiteSpace: 'nowrap' }}>₩{p.amount.toLocaleString()}</td>
-                      <td style={{ padding: '12px 14px', color: '#a08060', whiteSpace: 'nowrap' }}>{p.method ? (METHOD_LABEL[p.method] ?? p.method) : '—'}</td>
-                      <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
-                        <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4, fontWeight: 700, background: '#22c55e22', color: '#22c55e', border: '1px solid #22c55e44' }}>
+                      <td style={{ padding: '13px 14px', color: '#1a1a1a', fontWeight: 600, whiteSpace: 'nowrap' }}>₩{p.amount.toLocaleString()}</td>
+                      <td style={{ padding: '13px 14px', color: '#575654', whiteSpace: 'nowrap' }}>{p.method ? (METHOD_LABEL[p.method] ?? p.method) : '—'}</td>
+                      <td style={{ padding: '13px 14px', whiteSpace: 'nowrap' }}>
+                        <span style={{ fontSize: 12, padding: '3px 10px', borderRadius: 999, fontWeight: 500, background: p.status === 'completed' ? '#eaf6ee' : '#faf9f7', color: p.status === 'completed' ? '#16a34a' : '#575654', border: p.status === 'completed' ? '1px solid #d4ead9' : '1px solid #e9e7e4' }}>
                           {p.status === 'completed' ? '완료' : p.status}
                         </span>
                       </td>
@@ -117,9 +116,9 @@ export default function PaymentsPage() {
         </div>
 
         {payments.length > 0 && (
-          <div style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ fontSize: 11, color: '#4a3010' }}>{payments.length}건의 내역</div>
-            <div style={{ fontSize: 11, color: '#4a3010' }}>⚠️ 현재 테스트 모드 — 실제 결제 없음</div>
+          <div style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ fontSize: 12, color: '#8c8a87' }}>{payments.length}건의 내역</div>
+            <div style={{ fontSize: 12, color: '#8c8a87' }}>현재 테스트 모드 — 실제 결제 없음</div>
           </div>
         )}
       </div>

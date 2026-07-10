@@ -45,11 +45,11 @@ function buildTerrainCanvas(): HTMLCanvasElement {
   const ctx = tc.getContext('2d')!
   ctx.save(); ctx.scale(RS, RS)
 
-  // 통합 지도 — 따뜻한 갈색 지형
+  // 통합 지도 — 밝은 중립 지형
   for (let c = 0; c < GRID_COLS; c++) {
     for (let r = 0; r < GRID_ROWS; r++) {
       const bn = rng(Math.floor(c / 3), Math.floor(r / 3), 1)
-      const color = bn < 0.35 ? '#3a2510' : bn < 0.7 ? '#4a3018' : '#3d2a14'
+      const color = bn < 0.35 ? '#eceae6' : bn < 0.7 ? '#e7e5e1' : '#f0eeea'
       ctx.fillStyle = color
       ctx.fillRect(c * CELL, r * CELL, CELL, CELL)
     }
@@ -206,7 +206,7 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
     const ctx = canvas.getContext('2d')!
     ctx.clearRect(0, 0, W * RS, H * RS)
     if (terrainCanvas.current) ctx.drawImage(terrainCanvas.current, 0, 0)
-    else { ctx.fillStyle = '#2a1a0a'; ctx.fillRect(0, 0, W*RS, H*RS) }
+    else { ctx.fillStyle = '#eceae6'; ctx.fillRect(0, 0, W*RS, H*RS) }
     ctx.save(); ctx.scale(RS, RS)
 
     houses.filter(h => !h.parent_address).forEach(h => {
@@ -224,9 +224,11 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
         ctx.fillStyle=zone.color+'cc'; ctx.fillRect(x+1,y+1,w-2,ht-2); ctx.shadowBlur=0
       }
       if (h.border_effect==='neon') { ctx.shadowColor=zone.color; ctx.shadowBlur=6; ctx.strokeStyle=zone.color; ctx.lineWidth=1.5; ctx.strokeRect(x+1,y+1,w-2,ht-2); ctx.shadowBlur=0 }
-      if (myHouseIds?.has(h.id)) { ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.strokeRect(x,y,w,ht) }
+      if (myHouseIds?.has(h.id)) { ctx.strokeStyle='#1a1a1a'; ctx.lineWidth=2; ctx.strokeRect(x,y,w,ht) }
       if (h.nickname && w >= 20) {
-        ctx.fillStyle='#fff'; ctx.font=`bold ${Math.min(8,w/h.nickname.length)}px sans-serif`
+        // 이미지 위엔 흰 글씨+그림자, 밝은 지형 위엔 진한 글씨
+        ctx.fillStyle = hasImage ? '#fff' : '#1a1a1a'
+        ctx.font=`bold ${Math.min(8,w/h.nickname.length)}px sans-serif`
         ctx.textAlign='center'; ctx.textBaseline='middle'
         if (hasImage) { ctx.shadowColor='rgba(0,0,0,0.8)'; ctx.shadowBlur=3 }
         ctx.fillText(h.nickname, x+w/2, y+ht/2); ctx.shadowBlur=0
@@ -242,7 +244,7 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       }
       Object.entries(zoneBounds).forEach(([key, [cMin, cMax, rMin, rMax]]) => {
         if (key === activeZone) return
-        ctx.fillStyle = 'rgba(0,0,0,0.6)'
+        ctx.fillStyle = 'rgba(255,255,255,0.68)'
         ctx.fillRect(cMin*CELL, rMin*CELL, (cMax-cMin+1)*CELL, (rMax-rMin+1)*CELL)
       })
     }
@@ -251,9 +253,9 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       const { c1,r1,c2,r2 } = selection
       const sx=Math.min(c1,c2)*CELL, sy=Math.min(r1,r2)*CELL
       const sw=(Math.abs(c2-c1)+1)*CELL, sh=(Math.abs(r2-r1)+1)*CELL
-      ctx.fillStyle='#ffffff22'; ctx.fillRect(sx,sy,sw,sh)
-      ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.setLineDash([4,3]); ctx.strokeRect(sx,sy,sw,sh); ctx.setLineDash([])
-      ctx.fillStyle='#fff'; ctx.font='bold 9px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'
+      ctx.fillStyle='rgba(28,28,30,0.12)'; ctx.fillRect(sx,sy,sw,sh)
+      ctx.strokeStyle='#1a1a1a'; ctx.lineWidth=1.5; ctx.setLineDash([4,3]); ctx.strokeRect(sx,sy,sw,sh); ctx.setLineDash([])
+      ctx.fillStyle='#1a1a1a'; ctx.font='bold 9px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'
       ctx.fillText(`${Math.abs(c2-c1)+1}×${Math.abs(r2-r1)+1}`, sx+sw/2, sy+sh/2)
     }
     ctx.restore()
@@ -481,21 +483,20 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       {tooltip && (
         <div style={{
           position:'fixed', left:tooltip.x+14, top:tooltip.y-38,
-          background:'rgba(26,15,5,0.95)', color:'#fdf6e3',
-          padding:'5px 12px', borderRadius:6, fontSize:12, fontWeight:700,
-          border:'1.5px solid #8b6914', pointerEvents:'none', zIndex:200,
-          boxShadow:'0 4px 12px rgba(0,0,0,0.5)', whiteSpace:'nowrap',
-          fontFamily:'"Noto Sans KR", sans-serif',
-        }}>🏠 {tooltip.text}</div>
+          background:'#ffffff', color:'#1a1a1a',
+          padding:'6px 12px', borderRadius:10, fontSize:12, fontWeight:600,
+          border:'1px solid #e9e7e4', pointerEvents:'none', zIndex:200,
+          boxShadow:'0 4px 16px rgba(0,0,0,0.10)', whiteSpace:'nowrap',
+        }}>{tooltip.text}</div>
       )}
 
       {blockMsg && (
         <div style={{
           position:'absolute', bottom:24, left:'50%', transform:'translateX(-50%)',
-          background:'rgba(239,68,68,0.92)', color:'#fff',
+          background:'#fef2f2', color:'#dc2626',
           padding:'10px 20px', borderRadius:10, fontSize:13, fontWeight:600,
-          fontFamily:'"Noto Sans KR", sans-serif', pointerEvents:'none', whiteSpace:'nowrap',
-          boxShadow:'0 4px 20px rgba(0,0,0,0.4)',
+          border:'1px solid #dc2626', pointerEvents:'none', whiteSpace:'nowrap',
+          boxShadow:'0 4px 16px rgba(0,0,0,0.10)',
         }}>{blockMsg}</div>
       )}
 
@@ -505,23 +506,22 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
             position:'fixed',
             left:Math.min(contextMenu.x+4, window.innerWidth-200),
             top:Math.min(contextMenu.y+4, window.innerHeight-220),
-            background:'#2a1a08', border:'2px solid #8b6914', borderRadius:10,
-            overflow:'hidden', boxShadow:'0 8px 32px rgba(0,0,0,0.75)',
+            background:'#ffffff', border:'1px solid #e9e7e4', borderRadius:12,
+            overflow:'hidden', boxShadow:'0 4px 16px rgba(0,0,0,0.10)',
             minWidth:180, zIndex:491,
-            fontFamily:'"Noto Sans KR", -apple-system, sans-serif',
           }}>
-            <div style={{ padding:'8px 14px 7px', borderBottom:'1px solid #4a3010', fontSize:11, color:'#8b6914', fontWeight:700, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
-              {contextMenu.cell.status === 'available' ? `📍 빈 공간 · ${contextMenu.cell.address}` : `🏠 ${contextMenu.cell.name ?? contextMenu.cell.address}`}
+            <div style={{ padding:'10px 14px 9px', borderBottom:'1px solid #e9e7e4', fontSize:11, color:'#8c8a87', fontWeight:600, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+              {contextMenu.cell.status === 'available' ? `빈 공간 · ${contextMenu.cell.address}` : `${contextMenu.cell.name ?? contextMenu.cell.address}`}
             </div>
             {contextMenu.cell.status === 'available' ? (
-              <CtxItem emoji="🏠" label="입주 신청" onClick={() => { onCellClick(contextMenu.cell); setContextMenu(null) }} />
+              <CtxItem label="입주 신청" onClick={() => { onCellClick(contextMenu.cell); setContextMenu(null) }} />
             ) : (
               <>
-                <CtxItem emoji="👁" label="집 보기" onClick={() => { onViewCell?.(contextMenu.cell); setContextMenu(null) }} />
+                <CtxItem label="집 보기" onClick={() => { onViewCell?.(contextMenu.cell); setContextMenu(null) }} />
                 {(isAdmin || myHouseIds?.has(contextMenu.cell.id)) && <>
-                  <div style={{ height:1, background:'#4a3010', margin:'2px 0' }} />
-                  <CtxItem emoji="✏️" label="수정하기" onClick={() => { onEditCell?.(contextMenu.cell); setContextMenu(null) }} />
-                  <CtxItem emoji="🗑️" label={isAdmin && !myHouseIds?.has(contextMenu.cell.id) ? '강제 퇴거 (관리자)' : '퇴거하기'} color="#ef4444" onClick={() => { onVacateCell?.(contextMenu.cell); setContextMenu(null) }} />
+                  <div style={{ height:1, background:'#e9e7e4', margin:'2px 0' }} />
+                  <CtxItem label="수정하기" onClick={() => { onEditCell?.(contextMenu.cell); setContextMenu(null) }} />
+                  <CtxItem label={isAdmin && !myHouseIds?.has(contextMenu.cell.id) ? '강제 퇴거 (관리자)' : '퇴거하기'} color="#dc2626" onClick={() => { onVacateCell?.(contextMenu.cell); setContextMenu(null) }} />
                 </>}
               </>
             )}
@@ -532,18 +532,17 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
   )
 }
 
-function CtxItem({ emoji, label, color, onClick }: { emoji: string; label: string; color?: string; onClick: () => void }) {
+function CtxItem({ label, color, onClick }: { label: string; color?: string; onClick: () => void }) {
   return (
     <button onClick={onClick} style={{
       display:'flex', alignItems:'center', gap:10, width:'100%', padding:'10px 14px',
-      background:'transparent', border:'none', borderBottom:'1px solid #3d2a1820',
-      color: color ?? '#fdf6e3', fontSize:13, fontWeight:600,
+      background:'transparent', border:'none',
+      color: color ?? '#1a1a1a', fontSize:13, fontWeight:500,
       cursor:'pointer', textAlign:'left', fontFamily:'inherit', whiteSpace:'nowrap',
     }}
-      onMouseEnter={e => (e.currentTarget.style.background='#3d2a18')}
+      onMouseEnter={e => (e.currentTarget.style.background='#f4f3f1')}
       onMouseLeave={e => (e.currentTarget.style.background='transparent')}
     >
-      <span style={{ width:20, textAlign:'center' }}>{emoji}</span>
       <span>{label}</span>
     </button>
   )

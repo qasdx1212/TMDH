@@ -44,72 +44,94 @@ export default class ErrorBoundary extends React.Component<
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: '#0f0906',
+            backgroundColor: '#f4f3f1',
             padding: '24px',
             textAlign: 'center',
-            fontFamily: '"Noto Sans KR", -apple-system, sans-serif',
           }}
         >
-          <div style={{ fontSize: '56px', lineHeight: 1, marginBottom: '20px' }}>
-            🏚️
-          </div>
-          <h1
-            style={{
-              margin: '0 0 12px',
-              fontSize: '22px',
-              fontWeight: 700,
-              color: '#ef4444',
-            }}
-          >
-            일시적인 문제가 발생했어요
-          </h1>
-          <p
-            style={{
-              margin: '0 0 28px',
-              fontSize: '15px',
-              lineHeight: 1.6,
-              color: '#a08060',
-            }}
-          >
-            잠시 후 다시 시도해 주세요
-          </p>
           <div
             style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '14px',
+              background: '#ffffff',
+              border: '1px solid #e9e7e4',
+              borderRadius: 14,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+              padding: '36px 32px',
+              maxWidth: 360,
+              width: '100%',
             }}
           >
-            <button
-              type="button"
-              onClick={() => window.location.reload()}
+            <div
               style={{
-                appearance: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                backgroundColor: '#c8a96e',
-                color: '#0f0906',
-                fontSize: '15px',
+                display: 'inline-block',
+                fontSize: '12.5px',
+                fontWeight: 600,
+                color: '#dc2626',
+                backgroundColor: '#fdecec',
+                border: '1px solid #f5d5d5',
+                borderRadius: 999,
+                padding: '5px 14px',
+                marginBottom: '18px',
+              }}
+            >
+              오류
+            </div>
+            <h1
+              style={{
+                margin: '0 0 12px',
+                fontSize: '20px',
                 fontWeight: 700,
-                padding: '12px 28px',
-                borderRadius: '10px',
-                fontFamily: 'inherit',
+                color: '#1a1a1a',
               }}
             >
-              새로고침
-            </button>
-            <a
-              href="/"
+              일시적인 문제가 발생했어요
+            </h1>
+            <p
               style={{
-                color: '#a08060',
+                margin: '0 0 26px',
                 fontSize: '14px',
-                textDecoration: 'underline',
-                fontFamily: 'inherit',
+                lineHeight: 1.6,
+                color: '#575654',
               }}
             >
-              지도로 돌아가기
-            </a>
+              잠시 후 다시 시도해 주세요
+            </p>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '16px',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                style={{
+                  appearance: 'none',
+                  cursor: 'pointer',
+                  border: 'none',
+                  backgroundColor: '#1c1c1e',
+                  color: '#fff',
+                  fontSize: '15px',
+                  fontWeight: 600,
+                  padding: '12px 28px',
+                  borderRadius: 10,
+                }}
+              >
+                새로고침
+              </button>
+              <a
+                href="/"
+                style={{
+                  color: '#8c8a87',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  textDecoration: 'underline',
+                }}
+              >
+                지도로 돌아가기
+              </a>
+            </div>
           </div>
         </div>
       );

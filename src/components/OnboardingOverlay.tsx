@@ -48,8 +48,7 @@ export default function OnboardingOverlay() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'rgba(0,0,0,0.7)',
-        fontFamily: '"Noto Sans KR", -apple-system, sans-serif',
+        background: 'rgba(26,26,26,0.45)',
         padding: '20px',
         animation: reduceMotion ? undefined : 'zipzipOnboardFade 0.25s ease',
       }}
@@ -62,23 +61,22 @@ export default function OnboardingOverlay() {
       `}</style>
       <div
         style={{
-          background: '#1a0f05',
-          border: '2px solid #c8a96e',
-          borderRadius: 16,
+          background: '#ffffff',
+          border: '1px solid #e9e7e4',
+          borderRadius: 14,
           padding: '32px 28px',
           maxWidth: 360,
           width: '100%',
           textAlign: 'center',
-          boxShadow: '0 24px 60px rgba(0,0,0,0.7)',
+          boxShadow: '0 8px 30px rgba(0,0,0,0.12)',
         }}
       >
-        <div style={{ fontSize: 52, marginBottom: 14, lineHeight: 1 }}>🏠</div>
         <div
           style={{
-            fontSize: 20,
-            fontWeight: 800,
-            color: '#c8a96e',
-            marginBottom: 20,
+            fontSize: 19,
+            fontWeight: 700,
+            color: '#1a1a1a',
+            marginBottom: 22,
           }}
         >
           집.zip에 오신 걸 환영해요!
@@ -87,7 +85,7 @@ export default function OnboardingOverlay() {
           style={{
             display: 'flex',
             flexDirection: 'column',
-            gap: 12,
+            gap: 10,
             marginBottom: 26,
             textAlign: 'left',
           }}
@@ -96,12 +94,13 @@ export default function OnboardingOverlay() {
             <div
               key={step}
               style={{
-                fontSize: 14,
-                color: '#a08060',
+                fontSize: 13.5,
+                color: '#575654',
+                fontWeight: 500,
                 lineHeight: 1.5,
-                padding: '10px 14px',
-                background: 'rgba(200,169,110,0.08)',
-                border: '1px solid rgba(200,169,110,0.25)',
+                padding: '12px 14px',
+                background: '#faf9f7',
+                border: '1px solid #e9e7e4',
                 borderRadius: 10,
               }}
             >
@@ -114,14 +113,13 @@ export default function OnboardingOverlay() {
           style={{
             width: '100%',
             padding: '13px',
-            borderRadius: 10,
-            border: '2px solid #c8a96e',
-            background: '#c8a96e',
-            color: '#1a0f05',
+            border: 'none',
+            background: '#1c1c1e',
+            color: '#fff',
             fontSize: 15,
-            fontWeight: 700,
+            fontWeight: 600,
             cursor: 'pointer',
-            fontFamily: 'inherit',
+            borderRadius: 10,
           }}
         >
           시작하기

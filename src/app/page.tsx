@@ -162,7 +162,7 @@ export default function Home() {
   const STATS_H = 176       // StatsPanel 실제 높이 (사업자정보 푸터 포함)
 
   return (
-    <div style={{ width:'100vw', height:'100vh', background:'#1a0f05', overflow:'hidden' }}>
+    <div style={{ width:'100vw', height:'100vh', background:'#f4f3f1', overflow:'hidden' }}>
       <OnboardingOverlay />
       <FloatingHeader
         occupiedCount={occupiedCount}
@@ -243,21 +243,20 @@ export default function Home() {
       )}
 
       {showApply && !userId && (
-        <div style={{ position:'fixed', inset:0, zIndex:600, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.82)', backdropFilter:'blur(6px)' }}>
+        <div style={{ position:'fixed', inset:0, zIndex:600, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.4)' }}>
           <div style={{
-            background:'#fdf6e3', borderRadius:12, padding:'32px 28px', textAlign:'center',
-            maxWidth:340, width:'90vw', fontFamily:'"Noto Sans KR",-apple-system,sans-serif',
-            border:'4px solid #7a4f1a', boxShadow:'0 0 0 2px #e8c97a, 0 0 0 5px #7a4f1a, 0 24px 60px rgba(0,0,0,0.7)',
+            background:'#ffffff', borderRadius:14, padding:'32px 28px', textAlign:'center',
+            maxWidth:340, width:'90vw',
+            border:'1px solid #e9e7e4', boxShadow:'0 12px 40px rgba(0,0,0,0.14)',
           }}>
-            <div style={{ fontSize:52, marginBottom:12 }}>🔑</div>
-            <div style={{ fontSize:18, fontWeight:800, color:'#3d2a18', marginBottom:8 }}>로그인이 필요해요</div>
-            <div style={{ fontSize:13, color:'#78614a', marginBottom:24, lineHeight:1.7 }}>입주 신청을 위해<br />구글 계정으로 로그인해 주세요.</div>
+            <div style={{ fontSize:18, fontWeight:700, color:'#1a1a1a', marginBottom:8 }}>로그인이 필요해요</div>
+            <div style={{ fontSize:13, color:'#8c8a87', marginBottom:24, lineHeight:1.7 }}>입주 신청을 위해<br />구글 계정으로 로그인해 주세요.</div>
             <div style={{ display:'flex', gap:10 }}>
-              <button onClick={() => setShowApply(false)} style={{ flex:1, padding:'11px', borderRadius:8, border:'2px solid #c8a96e', background:'#f5ead5', cursor:'pointer', fontSize:13, fontWeight:600, color:'#78614a' }}>취소</button>
+              <button onClick={() => setShowApply(false)} style={{ flex:1, padding:'12px', borderRadius:10, border:'1px solid #e0ddd9', background:'#ffffff', cursor:'pointer', fontSize:13, fontWeight:600, color:'#1a1a1a' }}>취소</button>
               <button
                 onClick={() => supabase.auth.signInWithOAuth({ provider:'google', options:{ redirectTo:`${window.location.origin}/auth/callback` } })}
-                style={{ flex:2, padding:'11px', borderRadius:8, border:'2px solid #8b6914', background:'linear-gradient(180deg,#8b6914,#6b4c10)', color:'#fdf6e3', cursor:'pointer', fontSize:13, fontWeight:700, boxShadow:'0 3px 0 #3d2a08' }}
-              >🔍 구글로 로그인</button>
+                style={{ flex:2, padding:'12px', borderRadius:10, border:'1px solid #1c1c1e', background:'#1c1c1e', color:'#ffffff', cursor:'pointer', fontSize:13, fontWeight:700 }}
+              >구글로 로그인</button>
             </div>
           </div>
         </div>

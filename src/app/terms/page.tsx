@@ -18,16 +18,15 @@ export default async function TermsPage({ searchParams }: Props) {
       style={{
         height: '100vh',
         overflowY: 'auto',
-        background: '#0f0906',
-        fontFamily: '"Noto Sans KR", -apple-system, sans-serif',
-        color: '#fdf6e3',
+        background: '#f4f3f1',
+        color: '#1a1a1a',
       }}
     >
       {/* 헤더 */}
       <div
         style={{
-          background: 'linear-gradient(180deg,#2c1a08,#1e1005)',
-          borderBottom: '3px solid #6b4c2a',
+          background: '#ffffff',
+          borderBottom: '1px solid #e9e7e4',
           padding: '0 24px',
           position: 'sticky',
           top: 0,
@@ -47,30 +46,30 @@ export default async function TermsPage({ searchParams }: Props) {
           <a
             href="/"
             style={{
-              color: '#c8a96e',
+              color: '#1a1a1a',
               textDecoration: 'none',
               fontSize: 13,
-              padding: '6px 12px',
-              borderRadius: 6,
-              border: '1px solid #4a3010',
-              background: 'rgba(255,255,255,0.04)',
+              padding: '7px 14px',
+              border: '1px solid #e0ddd9',
+              borderRadius: 10,
+              background: '#ffffff',
+              fontWeight: 600,
             }}
           >
             ← 지도로 돌아가기
           </a>
-          <div style={{ width: 1, height: 20, background: '#4a3010' }} />
-          <div style={{ fontSize: 18, fontWeight: 900 }}>📋 이용약관</div>
+          <div style={{ width: 1, height: 20, background: '#e9e7e4' }} />
+          <div style={{ fontSize: 16, fontWeight: 700 }}>이용약관</div>
         </div>
       </div>
 
       <div style={{ maxWidth: 800, margin: '0 auto', padding: '32px 24px' }}>
         {/* 히어로 */}
-        <div style={{ textAlign: 'center', marginBottom: 36 }}>
-          <div style={{ fontSize: 48, marginBottom: 10 }}>🏠</div>
-          <div style={{ fontSize: 24, fontWeight: 900, color: '#fdf6e3', marginBottom: 6 }}>
+        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          <div style={{ fontSize: 24, fontWeight: 700, color: '#1a1a1a', marginBottom: 10 }}>
             집.zip 이용약관
           </div>
-          <div style={{ fontSize: 13, color: '#7a5c3a' }}>
+          <div style={{ fontSize: 13.5, color: '#8c8a87' }}>
             zipzipworld.com 서비스 이용에 관한 약관 및 환불정책을 안내합니다
           </div>
         </div>
@@ -79,12 +78,9 @@ export default async function TermsPage({ searchParams }: Props) {
         <div
           style={{
             display: 'flex',
-            gap: 8,
+            gap: 4,
             marginBottom: 28,
-            background: '#1a0f05',
-            border: '1.5px solid #3d2a08',
-            borderRadius: 12,
-            padding: 6,
+            borderBottom: '1px solid #e9e7e4',
           }}
         >
           <a
@@ -92,34 +88,32 @@ export default async function TermsPage({ searchParams }: Props) {
             style={{
               flex: 1,
               textAlign: 'center',
-              padding: '10px 0',
-              borderRadius: 8,
+              padding: '12px 0',
               fontSize: 14,
-              fontWeight: activeTab === 'terms' ? 800 : 500,
+              fontWeight: activeTab === 'terms' ? 700 : 500,
               textDecoration: 'none',
-              color: activeTab === 'terms' ? '#0f0906' : '#7a5c3a',
-              background: activeTab === 'terms' ? '#c8a96e' : 'transparent',
-              transition: 'all 0.12s',
+              color: activeTab === 'terms' ? '#1a1a1a' : '#8c8a87',
+              borderBottom: activeTab === 'terms' ? '2px solid #1a1a1a' : '2px solid transparent',
+              marginBottom: -1,
             }}
           >
-            📄 이용약관
+            이용약관
           </a>
           <a
             href="/terms?tab=refund"
             style={{
               flex: 1,
               textAlign: 'center',
-              padding: '10px 0',
-              borderRadius: 8,
+              padding: '12px 0',
               fontSize: 14,
-              fontWeight: activeTab === 'refund' ? 800 : 500,
+              fontWeight: activeTab === 'refund' ? 700 : 500,
               textDecoration: 'none',
-              color: activeTab === 'refund' ? '#0f0906' : '#7a5c3a',
-              background: activeTab === 'refund' ? '#c8a96e' : 'transparent',
-              transition: 'all 0.12s',
+              color: activeTab === 'refund' ? '#1a1a1a' : '#8c8a87',
+              borderBottom: activeTab === 'refund' ? '2px solid #1a1a1a' : '2px solid transparent',
+              marginBottom: -1,
             }}
           >
-            💳 환불정책
+            환불정책
           </a>
         </div>
 
@@ -286,7 +280,7 @@ export default async function TermsPage({ searchParams }: Props) {
                   width: '100%',
                   borderCollapse: 'collapse',
                   fontSize: 13,
-                  color: '#a08060',
+                  color: '#575654',
                 }}
               >
                 <tbody>
@@ -301,19 +295,19 @@ export default async function TermsPage({ searchParams }: Props) {
                     ['서비스 도메인', 'zipzipworld.com'],
                     ['약관 시행일', '2025년 7월 1일'],
                   ].map(([label, value]) => (
-                    <tr key={label} style={{ borderBottom: '1px solid #2a1a08' }}>
+                    <tr key={label} style={{ borderBottom: '1px solid #f0efec' }}>
                       <td
                         style={{
-                          padding: '10px 12px',
-                          color: '#c8a96e',
-                          fontWeight: 700,
+                          padding: '11px 12px',
+                          color: '#1a1a1a',
+                          fontWeight: 600,
                           width: '40%',
                           whiteSpace: 'nowrap',
                         }}
                       >
                         {label}
                       </td>
-                      <td style={{ padding: '10px 12px' }}>{value}</td>
+                      <td style={{ padding: '11px 12px' }}>{value}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -328,28 +322,28 @@ export default async function TermsPage({ searchParams }: Props) {
             {/* 핵심 요약 배너 */}
             <div
               style={{
-                background: 'linear-gradient(135deg,#2c1600,#1a0d00)',
-                border: '2px solid #8b6914',
-                borderRadius: 12,
+                background: '#ffffff',
+                border: '1px solid #e9e7e4',
+                borderRadius: 14,
+                boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
                 padding: '20px 22px',
               }}
             >
               <div
                 style={{
-                  fontSize: 14,
-                  fontWeight: 900,
-                  color: '#c8a96e',
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: '#8c8a87',
                   marginBottom: 10,
-                  letterSpacing: 0.5,
                 }}
               >
-                📌 핵심 요약
+                핵심 요약
               </div>
-              <div style={{ fontSize: 13, color: '#fdf6e3', lineHeight: 2 }}>
-                집.zip의 픽셀 구매는 <Strong>디지털 콘텐츠</Strong>에 해당합니다.<br />
+              <div style={{ fontSize: 13.5, color: '#575654', lineHeight: 2 }}>
+                집.zip의 픽셀 구매는 <StrongDark>디지털 콘텐츠</StrongDark>에 해당합니다.<br />
                 결제 완료 후 입주가 즉시 처리되는 특성상,{' '}
-                <Strong>원칙적으로 취소·환불이 불가</Strong>합니다.<br />
-                단, <Strong>시스템 오류·이중결제·서비스 귀책 실패</Strong>의 경우 전액 환불됩니다.
+                <StrongDark>원칙적으로 취소·환불이 불가</StrongDark>합니다.<br />
+                단, <StrongDark>시스템 오류·이중결제·서비스 귀책 실패</StrongDark>의 경우 전액 환불됩니다.
               </div>
             </div>
 
@@ -404,21 +398,21 @@ export default async function TermsPage({ searchParams }: Props) {
               <p>환불 사유가 발생한 경우 아래 방법으로 요청해 주세요.</p>
               <div
                 style={{
-                  background: '#1a0f05',
-                  border: '1.5px solid #3d2a08',
+                  background: '#faf9f7',
+                  border: '1px solid #e9e7e4',
                   borderRadius: 10,
                   padding: '16px 18px',
                   marginTop: 8,
                   fontSize: 13,
-                  color: '#a08060',
+                  color: '#575654',
                   lineHeight: 2,
                 }}
               >
                 <div>
-                  📧 환불 요청 이메일:{' '}
+                  환불 요청 이메일:{' '}
                   <a
                     href="mailto:qasdx1212@gmail.com"
-                    style={{ color: '#c8a96e', textDecoration: 'none', fontWeight: 700 }}
+                    style={{ color: '#1a1a1a', textDecoration: 'underline', fontWeight: 600 }}
                   >
                     qasdx1212@gmail.com
                   </a>
@@ -471,7 +465,7 @@ export default async function TermsPage({ searchParams }: Props) {
                   콘텐츠산업 진흥법 제28조 (콘텐츠 이용자 보호)
                 </li>
               </ul>
-              <p style={{ color: '#7a5c3a', fontSize: 12, marginTop: 8 }}>
+              <p style={{ color: '#8c8a87', fontSize: 12.5, marginTop: 8 }}>
                 * 소비자 분쟁이 발생한 경우 공정거래위원회의 소비자분쟁해결기준에 따라 처리됩니다.
                 한국소비자원(1372) 또는 전자거래분쟁조정위원회(1661-5714)에 분쟁 조정을 신청할 수
                 있습니다.
@@ -483,17 +477,18 @@ export default async function TermsPage({ searchParams }: Props) {
               style={{
                 marginTop: 4,
                 padding: '20px 22px',
-                background: '#1a0f05',
-                border: '1.5px solid #3d2a08',
-                borderRadius: 12,
+                background: '#ffffff',
+                border: '1px solid #e9e7e4',
+                borderRadius: 14,
+                boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
                 textAlign: 'center',
               }}
             >
-              <div style={{ fontSize: 13, color: '#7a5c3a', lineHeight: 2 }}>
+              <div style={{ fontSize: 13.5, color: '#575654', lineHeight: 2 }}>
                 환불 관련 문의는{' '}
                 <a
                   href="mailto:qasdx1212@gmail.com"
-                  style={{ color: '#c8a96e', textDecoration: 'none', fontWeight: 700 }}
+                  style={{ color: '#1a1a1a', textDecoration: 'underline', fontWeight: 600 }}
                 >
                   qasdx1212@gmail.com
                 </a>
@@ -505,7 +500,7 @@ export default async function TermsPage({ searchParams }: Props) {
         )}
 
         {/* 하단 공통 */}
-        <div style={{ marginTop: 40, fontSize: 11, color: '#3d2a08', textAlign: 'center' }}>
+        <div style={{ marginTop: 40, fontSize: 12, color: '#b0aeaa', textAlign: 'center' }}>
           © 2025 집.zip (zipzipworld.com) — 스트릿애드 (StreetAd) · All rights reserved.
         </div>
       </div>
@@ -525,21 +520,21 @@ function Section({
   return (
     <div
       style={{
-        background: '#1a0f05',
-        border: '1.5px solid #3d2a08',
-        borderRadius: 12,
+        background: '#ffffff',
+        border: '1px solid #e9e7e4',
+        borderRadius: 14,
+        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
         overflow: 'hidden',
       }}
     >
       {/* 섹션 헤더 */}
       <div
         style={{
-          padding: '13px 20px',
-          background: 'linear-gradient(90deg,#2c1a08,#1e1005)',
-          borderBottom: '1px solid #3d2a08',
+          padding: '14px 20px',
+          borderBottom: '1px solid #f0efec',
           fontSize: 14,
-          fontWeight: 800,
-          color: '#c8a96e',
+          fontWeight: 700,
+          color: '#1a1a1a',
         }}
       >
         {title}
@@ -549,7 +544,7 @@ function Section({
         style={{
           padding: '16px 20px',
           fontSize: 13,
-          color: '#a08060',
+          color: '#575654',
           lineHeight: 2,
         }}
       >
@@ -561,7 +556,13 @@ function Section({
 
 function Strong({ children }: { children: React.ReactNode }) {
   return (
-    <span style={{ color: '#fdf6e3', fontWeight: 700 }}>{children}</span>
+    <span style={{ color: '#1a1a1a', fontWeight: 600 }}>{children}</span>
+  )
+}
+
+function StrongDark({ children }: { children: React.ReactNode }) {
+  return (
+    <span style={{ color: '#1a1a1a', fontWeight: 700 }}>{children}</span>
   )
 }
 
@@ -577,9 +578,9 @@ function RefundCase({
   return (
     <div
       style={{
-        background: '#0f0906',
-        border: '1px solid #3d2a08',
-        borderRadius: 8,
+        background: '#faf9f7',
+        border: '1px solid #e9e7e4',
+        borderRadius: 10,
         padding: '12px 16px',
         display: 'flex',
         gap: 12,
@@ -588,8 +589,8 @@ function RefundCase({
     >
       <span
         style={{
-          color: '#c8a96e',
-          fontWeight: 900,
+          color: '#1a1a1a',
+          fontWeight: 700,
           fontSize: 15,
           flexShrink: 0,
           lineHeight: 1.8,
@@ -598,8 +599,8 @@ function RefundCase({
         {num}
       </span>
       <div>
-        <div style={{ color: '#fdf6e3', fontWeight: 700, marginBottom: 4 }}>{title}</div>
-        <div style={{ color: '#a08060', fontSize: 13, lineHeight: 1.8 }}>{desc}</div>
+        <div style={{ color: '#1a1a1a', fontWeight: 600, marginBottom: 4 }}>{title}</div>
+        <div style={{ color: '#575654', fontSize: 13, lineHeight: 1.9 }}>{desc}</div>
       </div>
     </div>
   )

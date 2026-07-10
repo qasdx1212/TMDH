@@ -52,13 +52,13 @@ export default function StatsPanel({ houses, mapViewport }: StatsPanelProps) {
     ctx.clearRect(0, 0, W, H)
 
     // 배경 (단일 색상)
-    ctx.fillStyle = '#3a2510'
+    ctx.fillStyle = '#eceae6'
     ctx.fillRect(0, 0, W, H)
 
     // 입주 셀
     for (const h of houses) {
       if (h.status !== 'occupied') continue
-      ctx.fillStyle = '#c8a96e'
+      ctx.fillStyle = '#a1834a'
       ctx.fillRect(h.col * SX, h.row * SY, Math.max((h.width ?? 1) * SX, 0.5), Math.max((h.height ?? 1) * SY, 0.5))
     }
 
@@ -71,14 +71,14 @@ export default function StatsPanel({ houses, mapViewport }: StatsPanelProps) {
       const rh = Math.min(containerH / (scale * CELL) * SY, H - ry)
 
       // 뷰포트 밖 어두운 오버레이
-      ctx.fillStyle = 'rgba(0,0,0,0.55)'
+      ctx.fillStyle = 'rgba(28,28,30,0.28)'
       ctx.fillRect(0, 0, W, ry)               // 위
       ctx.fillRect(0, ry + rh, W, H - ry - rh) // 아래
       ctx.fillRect(0, ry, rx, rh)             // 왼쪽
       ctx.fillRect(rx + rw, ry, W - rx - rw, rh) // 오른쪽
 
       // 뷰포트 테두리
-      ctx.strokeStyle = 'rgba(255,220,100,0.9)'
+      ctx.strokeStyle = '#1a1a1a'
       ctx.lineWidth = 1
       ctx.strokeRect(rx, ry, rw, rh)
     }
@@ -92,9 +92,9 @@ export default function StatsPanel({ houses, mapViewport }: StatsPanelProps) {
     const sz = canvas.width, cx = sz / 2, cy = sz / 2
     const r = sz / 2 - 4, innerR = r * 0.55
     const segments = [
-      { value: occupiedCount, color: '#22c55e' },
-      { value: pendingCount, color: '#3b82f6' },
-      { value: availableCount, color: '#4a3520' },
+      { value: occupiedCount, color: '#16a34a' },
+      { value: pendingCount, color: '#2563eb' },
+      { value: availableCount, color: '#e9e7e4' },
     ]
     const total = segments.reduce((s, seg) => s + seg.value, 0) || 1
     ctx.clearRect(0, 0, sz, sz)
@@ -111,42 +111,41 @@ export default function StatsPanel({ houses, mapViewport }: StatsPanelProps) {
     }
     ctx.beginPath()
     ctx.arc(cx, cy, innerR, 0, 2 * Math.PI)
-    ctx.fillStyle = '#1a0f05'
+    ctx.fillStyle = '#ffffff'
     ctx.fill()
     ctx.font = `bold ${sz * 0.14}px sans-serif`
-    ctx.fillStyle = '#4ade80'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+    ctx.fillStyle = '#1a1a1a'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
     ctx.fillText(`${occupancyRate}%`, cx, cy)
   }, [occupiedCount, pendingCount, availableCount, occupancyRate])
 
   return (
-    <div style={{ overflowX:'auto', borderTop:'3px solid #8b6914', boxShadow:'0 -4px 20px rgba(0,0,0,0.5)' }}>
+    <div style={{ overflowX:'auto', borderTop:'1px solid #e9e7e4' }}>
     <div style={{
       display:'grid', gridTemplateColumns:'140px 200px 1fr 1fr',
-      background:'linear-gradient(180deg,#2a1a08 0%,#1a0f05 100%)',
+      background:'#ffffff',
       height:148, minWidth:580,
-      fontFamily:'"Noto Sans KR",-apple-system,sans-serif',
     }}>
       {/* 미니맵 */}
-      <div style={{ padding:'10px 12px', borderRight:'1px solid #8b691430', display:'flex', flexDirection:'column', gap:6 }}>
-        <PanelLabel>🗺️ 미니맵</PanelLabel>
-        <canvas ref={canvasRef} width={100} height={100} style={{ width:100, height:100, borderRadius:4, border:'2px solid #8b6914', imageRendering:'pixelated', flexShrink:0 }} />
+      <div style={{ padding:'10px 12px', borderRight:'1px solid #e9e7e4', display:'flex', flexDirection:'column', gap:6 }}>
+        <PanelLabel>미니맵</PanelLabel>
+        <canvas ref={canvasRef} width={100} height={100} style={{ width:100, height:100, borderRadius:10, border:'1px solid #e9e7e4', imageRendering:'pixelated', flexShrink:0 }} />
       </div>
 
       {/* 분양 현황 — 도넛 차트 */}
-      <div style={{ padding:'10px 14px', borderRight:'1px solid #8b691430', display:'flex', flexDirection:'column', gap:6 }}>
-        <PanelLabel>📊 실시간 분양 현황</PanelLabel>
+      <div style={{ padding:'10px 14px', borderRight:'1px solid #e9e7e4', display:'flex', flexDirection:'column', gap:6 }}>
+        <PanelLabel>실시간 분양 현황</PanelLabel>
         <div style={{ display:'flex', alignItems:'center', gap:12 }}>
           <canvas ref={donutRef} width={80} height={80} style={{ flexShrink:0 }} />
           <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
             {[
-              { label:'분양 완료', value: occupiedCount, color:'#22c55e' },
-              { label:'판매 중',   value: pendingCount,  color:'#3b82f6' },
-              { label:'관심 구역', value: availableCount, color:'#4a3520' },
+              { label:'분양 완료', value: occupiedCount, color:'#16a34a' },
+              { label:'판매 중',   value: pendingCount,  color:'#2563eb' },
+              { label:'관심 구역', value: availableCount, color:'#e9e7e4' },
             ].map(item => (
               <div key={item.label} style={{ display:'flex', alignItems:'center', gap:6 }}>
-                <div style={{ width:8, height:8, borderRadius:2, background:item.color, flexShrink:0 }} />
-                <span style={{ fontSize:10, color:'#a08060', flex:1 }}>{item.label}</span>
-                <span style={{ fontSize:11, fontWeight:700, color:'#fdf6e3' }}>{((item.value/totalCells)*100).toFixed(1)}%</span>
+                <div style={{ width:8, height:8, borderRadius:'50%', background:item.color, flexShrink:0 }} />
+                <span style={{ fontSize:10, color:'#8c8a87', flex:1 }}>{item.label}</span>
+                <span style={{ fontSize:11, fontWeight:600, color:'#1a1a1a' }}>{((item.value/totalCells)*100).toFixed(1)}%</span>
               </div>
             ))}
           </div>
@@ -154,59 +153,58 @@ export default function StatsPanel({ houses, mapViewport }: StatsPanelProps) {
       </div>
 
       {/* 인기 지역 */}
-      <div style={{ padding:'10px 16px', borderRight:'1px solid #8b691430', display:'flex', flexDirection:'column', gap:5 }}>
-        <PanelLabel>🏆 인기 지역 TOP 5 (방문자 수 기준)</PanelLabel>
+      <div style={{ padding:'10px 16px', borderRight:'1px solid #e9e7e4', display:'flex', flexDirection:'column', gap:5 }}>
+        <PanelLabel>인기 지역 TOP 5 (방문자 수 기준)</PanelLabel>
         {topAreas.length === 0 ? (
-          <div style={{ fontSize:11, color:'#5a3e1a', marginTop:8 }}>아직 방문 데이터가 없어요</div>
+          <div style={{ fontSize:11, color:'#8c8a87', marginTop:8 }}>아직 방문 데이터가 없어요</div>
         ) : topAreas.map(area => (
           <div key={area.rank} style={{ display:'flex', alignItems:'center', gap:8 }}>
-            <span style={{ fontSize:10, fontWeight:800, width:18, height:18, borderRadius:4, background:'#3d2a18', color:'#c8a96e', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>{area.rank}</span>
-            <span style={{ fontSize:9, color:ZONES[area.zone as keyof typeof ZONES]?.color ?? '#fff' }}>●</span>
-            <span style={{ fontSize:11, color:'#d4b47a', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{area.name}</span>
-            <span style={{ fontSize:10, color:'#78614a', flexShrink:0 }}>👣 {area.count.toLocaleString()}</span>
+            <span style={{ fontSize:10, fontWeight:700, width:18, height:18, borderRadius:'50%', background:'#f4f3f1', color:'#1a1a1a', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>{area.rank}</span>
+            <span style={{ fontSize:9, color:ZONES[area.zone as keyof typeof ZONES]?.color ?? '#1a1a1a' }}>●</span>
+            <span style={{ fontSize:11, color:'#1a1a1a', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{area.name}</span>
+            <span style={{ fontSize:10, color:'#8c8a87', flexShrink:0 }}>{area.count.toLocaleString()}</span>
           </div>
         ))}
       </div>
 
       {/* 최근 입주자 */}
       <div style={{ padding:'10px 16px', display:'flex', flexDirection:'column', gap:5 }}>
-        <PanelLabel>🆕 최근 입주자</PanelLabel>
+        <PanelLabel>최근 입주자</PanelLabel>
         {recentHouses.length === 0 ? (
-          <div style={{ fontSize:11, color:'#5a3e1a', marginTop:8 }}>첫 번째 입주자가 되어보세요!</div>
+          <div style={{ fontSize:11, color:'#8c8a87', marginTop:8 }}>첫 번째 입주자가 되어보세요!</div>
         ) : recentHouses.map(h => (
           <div key={h.id} style={{ display:'flex', alignItems:'center', gap:8 }}>
-            <span style={{ fontSize:8, fontWeight:800, padding:'1px 5px', borderRadius:3, background:'#22c55e22', color:'#22c55e', border:'1px solid #22c55e44', flexShrink:0 }}>NEW</span>
-            <span style={{ fontSize:11, color:'#d4b47a', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{h.name ?? h.nickname ?? '이름 없음'}</span>
-            <span style={{ fontSize:10, color:'#5a3e1a', flexShrink:0 }}>{h.occupied_at ? getTimeAgo(h.occupied_at) : ''}</span>
+            <span style={{ fontSize:9, fontWeight:600, padding:'1px 7px', borderRadius:8, background:'#f4f3f1', color:'#8c8a87', border:'1px solid #e9e7e4', flexShrink:0 }}>new</span>
+            <span style={{ fontSize:11, color:'#1a1a1a', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{h.name ?? h.nickname ?? '이름 없음'}</span>
+            <span style={{ fontSize:10, color:'#8c8a87', flexShrink:0 }}>{h.occupied_at ? getTimeAgo(h.occupied_at) : ''}</span>
           </div>
         ))}
       </div>
     </div>
     {/* 사업자정보 + 상품/요금 (PG 심사·전자상거래법 표기) */}
     <div style={{
-      background:'#160c04', borderTop:'1px solid #4a3010',
-      padding:'6px 16px', fontSize:10, color:'#7a5c3a',
+      background:'#ffffff', borderTop:'1px solid #e9e7e4',
+      padding:'8px 16px', fontSize:10, color:'#8c8a87',
       whiteSpace:'nowrap', overflowX:'auto', minWidth:580,
-      fontFamily:'"Noto Sans KR",-apple-system,sans-serif',
     }}>
-      <strong style={{ color:'#c8a96e', fontWeight:700 }}>스트릿애드 (StreetAd)</strong>
+      <strong style={{ color:'#1a1a1a', fontWeight:600 }}>스트릿애드 (StreetAd)</strong>
       {' · 대표 이승원 · 사업자등록번호 593-17-02833 · 경기도 의정부시 태평로 13, 14층 1401호 · 전화 0502-1946-1697 · '}
       qasdx1212@gmail.com
       {' · 통신판매업신고 신고 중 · '}
-      <strong style={{ color:'#c8a96e' }}>집.zip 디지털 공간 이용권 1칸(픽셀) 1,000원~ (이용기간 30일·90일·180일·365일·영구)</strong>
+      <strong style={{ color:'#1a1a1a', fontWeight:600 }}>집.zip 디지털 공간 이용권 1칸(픽셀) 1,000원~ (이용기간 30일·90일·180일·365일·영구)</strong>
       {' · '}
-      <a href="/terms" style={{ color:'#8b6914', textDecoration:'none' }}>이용약관</a>
+      <a href="/terms" style={{ color:'#8c8a87', textDecoration:'none' }}>이용약관</a>
       {' · '}
-      <a href="/privacy" style={{ color:'#8b6914', textDecoration:'none' }}>개인정보처리방침</a>
+      <a href="/privacy" style={{ color:'#8c8a87', textDecoration:'none' }}>개인정보처리방침</a>
       {' · '}
-      <a href="/terms?tab=refund" style={{ color:'#8b6914', textDecoration:'none' }}>환불정책</a>
+      <a href="/terms?tab=refund" style={{ color:'#8c8a87', textDecoration:'none' }}>환불정책</a>
     </div>
     </div>
   )
 }
 
 function PanelLabel({ children }: { children: React.ReactNode }) {
-  return <div style={{ fontSize:10, fontWeight:700, color:'#8b6914', letterSpacing:'0.05em', marginBottom:4 }}>{children}</div>
+  return <div style={{ fontSize:10, fontWeight:600, color:'#8c8a87', letterSpacing:'0.01em', marginBottom:4 }}>{children}</div>
 }
 
 function getTimeAgo(dateStr: string): string {

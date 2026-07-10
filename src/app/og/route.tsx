@@ -13,7 +13,7 @@ export function GET() {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          background: '#1a0f05',
+          background: '#f4f3f1',
           fontFamily: 'sans-serif',
           position: 'relative',
         }}
@@ -22,38 +22,31 @@ export function GET() {
         <div style={{
           position: 'absolute',
           inset: 0,
-          opacity: 0.12,
+          opacity: 0.5,
           backgroundImage:
-            'repeating-linear-gradient(0deg, #8b6914 0px, #8b6914 1px, transparent 1px, transparent 24px),' +
-            'repeating-linear-gradient(90deg, #8b6914 0px, #8b6914 1px, transparent 1px, transparent 24px)',
+            'repeating-linear-gradient(0deg, #e0ddd9 0px, #e0ddd9 1px, transparent 1px, transparent 24px),' +
+            'repeating-linear-gradient(90deg, #e0ddd9 0px, #e0ddd9 1px, transparent 1px, transparent 24px)',
           display: 'flex',
         }} />
 
-        {/* 구역 색상 코너 */}
-        <div style={{ position:'absolute', top:0, left:0, width:240, height:240, background:'#c084fc18', display:'flex' }} />
-        <div style={{ position:'absolute', top:0, right:0, width:240, height:240, background:'#34d39918', display:'flex' }} />
-        <div style={{ position:'absolute', bottom:0, left:0, width:240, height:240, background:'#fbbf2418', display:'flex' }} />
-        <div style={{ position:'absolute', bottom:0, right:0, width:240, height:240, background:'#f8717118', display:'flex' }} />
-
         <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'0px', zIndex:1 }}>
-          <div style={{ fontSize:'88px', display:'flex', marginBottom:'4px' }}>🏠</div>
-          <div style={{ fontSize:'86px', fontWeight:900, color:'#fdf6e3', letterSpacing:'-3px', display:'flex', lineHeight:'1' }}>ZIP.zip</div>
-          <div style={{ fontSize:'26px', color:'#a08060', marginTop:'18px', display:'flex' }}>Your Digital Home on the Map</div>
+          <div style={{ fontSize:'86px', fontWeight:800, color:'#1a1a1a', letterSpacing:'-3px', display:'flex', lineHeight:'1' }}>집.zip</div>
+          <div style={{ fontSize:'26px', color:'#8c8a87', marginTop:'18px', display:'flex' }}>Your Digital Home on the Map</div>
           <div style={{
             marginTop:'28px',
             padding:'14px 44px',
-            borderRadius:'14px',
-            border:'2.5px solid #8b6914',
-            background:'rgba(139,105,20,0.18)',
+            borderRadius:'12px',
+            border:'1px solid #e0ddd9',
+            background:'#ffffff',
             fontSize:'22px',
-            color:'#c8a96e',
+            color:'#575654',
             display:'flex',
             gap:'32px',
           }}>
-            <span>100 × 100 Grid</span>
-            <span style={{ color:'#5a3e1a' }}>·</span>
-            <span>10,000 Houses</span>
-            <span style={{ color:'#5a3e1a' }}>·</span>
+            <span>200 × 100 Grid</span>
+            <span style={{ color:'#b0aeaa' }}>·</span>
+            <span>20,000 Houses</span>
+            <span style={{ color:'#b0aeaa' }}>·</span>
             <span>zipzipworld.com</span>
           </div>
         </div>

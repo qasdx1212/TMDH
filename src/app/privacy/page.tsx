@@ -11,16 +11,15 @@ export default function PrivacyPage() {
       style={{
         height: '100vh',
         overflowY: 'auto',
-        background: '#0f0906',
-        fontFamily: '"Noto Sans KR", -apple-system, sans-serif',
-        color: '#fdf6e3',
+        background: '#f4f3f1',
+        color: '#1a1a1a',
       }}
     >
       {/* 헤더 */}
       <div
         style={{
-          background: 'linear-gradient(180deg,#2c1a08,#1e1005)',
-          borderBottom: '3px solid #6b4c2a',
+          background: '#ffffff',
+          borderBottom: '1px solid #e9e7e4',
           padding: '0 24px',
           position: 'sticky',
           top: 0,
@@ -40,49 +39,50 @@ export default function PrivacyPage() {
           <a
             href="/"
             style={{
-              color: '#c8a96e',
+              color: '#1a1a1a',
               textDecoration: 'none',
               fontSize: 13,
-              padding: '6px 12px',
-              borderRadius: 6,
-              border: '1px solid #4a3010',
-              background: 'rgba(255,255,255,0.04)',
+              padding: '7px 14px',
+              border: '1px solid #e0ddd9',
+              borderRadius: 10,
+              background: '#ffffff',
+              fontWeight: 600,
             }}
           >
             ← 지도로 돌아가기
           </a>
-          <div style={{ width: 1, height: 20, background: '#4a3010' }} />
-          <div style={{ fontSize: 18, fontWeight: 900 }}>개인정보처리방침</div>
+          <div style={{ width: 1, height: 20, background: '#e9e7e4' }} />
+          <div style={{ fontSize: 16, fontWeight: 700 }}>개인정보처리방침</div>
         </div>
       </div>
 
       {/* 본문 */}
       <div style={{ maxWidth: 800, margin: '0 auto', padding: '40px 24px 64px' }}>
         {/* 타이틀 */}
-        <div style={{ marginBottom: 40, paddingBottom: 24, borderBottom: '2px solid #3d2a08' }}>
-          <div style={{ fontSize: 26, fontWeight: 900, color: '#fdf6e3', marginBottom: 10 }}>
+        <div style={{ marginBottom: 40, paddingBottom: 24, borderBottom: '1px solid #e9e7e4' }}>
+          <div style={{ fontSize: 24, fontWeight: 700, color: '#1a1a1a', marginBottom: 14 }}>
             개인정보처리방침
           </div>
-          <div style={{ fontSize: 13, color: '#7a5c3a', lineHeight: 1.8 }}>
+          <div style={{ fontSize: 13.5, color: '#8c8a87', lineHeight: 1.8 }}>
             스트릿애드(StreetAd)가 운영하는 집.zip(zipzipworld.com)은 이용자의 개인정보를 소중히
             여기며, 「개인정보 보호법」 등 관련 법령을 준수합니다.
           </div>
           <div
             style={{
               marginTop: 16,
-              padding: '12px 16px',
-              background: '#1a0f05',
-              border: '1px solid #4a3010',
-              borderRadius: 8,
-              fontSize: 12,
-              color: '#8b6914',
+              display: 'inline-block',
+              padding: '9px 16px',
+              background: '#ffffff',
+              border: '1px solid #e9e7e4',
+              borderRadius: 10,
+              fontSize: 12.5,
+              fontWeight: 600,
+              color: '#575654',
             }}
           >
             시행일: 2026년 7월 1일
           </div>
         </div>
-
-        {/* 섹션 공통 스타일 helper — inline으로 반복 사용 */}
 
         {/* 1. 개인정보의 수집 및 이용 목적 */}
         <Section title="제1조 개인정보의 수집 및 이용 목적">
@@ -174,7 +174,7 @@ export default function PrivacyPage() {
               ],
             ]}
           />
-          <p style={{ marginTop: 12, fontSize: 13, color: '#a08060' }}>
+          <p style={{ marginTop: 12, fontSize: 13, color: '#575654' }}>
             ※ Supabase는 EU-US 데이터 프라이버시 프레임워크 인증 사업자이며, 이용자 데이터는 암호화되어
             전송·저장됩니다.
           </p>
@@ -190,7 +190,7 @@ export default function PrivacyPage() {
               ['토스페이먼츠(주)', '결제 대행', '서비스 운영 기간 또는 위탁 계약 종료 시'],
             ]}
           />
-          <p style={{ marginTop: 12, fontSize: 13, color: '#a08060' }}>
+          <p style={{ marginTop: 12, fontSize: 13, color: '#575654' }}>
             회사는 위탁 계약 체결 시 개인정보 보호법에 따라 위탁업무 수행 목적 외 개인정보 처리 금지,
             기술적·관리적 보호조치, 재위탁 제한 등에 관한 사항을 계약서에 명시합니다.
           </p>
@@ -209,14 +209,14 @@ export default function PrivacyPage() {
           />
           <p>
             위 권리 행사는 이메일(
-            <a href="mailto:qasdx1212@gmail.com" style={{ color: '#c8a96e', textDecoration: 'none' }}>
+            <a href="mailto:qasdx1212@gmail.com" style={{ color: '#1a1a1a', textDecoration: 'underline', fontWeight: 600 }}>
               qasdx1212@gmail.com
             </a>
             )로 요청하시면 지체 없이 처리하겠습니다. 이용자가 개인정보의 오류 등에 대한 정정 또는
             삭제를 요청한 경우에는 정정 또는 삭제를 완료할 때까지 해당 개인정보를 이용하거나 제공하지
             않습니다.
           </p>
-          <p style={{ marginTop: 8, fontSize: 13, color: '#a08060' }}>
+          <p style={{ marginTop: 8, fontSize: 13, color: '#575654' }}>
             ※ 만 14세 미만 아동의 경우, 법정대리인이 아동의 개인정보에 대한 열람·정정·삭제·처리 정지를
             요청할 수 있습니다.
           </p>
@@ -259,65 +259,42 @@ export default function PrivacyPage() {
             style={{
               marginTop: 12,
               padding: '16px 20px',
-              background: '#1a0f05',
-              border: '1.5px solid #4a3010',
+              background: '#faf9f7',
+              border: '1px solid #e9e7e4',
               borderRadius: 10,
               fontSize: 13,
               lineHeight: 2,
+              color: '#575654',
             }}
           >
+            {[
+              ['상호명', '스트릿애드 (StreetAd)'],
+              ['서비스명', '집.zip (zipzipworld.com)'],
+              ['대표자명', '이승원'],
+              ['사업자등록번호', '593-17-02833'],
+              ['주소', '경기도 의정부시 태평로 13, 14층 1401호'],
+              ['전화', '0502-1946-1697'],
+              ['통신판매업신고번호', '신고 중'],
+              ['개인정보 보호책임자', '대표자'],
+            ].map(([label, value]) => (
+              <div key={label}>
+                <span style={{ color: '#1a1a1a', fontWeight: 600 }}>{label}</span>
+                <span style={{ color: '#b0aeaa', margin: '0 8px' }}>|</span>
+                {value}
+              </div>
+            ))}
             <div>
-              <span style={{ color: '#8b6914', fontWeight: 700 }}>상호명</span>
-              <span style={{ color: '#7a5c3a', margin: '0 8px' }}>|</span>
-              스트릿애드 (StreetAd)
-            </div>
-            <div>
-              <span style={{ color: '#8b6914', fontWeight: 700 }}>서비스명</span>
-              <span style={{ color: '#7a5c3a', margin: '0 8px' }}>|</span>
-              집.zip (zipzipworld.com)
-            </div>
-            <div>
-              <span style={{ color: '#8b6914', fontWeight: 700 }}>대표자명</span>
-              <span style={{ color: '#7a5c3a', margin: '0 8px' }}>|</span>
-              이승원
-            </div>
-            <div>
-              <span style={{ color: '#8b6914', fontWeight: 700 }}>사업자등록번호</span>
-              <span style={{ color: '#7a5c3a', margin: '0 8px' }}>|</span>
-              593-17-02833
-            </div>
-            <div>
-              <span style={{ color: '#8b6914', fontWeight: 700 }}>주소</span>
-              <span style={{ color: '#7a5c3a', margin: '0 8px' }}>|</span>
-              경기도 의정부시 태평로 13, 14층 1401호
-            </div>
-            <div>
-              <span style={{ color: '#8b6914', fontWeight: 700 }}>전화</span>
-              <span style={{ color: '#7a5c3a', margin: '0 8px' }}>|</span>
-              0502-1946-1697
-            </div>
-            <div>
-              <span style={{ color: '#8b6914', fontWeight: 700 }}>통신판매업신고번호</span>
-              <span style={{ color: '#7a5c3a', margin: '0 8px' }}>|</span>
-              신고 중
-            </div>
-            <div>
-              <span style={{ color: '#8b6914', fontWeight: 700 }}>개인정보 보호책임자</span>
-              <span style={{ color: '#7a5c3a', margin: '0 8px' }}>|</span>
-              대표자
-            </div>
-            <div>
-              <span style={{ color: '#8b6914', fontWeight: 700 }}>이메일</span>
-              <span style={{ color: '#7a5c3a', margin: '0 8px' }}>|</span>
+              <span style={{ color: '#1a1a1a', fontWeight: 600 }}>이메일</span>
+              <span style={{ color: '#b0aeaa', margin: '0 8px' }}>|</span>
               <a
                 href="mailto:qasdx1212@gmail.com"
-                style={{ color: '#c8a96e', textDecoration: 'none' }}
+                style={{ color: '#1a1a1a', textDecoration: 'underline', fontWeight: 600 }}
               >
                 qasdx1212@gmail.com
               </a>
             </div>
           </div>
-          <p style={{ marginTop: 12, fontSize: 13, color: '#a08060' }}>
+          <p style={{ marginTop: 12, fontSize: 13, color: '#575654' }}>
             이용자는 개인정보 보호 관련 문의, 불만 처리, 피해 구제 등에 관한 사항을 위 연락처로
             문의하실 수 있습니다. 회사는 이용자의 문의에 지체 없이 답변 및 처리할 것입니다.
           </p>
@@ -352,19 +329,20 @@ export default function PrivacyPage() {
           style={{
             marginTop: 48,
             padding: '20px 24px',
-            background: '#1a0f05',
-            border: '1.5px solid #3d2a08',
-            borderRadius: 12,
+            background: '#ffffff',
+            border: '1px solid #e9e7e4',
+            borderRadius: 14,
+            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
             textAlign: 'center',
           }}
         >
-          <div style={{ fontSize: 13, color: '#7a5c3a', lineHeight: 1.9 }}>
-            본 방침은 <strong style={{ color: '#c8a96e' }}>2026년 7월 1일</strong>부터 시행됩니다.
+          <div style={{ fontSize: 13.5, color: '#575654', lineHeight: 1.9 }}>
+            본 방침은 <strong style={{ color: '#1a1a1a' }}>2026년 7월 1일</strong>부터 시행됩니다.
             <br />
             문의사항은{' '}
             <a
               href="mailto:qasdx1212@gmail.com"
-              style={{ color: '#c8a96e', textDecoration: 'none', fontWeight: 700 }}
+              style={{ color: '#1a1a1a', textDecoration: 'underline', fontWeight: 600 }}
             >
               qasdx1212@gmail.com
             </a>
@@ -372,7 +350,7 @@ export default function PrivacyPage() {
           </div>
         </div>
 
-        <div style={{ marginTop: 16, fontSize: 11, color: '#3d2a08', textAlign: 'center' }}>
+        <div style={{ marginTop: 16, fontSize: 12, color: '#b0aeaa', textAlign: 'center' }}>
           © 2026 집.zip (zipzipworld.com) · 스트릿애드(StreetAd) — All rights reserved.
         </div>
       </div>
@@ -384,15 +362,23 @@ export default function PrivacyPage() {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div style={{ marginBottom: 40 }}>
+    <div
+      style={{
+        marginBottom: 20,
+        background: '#ffffff',
+        border: '1px solid #e9e7e4',
+        borderRadius: 14,
+        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+        overflow: 'hidden',
+      }}
+    >
       <div
         style={{
-          fontSize: 15,
-          fontWeight: 800,
-          color: '#c8a96e',
-          marginBottom: 16,
-          paddingBottom: 10,
-          borderBottom: '2px solid #3d2a08',
+          fontSize: 14,
+          fontWeight: 700,
+          color: '#1a1a1a',
+          padding: '14px 20px',
+          borderBottom: '1px solid #f0efec',
         }}
       >
         {title}
@@ -400,8 +386,9 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <div
         style={{
           fontSize: 13,
-          color: '#a08060',
+          color: '#575654',
           lineHeight: 1.9,
+          padding: '16px 20px',
           display: 'flex',
           flexDirection: 'column',
           gap: 10,
@@ -417,9 +404,9 @@ function SubTitle({ children }: { children: React.ReactNode }) {
   return (
     <div
       style={{
-        fontSize: 12,
+        fontSize: 12.5,
         fontWeight: 700,
-        color: '#8b6914',
+        color: '#8c8a87',
         marginTop: 8,
         marginBottom: -4,
       }}
@@ -433,7 +420,7 @@ function BulletList({ items }: { items: string[] }) {
   return (
     <ul style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 4 }}>
       {items.map((item, i) => (
-        <li key={i} style={{ fontSize: 13, color: '#a08060', lineHeight: 1.8 }}>
+        <li key={i} style={{ fontSize: 13, color: '#575654', lineHeight: 1.8 }}>
           {item}
         </li>
       ))}
@@ -449,29 +436,27 @@ function Table({
   rows: string[][]
 }) {
   return (
-    <div style={{ overflowX: 'auto', marginTop: 8 }}>
+    <div style={{ overflowX: 'auto', marginTop: 8, border: '1px solid #e9e7e4', borderRadius: 10 }}>
       <table
         style={{
           width: '100%',
           borderCollapse: 'collapse',
-          fontSize: 12,
-          background: '#130b03',
-          borderRadius: 8,
-          overflow: 'hidden',
+          fontSize: 12.5,
+          background: '#ffffff',
         }}
       >
         <thead>
-          <tr style={{ background: '#2a1a08' }}>
+          <tr style={{ background: '#faf9f7' }}>
             {headers.map((h, i) => (
               <th
                 key={i}
                 style={{
-                  padding: '10px 14px',
+                  padding: '11px 14px',
                   textAlign: 'left',
-                  color: '#c8a96e',
-                  fontWeight: 700,
-                  fontSize: 12,
-                  border: '1px solid #3d2a08',
+                  color: '#1a1a1a',
+                  fontWeight: 600,
+                  fontSize: 12.5,
+                  borderBottom: '1px solid #e9e7e4',
                   whiteSpace: 'nowrap',
                 }}
               >
@@ -482,14 +467,14 @@ function Table({
         </thead>
         <tbody>
           {rows.map((row, ri) => (
-            <tr key={ri} style={{ borderBottom: '1px solid #2a1a08' }}>
+            <tr key={ri}>
               {row.map((cell, ci) => (
                 <td
                   key={ci}
                   style={{
-                    padding: '10px 14px',
-                    color: '#a08060',
-                    border: '1px solid #2a1a08',
+                    padding: '11px 14px',
+                    color: '#575654',
+                    borderBottom: '1px solid #f0efec',
                     lineHeight: 1.7,
                     verticalAlign: 'top',
                   }}
