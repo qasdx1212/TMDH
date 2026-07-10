@@ -43,9 +43,9 @@ export function GET() {
             display:'flex',
             gap:'32px',
           }}>
-            <span>200 × 100 Grid</span>
+            <span>400 × 200 Grid</span>
             <span style={{ color:'#b0aeaa' }}>·</span>
-            <span>20,000 Houses</span>
+            <span>80,000 Houses</span>
             <span style={{ color:'#b0aeaa' }}>·</span>
             <span>zipzipworld.com</span>
           </div>

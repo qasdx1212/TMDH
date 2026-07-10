@@ -130,7 +130,7 @@ export default async function TermsPage({ searchParams }: Props) {
 
             <Section title="제2조 (서비스 소개 및 이용 조건)">
               <p>
-                집.zip은 200×100 픽셀 격자 지도 위에서 칸(픽셀)을 구매하여 자신만의 디지털
+                집.zip은 400×200 격자 지도 위에서 칸(1칸 = 10×10 픽셀)을 구매하여 자신만의 디지털
                 공간(이하 &quot;집&quot;)을 꾸밀 수 있는 인터넷 서비스입니다.
               </p>
               <ul>

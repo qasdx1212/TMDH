@@ -1,12 +1,12 @@
-export const GRID_COLS = 200
-export const GRID_ROWS = 100
-export const CELL_PX = 10 // 1칸 = 10px (표시용)
+export const GRID_COLS = 400
+export const GRID_ROWS = 200
+export const CELL_PX = 5 // 1칸 = 5 CSS px (레티나 2배 → 실제 10×10 픽셀)
 
 export const ZONES = {
-  neon:        { label: '집.zip', colMin: 0,   colMax: 99,  rowMin: 0,  rowMax: 49, color: '#a1834a', bg: '#eceae6', gridColor: '#e0ddd9' },
-  riverside:   { label: '집.zip', colMin: 100, colMax: 199, rowMin: 0,  rowMax: 49, color: '#a1834a', bg: '#eceae6', gridColor: '#e0ddd9' },
-  oldtown:     { label: '집.zip', colMin: 0,   colMax: 99,  rowMin: 50, rowMax: 99, color: '#a1834a', bg: '#eceae6', gridColor: '#e0ddd9' },
-  artdistrict: { label: '집.zip', colMin: 100, colMax: 199, rowMin: 50, rowMax: 99, color: '#a1834a', bg: '#eceae6', gridColor: '#e0ddd9' },
+  neon:        { label: '집.zip', colMin: 0,   colMax: 199, rowMin: 0,   rowMax: 99,  color: '#a1834a', bg: '#eceae6', gridColor: '#e0ddd9' },
+  riverside:   { label: '집.zip', colMin: 200, colMax: 399, rowMin: 0,   rowMax: 99,  color: '#a1834a', bg: '#eceae6', gridColor: '#e0ddd9' },
+  oldtown:     { label: '집.zip', colMin: 0,   colMax: 199, rowMin: 100, rowMax: 199, color: '#a1834a', bg: '#eceae6', gridColor: '#e0ddd9' },
+  artdistrict: { label: '집.zip', colMin: 200, colMax: 399, rowMin: 100, rowMax: 199, color: '#a1834a', bg: '#eceae6', gridColor: '#e0ddd9' },
 } as const
 
 export const ZONE_PRICES: Record<string, number> = {
@@ -28,16 +28,16 @@ export const DURATIONS = [
 export const PERMANENT_DAYS = -1
 
 export function getZone(col: number, row: number): keyof typeof ZONES {
-  if (col < 100 && row < 50) return 'neon'
-  if (col >= 100 && row < 50) return 'riverside'
-  if (col < 100 && row >= 50) return 'oldtown'
+  if (col < 200 && row < 100) return 'neon'
+  if (col >= 200 && row < 100) return 'riverside'
+  if (col < 200 && row >= 100) return 'oldtown'
   return 'artdistrict'
 }
 
 export function getAddress(col: number, row: number): string {
   const zone = getZone(col, row)
   const prefix = { neon: 'N', riverside: 'R', oldtown: 'O', artdistrict: 'A' }[zone]
-  return `${prefix}-${String(row * 200 + col).padStart(5, '0')}`
+  return `${prefix}-${String(row * GRID_COLS + col).padStart(5, '0')}`
 }
 
 export function calcPrice(zone: keyof typeof ZONES, cellCount: number, days: number): number {

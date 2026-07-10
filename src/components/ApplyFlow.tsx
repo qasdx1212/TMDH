@@ -102,8 +102,8 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
     const canvas = miniMapRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')!
-    // SX=1 (200 cols → 200px), SY=2 (100 rows → 200px)
-    const SX = 1, SY = 2
+    // SX=0.5 (400 cols → 200px), SY=1 (200 rows → 200px)
+    const SX = 0.5, SY = 1
     ctx.clearRect(0, 0, 200, 200)
     // 통합 지도 — 밝은 중립 배경 (구역 구분 없음)
     ctx.fillStyle = '#eceae6'

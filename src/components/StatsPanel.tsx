@@ -23,7 +23,7 @@ export default function StatsPanel({ houses, mapViewport }: StatsPanelProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const donutRef = useRef<HTMLCanvasElement>(null)
 
-  const totalCells = 20000
+  const totalCells = 80000
   const occupiedHouses = houses.filter(h => h.status === 'occupied')
   const occupiedCount = occupiedHouses.length
   const pendingCount = houses.filter(h => h.status === 'pending').length
@@ -47,8 +47,8 @@ export default function StatsPanel({ houses, mapViewport }: StatsPanelProps) {
     if (!canvas) return
     const ctx = canvas.getContext('2d')!
     const W = 100, H = 100
-    const CELL = 10
-    const SX = 0.5, SY = 1  // 200cols→100px, 100rows→100px
+    const CELL = 5
+    const SX = 0.25, SY = 0.5  // 400cols→100px, 200rows→100px
     ctx.clearRect(0, 0, W, H)
 
     // 배경 (단일 색상)

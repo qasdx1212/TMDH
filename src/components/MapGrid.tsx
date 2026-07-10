@@ -24,11 +24,11 @@ interface MapGridProps {
   onViewportChange?: (info: { scale: number; offset: { x: number; y: number }; containerW: number; containerH: number; mapW: number }) => void
 }
 
-const CELL = 10
-const HALF = GRID_COLS / 2  // 100 — fixed horizontal zone boundary
+const CELL = 5
+const HALF = GRID_COLS / 2  // 200 — fixed horizontal zone boundary
 const W = GRID_COLS * CELL  // 2000px canvas width
 const H = GRID_ROWS * CELL  // 1000px canvas height
-const RS = 2
+const RS = 2                // 레티나 2배 → 1칸 실제 10×10 픽셀
 const DRAG_THRESHOLD = 4
 
 const ZONE_PREFIX: Record<string, string> = { neon:'N', riverside:'R', oldtown:'O', artdistrict:'A' }
@@ -48,7 +48,7 @@ function buildTerrainCanvas(): HTMLCanvasElement {
   // 통합 지도 — 밝은 중립 지형
   for (let c = 0; c < GRID_COLS; c++) {
     for (let r = 0; r < GRID_ROWS; r++) {
-      const bn = rng(Math.floor(c / 3), Math.floor(r / 3), 1)
+      const bn = rng(Math.floor(c / 6), Math.floor(r / 6), 1)
       const color = bn < 0.35 ? '#eceae6' : bn < 0.7 ? '#e7e5e1' : '#f0eeea'
       ctx.fillStyle = color
       ctx.fillRect(c * CELL, r * CELL, CELL, CELL)
@@ -236,11 +236,12 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
     })
 
     if (activeZone) {
+      const HALF_R = GRID_ROWS / 2  // 100
       const zoneBounds: Record<string, [number,number,number,number]> = {
-        neon:        [0,    HALF-1,     0,  49],
-        riverside:   [HALF, GRID_COLS-1,0,  49],
-        oldtown:     [0,    HALF-1,     50, 99],
-        artdistrict: [HALF, GRID_COLS-1,50, 99],
+        neon:        [0,    HALF-1,     0,      HALF_R-1],
+        riverside:   [HALF, GRID_COLS-1,0,      HALF_R-1],
+        oldtown:     [0,    HALF-1,     HALF_R, GRID_ROWS-1],
+        artdistrict: [HALF, GRID_COLS-1,HALF_R, GRID_ROWS-1],
       }
       Object.entries(zoneBounds).forEach(([key, [cMin, cMax, rMin, rMax]]) => {
         if (key === activeZone) return
@@ -354,7 +355,7 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
             } else {
               const zone = getZone(grid.col, grid.row)
               const prefix = ZONE_PREFIX[zone]
-              onCellClick({ id:'', address:`${prefix}-${String(grid.row*200+grid.col).padStart(5,'0')}`, col:grid.col, row:grid.row, zone, status:'available', name:null, nickname:null, description:null, link_url:null, exterior_image_url:null, border_effect:'none', like_count:0, visit_count:0, occupied_at:null, expires_at:null, is_permanent:false })
+              onCellClick({ id:'', address:`${prefix}-${String(grid.row*GRID_COLS+grid.col).padStart(5,'0')}`, col:grid.col, row:grid.row, zone, status:'available', name:null, nickname:null, description:null, link_url:null, exterior_image_url:null, border_effect:'none', like_count:0, visit_count:0, occupied_at:null, expires_at:null, is_permanent:false })
             }
           }
         }
@@ -429,7 +430,7 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       } else {
         const zone = getZone(grid.col, grid.row)
         const prefix = ZONE_PREFIX[zone]
-        onCellClick({ id:'', address:`${prefix}-${String(grid.row*200+grid.col).padStart(5,'0')}`, col:grid.col, row:grid.row, zone, status:'available', name:null, nickname:null, description:null, link_url:null, exterior_image_url:null, border_effect:'none', like_count:0, visit_count:0, occupied_at:null, expires_at:null, is_permanent:false })
+        onCellClick({ id:'', address:`${prefix}-${String(grid.row*GRID_COLS+grid.col).padStart(5,'0')}`, col:grid.col, row:grid.row, zone, status:'available', name:null, nickname:null, description:null, link_url:null, exterior_image_url:null, border_effect:'none', like_count:0, visit_count:0, occupied_at:null, expires_at:null, is_permanent:false })
       }
     } else if (isSelecting.current && selectStart.current && selectEnd.current) {
       const c1=Math.min(selectStart.current.col,selectEnd.current.col)
@@ -457,7 +458,7 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
     const zone = getZone(grid.col, grid.row)
     const prefix = ZONE_PREFIX[zone]
     const cell: CellData = primary ?? {
-      id: '', address: `${prefix}-${String(grid.row*200+grid.col).padStart(5,'0')}`,
+      id: '', address: `${prefix}-${String(grid.row*GRID_COLS+grid.col).padStart(5,'0')}`,
       col: grid.col, row: grid.row, zone, status: 'available',
       name: null, nickname: null, description: null, link_url: null,
       exterior_image_url: null, border_effect: 'none',
