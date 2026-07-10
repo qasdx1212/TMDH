@@ -84,6 +84,11 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
   const isMouseDown = useRef(false)
   const [selection, setSelection] = useState<{ c1: number; r1: number; c2: number; r2: number } | null>(null)
   const [blockMsg, setBlockMsg] = useState('')
+  // 탭-탭 범위 선택 (모바일 드래그 대체, 데스크탑에서도 동일 동작)
+  const [rangeMode, setRangeMode] = useState(false)
+  const [anchorUI, setAnchorUI] = useState<{ col: number; row: number } | null>(null)
+  const rangeModeRef = useRef(false)
+  const anchorRef = useRef<{ col: number; row: number } | null>(null)
   const [terrainReady, setTerrainReady] = useState(false)
   const [tooltip, setTooltip] = useState<{ x: number; y: number; text: string } | null>(null)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; cell: CellData } | null>(null)
@@ -300,6 +305,37 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
     return () => canvas.removeEventListener('wheel', handler)
   }, [clampOffset])
 
+  // 두 지점으로 영역 확정 (드래그·탭탭 공통)
+  const commitArea = useCallback((a: { col: number; row: number }, b: { col: number; row: number }) => {
+    const c1 = Math.min(a.col, b.col), c2 = Math.max(a.col, b.col)
+    const r1 = Math.min(a.row, b.row), r2 = Math.max(a.row, b.row)
+    let hasOccupied = false
+    outer: for (let c = c1; c <= c2; c++) for (let r = r1; r <= r2; r++) if (houseMap.current.has(`${c},${r}`)) { hasOccupied = true; break outer }
+    if (hasOccupied) { setBlockMsg('선택 영역에 이미 입주된 칸이 있어요'); setTimeout(() => setBlockMsg(''), 2500); return false }
+    const zone = getZone(c1, r1)
+    onAreaSelect({ col: c1, row: r1, width: c2 - c1 + 1, height: r2 - r1 + 1, zone })
+    return true
+  }, [onAreaSelect])
+
+  const exitRangeMode = useCallback(() => {
+    rangeModeRef.current = false
+    anchorRef.current = null
+    setRangeMode(false); setAnchorUI(null); setSelection(null)
+  }, [])
+
+  // 범위 선택 모드에서의 탭/클릭 한 번 처리 (첫 탭=시작, 둘째 탭=끝)
+  const handleRangeTap = useCallback((grid: { col: number; row: number }) => {
+    if (!anchorRef.current) {
+      anchorRef.current = grid
+      setAnchorUI(grid)
+      setSelection({ c1: grid.col, r1: grid.row, c2: grid.col, r2: grid.row })
+      return
+    }
+    const ok = commitArea(anchorRef.current, grid)
+    if (ok) exitRangeMode()
+    else { anchorRef.current = null; setAnchorUI(null); setSelection(null) }
+  }, [commitArea, exitRangeMode])
+
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
@@ -347,7 +383,9 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
         const dy = Math.abs(t.clientY - touchStartPos.current.y)
         if (elapsed < 300 && dx < 12 && dy < 12) {
           const grid = toGrid(t.clientX, t.clientY)
-          if (grid) {
+          if (grid && rangeModeRef.current) {
+            handleRangeTap(grid)
+          } else if (grid) {
             const existing = houseMap.current.get(`${grid.col},${grid.row}`)
             if (existing) {
               const cell = existing.parent_address ? (addressMap.current.get(existing.parent_address) ?? existing) : existing
@@ -371,10 +409,11 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       el.removeEventListener('touchmove', onTouchMove)
       el.removeEventListener('touchend', onTouchEnd)
     }
-  }, [toGrid, onCellClick, clampOffset])
+  }, [toGrid, onCellClick, clampOffset, handleRangeTap])
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button === 2) return
+    if (rangeModeRef.current) return
     mouseDownPos.current = { x: e.clientX, y: e.clientY }
     isMouseDown.current = true; setTooltip(null)
     if (e.button === 1 || e.altKey) {
@@ -413,6 +452,12 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
 
   const handleMouseUp = useCallback((e: React.MouseEvent) => {
     if (e.button === 2) return
+    // 범위 선택 모드: 클릭 두 번으로 영역 지정 (모바일과 동일 동작)
+    if (rangeModeRef.current) {
+      const g = toGrid(e.clientX, e.clientY)
+      if (g) handleRangeTap(g)
+      return
+    }
     const hadMouseDown = isMouseDown.current
     isPanning.current = false; isMouseDown.current = false; setCursor('default')
     if (!hadMouseDown) return
@@ -433,21 +478,11 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
         onCellClick({ id:'', address:`${prefix}-${String(grid.row*GRID_COLS+grid.col).padStart(5,'0')}`, col:grid.col, row:grid.row, zone, status:'available', name:null, nickname:null, description:null, link_url:null, exterior_image_url:null, border_effect:'none', like_count:0, visit_count:0, occupied_at:null, expires_at:null, is_permanent:false })
       }
     } else if (isSelecting.current && selectStart.current && selectEnd.current) {
-      const c1=Math.min(selectStart.current.col,selectEnd.current.col)
-      const c2=Math.max(selectStart.current.col,selectEnd.current.col)
-      const r1=Math.min(selectStart.current.row,selectEnd.current.row)
-      const r2=Math.max(selectStart.current.row,selectEnd.current.row)
       setSelection(null); isSelecting.current = false
-      let hasOccupied = false
-      outer: for (let c=c1;c<=c2;c++) for (let r=r1;r<=r2;r++) if (houseMap.current.has(`${c},${r}`)) { hasOccupied=true; break outer }
-      if (hasOccupied) { setBlockMsg('선택 영역에 이미 입주된 칸이 있어요 🏠'); setTimeout(()=>setBlockMsg(''),2500) }
-      else {
-        const zone = getZone(c1, r1)
-        onAreaSelect({ col:c1, row:r1, width:c2-c1+1, height:r2-r1+1, zone })
-      }
+      commitArea(selectStart.current, selectEnd.current)
     }
     selectStart.current = null; selectEnd.current = null
-  }, [toGrid, onCellClick, onAreaSelect])
+  }, [toGrid, onCellClick, commitArea, handleRangeTap])
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault(); setTooltip(null)
@@ -470,15 +505,48 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
   return (
     <div
       ref={containerRef}
-      style={{ width:'100%', height:'100%', overflow:'hidden', cursor, background:'#1a0f05', userSelect:'none', position:'relative', touchAction:'none' }}
+      style={{ width:'100%', height:'100%', overflow:'hidden', cursor: rangeMode ? 'crosshair' : cursor, background:'#f4f3f1', userSelect:'none', position:'relative', touchAction:'none' }}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
-      onMouseLeave={() => { isPanning.current=false; isMouseDown.current=false; isSelecting.current=false; setSelection(null); setCursor('default'); setTooltip(null) }}
+      onMouseLeave={() => { isPanning.current=false; isMouseDown.current=false; isSelecting.current=false; if (!rangeModeRef.current) setSelection(null); setCursor('default'); setTooltip(null) }}
       onContextMenu={handleContextMenu}
     >
       <div style={{ transform:`translate(${offset.x}px,${offset.y}px) scale(${scale})`, transformOrigin:'0 0' }}>
         <canvas ref={canvasRef} width={W * RS} height={H * RS} style={{ display:'block', width:W, height:H }} />
+      </div>
+
+      {/* 범위 선택 (모바일·데스크탑 공통 탭탭 방식) */}
+      <div style={{ position:'absolute', left:'50%', bottom:16, transform:'translateX(-50%)', zIndex:20, display:'flex', alignItems:'center', gap:8 }}>
+        {!rangeMode ? (
+          <button
+            onClick={() => { rangeModeRef.current = true; setRangeMode(true); setTooltip(null) }}
+            style={{
+              padding:'10px 16px', borderRadius:10, border:'1px solid #e9e7e4', background:'#ffffff',
+              color:'#1a1a1a', fontSize:13, fontWeight:600, cursor:'pointer',
+              boxShadow:'0 4px 16px rgba(0,0,0,0.10)', whiteSpace:'nowrap',
+            }}
+          >범위 선택</button>
+        ) : (
+          <div style={{
+            display:'flex', alignItems:'center', gap:10,
+            padding:'10px 12px 10px 16px', borderRadius:10, border:'1px solid #e9e7e4',
+            background:'#ffffff', boxShadow:'0 4px 16px rgba(0,0,0,0.10)',
+          }}>
+            <span style={{ fontSize:13, color:'#1a1a1a', fontWeight:600, whiteSpace:'nowrap' }}>
+              {anchorUI ? '끝 칸을 탭하세요' : '시작 칸을 탭하세요'}
+            </span>
+            {anchorUI && (
+              <span style={{ fontSize:12, color:'#8c8a87', whiteSpace:'nowrap' }}>
+                시작 {anchorUI.col},{anchorUI.row}
+              </span>
+            )}
+            <button
+              onClick={exitRangeMode}
+              style={{ padding:'6px 12px', borderRadius:8, border:'1px solid #e0ddd9', background:'#fff', color:'#1a1a1a', fontSize:12, fontWeight:600, cursor:'pointer' }}
+            >취소</button>
+          </div>
+        )}
       </div>
 
       {tooltip && (
