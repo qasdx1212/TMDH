@@ -82,7 +82,7 @@ export default function Home() {
       .from('houses')
       .select('id, address, col, row, width, height, zone, status, name, nickname, description, link_url, exterior_image_url, interior_image_url, border_effect, like_count, visit_count, occupied_at, expires_at, is_permanent, parent_address, is_visible, has_password')
       .neq('status', 'available')
-      .range(0, 19999)
+      .range(0, 79999)  // 전체 80,000칸 — Supabase 기본 1,000행 제한 회피
     setHouses((data ?? []) as CellData[])
     setLoading(false)
   }, [])
@@ -159,7 +159,7 @@ export default function Home() {
   }, [fetchHouses])
 
   const HEADER_H = 58 + 36  // FloatingHeader 실제 높이
-  const STATS_H = 176       // StatsPanel 실제 높이 (사업자정보 푸터 포함)
+  const STATS_H = 188       // StatsPanel 실제 높이 (스탯 160 + 사업자정보 푸터 28)
 
   return (
     <div style={{ width:'100vw', height:'100vh', background:'#f4f3f1', overflow:'hidden' }}>
@@ -183,9 +183,6 @@ export default function Home() {
           setCenterTarget({ col: house.col, row: house.row })
           setTimeout(() => setCenterTarget(null), 100)
         }}
-        onZoomIn={() => zoomInRef.current?.()}
-        onZoomOut={() => zoomOutRef.current?.()}
-        onFitView={() => fitViewRef.current?.()}
       />
 
       {/* 맵: 헤더 아래~스탯 위 사이 고정 영역 */}
@@ -216,7 +213,13 @@ export default function Home() {
 
       {/* 스탯: 하단 고정 */}
       <div style={{ position:'fixed', bottom:0, left:0, right:0 }}>
-        <StatsPanel houses={houses} mapViewport={mapViewport} />
+        <StatsPanel
+          houses={houses}
+          mapViewport={mapViewport}
+          onZoomIn={() => zoomInRef.current?.()}
+          onZoomOut={() => zoomOutRef.current?.()}
+          onFitView={() => fitViewRef.current?.()}
+        />
       </div>
 
       {selectedCell && (

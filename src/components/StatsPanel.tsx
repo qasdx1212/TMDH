@@ -8,6 +8,9 @@ import type { CellData } from '@/types/cell'
 interface StatsPanelProps {
   houses: CellData[]
   mapViewport?: { scale: number; offset: { x: number; y: number }; containerW: number; containerH: number; mapW?: number } | null
+  onZoomIn?: () => void
+  onZoomOut?: () => void
+  onFitView?: () => void
 }
 
 interface RecentHouse {
@@ -18,7 +21,7 @@ interface RecentHouse {
   occupied_at: string | null
 }
 
-export default function StatsPanel({ houses, mapViewport }: StatsPanelProps) {
+export default function StatsPanel({ houses, mapViewport, onZoomIn, onZoomOut, onFitView }: StatsPanelProps) {
   const [recentHouses, setRecentHouses] = useState<RecentHouse[]>([])
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const donutRef = useRef<HTMLCanvasElement>(null)
@@ -46,9 +49,9 @@ export default function StatsPanel({ houses, mapViewport }: StatsPanelProps) {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')!
-    const W = 100, H = 100
+    const W = 120, H = 60      // 실제 지도와 동일한 2:1 비율
     const CELL = 5
-    const SX = 0.25, SY = 0.5  // 400cols→100px, 200rows→100px
+    const SX = 120 / 400, SY = 60 / 200  // 400cols→120px, 200rows→60px (둘 다 0.3)
     ctx.clearRect(0, 0, W, H)
 
     // 배경 (단일 색상)
@@ -121,14 +124,19 @@ export default function StatsPanel({ houses, mapViewport }: StatsPanelProps) {
   return (
     <div style={{ overflowX:'auto', borderTop:'1px solid #e9e7e4' }}>
     <div style={{
-      display:'grid', gridTemplateColumns:'140px 200px 1fr 1fr',
+      display:'grid', gridTemplateColumns:'156px 340px 1fr 1fr',
       background:'#ffffff',
-      height:148, minWidth:580,
+      height:160, minWidth:720,   // 미니맵(60) + 줌버튼(28) + 라벨/여백 수용
     }}>
-      {/* 미니맵 */}
+      {/* 미니맵 + 줌 컨트롤 */}
       <div style={{ padding:'10px 12px', borderRight:'1px solid #e9e7e4', display:'flex', flexDirection:'column', gap:6 }}>
         <PanelLabel>미니맵</PanelLabel>
-        <canvas ref={canvasRef} width={100} height={100} style={{ width:100, height:100, borderRadius:10, border:'1px solid #e9e7e4', imageRendering:'pixelated', flexShrink:0 }} />
+        <canvas ref={canvasRef} width={120} height={60} style={{ width:120, height:60, borderRadius:10, border:'1px solid #e9e7e4', imageRendering:'pixelated', flexShrink:0 }} />
+        <div style={{ display:'flex', alignItems:'center', gap:6, width:120 }}>
+          <button onClick={onZoomIn} style={zoomBtnStyle} title="확대">+</button>
+          <button onClick={onZoomOut} style={zoomBtnStyle} title="축소">−</button>
+          <button onClick={onFitView} style={{ ...zoomBtnStyle, fontSize:13 }} title="전체 보기">⤢</button>
+        </div>
       </div>
 
       {/* 분양 현황 — 도넛 차트 */}
@@ -136,16 +144,16 @@ export default function StatsPanel({ houses, mapViewport }: StatsPanelProps) {
         <PanelLabel>실시간 분양 현황</PanelLabel>
         <div style={{ display:'flex', alignItems:'center', gap:12 }}>
           <canvas ref={donutRef} width={80} height={80} style={{ flexShrink:0 }} />
-          <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:10, minWidth:0 }}>
             {[
               { label:'분양 완료', value: occupiedCount, color:'#16a34a' },
               { label:'판매 중',   value: pendingCount,  color:'#2563eb' },
               { label:'관심 구역', value: availableCount, color:'#e9e7e4' },
             ].map(item => (
-              <div key={item.label} style={{ display:'flex', alignItems:'center', gap:6 }}>
-                <div style={{ width:8, height:8, borderRadius:'50%', background:item.color, flexShrink:0 }} />
-                <span style={{ fontSize:10, color:'#6f6d6a', flex:1 }}>{item.label}</span>
-                <span style={{ fontSize:11, fontWeight:600, color:'#1a1a1a' }}>{((item.value/totalCells)*100).toFixed(1)}%</span>
+              <div key={item.label} style={{ display:'flex', alignItems:'center', gap:4, whiteSpace:'nowrap', flexShrink:0 }}>
+                <div style={{ width:7, height:7, borderRadius:'50%', background:item.color, flexShrink:0 }} />
+                <span style={{ fontSize:10, color:'#6f6d6a' }}>{item.label}</span>
+                <span style={{ fontSize:10, fontWeight:600, color:'#1a1a1a' }}>{((item.value/totalCells)*100).toFixed(1)}%</span>
               </div>
             ))}
           </div>
@@ -185,7 +193,7 @@ export default function StatsPanel({ houses, mapViewport }: StatsPanelProps) {
     <div style={{
       background:'#ffffff', borderTop:'1px solid #e9e7e4',
       padding:'8px 16px', fontSize:10, color:'#6f6d6a',
-      whiteSpace:'nowrap', overflowX:'auto', minWidth:580,
+      whiteSpace:'nowrap', overflowX:'auto', minWidth:720,
     }}>
       <strong style={{ color:'#1a1a1a', fontWeight:600 }}>스트릿애드 (StreetAd)</strong>
       {' · 대표 이승원 · 사업자등록번호 593-17-02833 · 경기도 의정부시 태평로 13, 14층 1401호 · 전화 0502-1946-1697 · '}
@@ -201,6 +209,14 @@ export default function StatsPanel({ houses, mapViewport }: StatsPanelProps) {
     </div>
     </div>
   )
+}
+
+const zoomBtnStyle: React.CSSProperties = {
+  width:28, height:28, borderRadius:8, border:'1px solid #e0ddd9',
+  background:'#ffffff', color:'#1a1a1a',
+  fontSize:15, fontWeight:600, cursor:'pointer',
+  display:'flex', alignItems:'center', justifyContent:'center', lineHeight:1,
+  padding:0, flexShrink:0,
 }
 
 function PanelLabel({ children }: { children: React.ReactNode }) {

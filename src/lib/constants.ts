@@ -18,6 +18,16 @@ export const ZONE_PRICES: Record<string, number> = {
 
 export const PERMANENT_MULTIPLIER = 1 // 영구제: 기준가 × 1 (= 칸당 기준가 그대로)
 
+// 이펙트 추가금 (정액). 금액은 여기서만 고치면 전체 반영됨.
+export const EFFECT_PRICES: Record<string, number> = {
+  none: 0,
+  neon: 1000,
+}
+export const EFFECT_LABELS: Record<string, string> = {
+  none: '기본 (이펙트 없음)',
+  neon: '네온 테두리',
+}
+
 export const DURATIONS = [
   { days: 30,  label: '1개월',  multiplier: 1 },
   { days: 90,  label: '3개월',  multiplier: 2.7 },

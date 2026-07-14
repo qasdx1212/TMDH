@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-import { ZONES, ZONE_PRICES, DURATIONS, PERMANENT_DAYS, PERMANENT_MULTIPLIER, calcPrice, formatKRW, getAddress, getZone } from '@/lib/constants'
+import { ZONES, ZONE_PRICES, DURATIONS, PERMANENT_DAYS, PERMANENT_MULTIPLIER, EFFECT_PRICES, EFFECT_LABELS, calcPrice, formatKRW, getAddress, getZone } from '@/lib/constants'
 import { hashPwd } from '@/lib/hash'
 import { toUserMessage } from '@/lib/errorMessage'
 import type { CellData } from '@/types/cell'
@@ -28,6 +28,8 @@ interface FormData {
   exteriorOffset: { x: number; y: number }    // 캔버스 크기 대비 정규화된 이동값
   interiorImage: File | null
   interiorPreview: string | null
+  interiorScale: number                       // 1:1 크롭 배율
+  interiorOffset: { x: number; y: number }    // 1:1 크롭 이동값 (정규화)
   days: number
   borderEffect: 'none' | 'neon'
   password: string
@@ -36,6 +38,89 @@ interface FormData {
 }
 
 const STEPS = ['위치 확인', '집 정보', '외관 이미지', '신청 확인', '결제']
+
+/* ─── 이미지 변환 공통 로직 (외관·내부 크롭에서 재사용) ─── */
+interface Transform { fit: 'cover' | 'contain'; scale: number; offset: { x: number; y: number } }
+
+// 기본맞춤(cover/contain) × 사용자 배율 + 정규화 이동으로 img를 TW×TH 캔버스에 그림
+function drawTransformed(ctx: CanvasRenderingContext2D, img: HTMLImageElement, TW: number, TH: number, t: Transform) {
+  const iw = img.naturalWidth, ih = img.naturalHeight
+  if (!iw || !ih) return
+  const base = t.fit === 'cover' ? Math.max(TW / iw, TH / ih) : Math.min(TW / iw, TH / ih)
+  const s = base * t.scale
+  const dw = iw * s, dh = ih * s
+  const dx = (TW - dw) / 2 + t.offset.x * TW
+  const dy = (TH - dh) / 2 + t.offset.y * TH
+  ctx.drawImage(img, dx, dy, dw, dh)
+}
+
+// 캔버스 한 장을 (흰 배경 + 이미지 + 선택적 네온 테두리)로 칠함
+function paintCanvas(canvas: HTMLCanvasElement | null, img: HTMLImageElement | null, t: Transform, neon?: { color: string }) {
+  if (!canvas) return
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+  ctx.clearRect(0, 0, canvas.width, canvas.height)
+  ctx.fillStyle = '#ffffff'
+  ctx.fillRect(0, 0, canvas.width, canvas.height)
+  if (img) drawTransformed(ctx, img, canvas.width, canvas.height, t)
+  if (neon) {
+    // 지도(MapGrid)의 neon 렌더와 동일한 방식: zone 컬러 stroke + shadowBlur 글로우
+    ctx.save()
+    ctx.shadowColor = neon.color
+    ctx.shadowBlur = 8
+    ctx.strokeStyle = neon.color
+    ctx.lineWidth = 3
+    ctx.strokeRect(1.5, 1.5, canvas.width - 3, canvas.height - 3)
+    ctx.strokeRect(1.5, 1.5, canvas.width - 3, canvas.height - 3) // 두 번 그려 글로우 강조
+    ctx.restore()
+  }
+}
+
+// 조정값을 실제 픽셀에 구워낸 업로드용 파일 생성
+async function bakeFile(img: HTMLImageElement, t: Transform, tw: number, th: number, filename: string): Promise<File | null> {
+  const cv = document.createElement('canvas')
+  cv.width = Math.max(1, Math.round(tw)); cv.height = Math.max(1, Math.round(th))
+  const ctx = cv.getContext('2d')
+  if (!ctx) return null
+  ctx.fillStyle = '#ffffff'
+  ctx.fillRect(0, 0, cv.width, cv.height)
+  drawTransformed(ctx, img, cv.width, cv.height, t)
+  const blob: Blob | null = await new Promise(res => cv.toBlob(res, 'image/jpeg', 0.92))
+  if (!blob) return null
+  return new File([blob], filename, { type: 'image/jpeg' })
+}
+
+/* ─── 비밀번호 규칙: 영문 + 숫자 + 특수문자 포함 10자 이상 ─── */
+function pwdChecks(p: string) {
+  return {
+    len: p.length >= 10,
+    alpha: /[A-Za-z]/.test(p),
+    num: /[0-9]/.test(p),
+    special: /[^A-Za-z0-9]/.test(p),
+  }
+}
+function isPwdValid(p: string): boolean {
+  const c = pwdChecks(p)
+  return c.len && c.alpha && c.num && c.special
+}
+
+/* ─── 임시저장(draft) ─── */
+interface Draft {
+  name?: string; description?: string; linkUrl?: string; nickname?: string
+  days?: number; borderEffect?: 'none' | 'neon'
+  exteriorFit?: 'cover' | 'contain'
+  exteriorScale?: number; exteriorOffset?: { x: number; y: number }
+  interiorScale?: number; interiorOffset?: { x: number; y: number }
+}
+
+function linkHost(url: string): string | null {
+  const v = url.trim()
+  if (!v) return null
+  try {
+    const u = new URL(/^https?:\/\//i.test(v) ? v : `https://${v}`)
+    return u.hostname.replace(/^www\./, '')
+  } catch { return null }
+}
 
 export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: ApplyFlowProps) {
   const isEdit = selectedCell.status === 'occupied'
@@ -52,6 +137,8 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
     exteriorOffset: { x: 0, y: 0 },
     interiorImage: null,
     interiorPreview: isEdit ? (selectedCell.interior_image_url ?? null) : null,
+    interiorScale: 1,
+    interiorOffset: { x: 0, y: 0 },
     days: PERMANENT_DAYS,
     borderEffect: isEdit ? (selectedCell.border_effect ?? 'none') : 'none',
     password: '',
@@ -98,7 +185,74 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
     }, 0))
   }
 
-  const price = calcTotalPrice(form.days)
+  // 이펙트 추가금 (네온 +1,000원 등) — 총액·결제버튼·orders.amount 전부 이 값을 사용
+  const effectPrice = EFFECT_PRICES[form.borderEffect] ?? 0
+  const price = calcTotalPrice(form.days) + effectPrice
+
+  /* ─── 단계별 임시저장 (셀 주소별 localStorage) ─── */
+  // File 객체·비밀번호는 저장하지 않음 (직렬화 불가 + 보안)
+  const draftKey = `zipzip_draft_${selectedCell.address}`
+  const [draftRestored, setDraftRestored] = useState(false)
+  const hydrated = useRef(false)
+
+  const clearDraft = useCallback(() => {
+    try { localStorage.removeItem(draftKey) } catch { /* storage 차단 환경 무시 */ }
+  }, [draftKey])
+
+  // 복원 — 수정 모드에서는 기존 데이터가 우선이므로 복원하지 않음
+  useEffect(() => {
+    if (isEdit) { hydrated.current = true; return }
+    try {
+      const raw = localStorage.getItem(draftKey)
+      if (raw) {
+        const d = JSON.parse(raw) as Draft
+        const hasContent = !!(d.name || d.description || d.linkUrl || d.nickname)
+        setForm(f => ({
+          ...f,
+          name: d.name ?? f.name,
+          description: d.description ?? f.description,
+          linkUrl: d.linkUrl ?? f.linkUrl,
+          nickname: d.nickname ?? f.nickname,
+          days: typeof d.days === 'number' ? d.days : f.days,
+          borderEffect: d.borderEffect === 'neon' ? 'neon' : f.borderEffect,
+          exteriorFit: d.exteriorFit === 'contain' ? 'contain' : f.exteriorFit,
+          exteriorScale: typeof d.exteriorScale === 'number' ? d.exteriorScale : f.exteriorScale,
+          exteriorOffset: d.exteriorOffset ?? f.exteriorOffset,
+          interiorScale: typeof d.interiorScale === 'number' ? d.interiorScale : f.interiorScale,
+          interiorOffset: d.interiorOffset ?? f.interiorOffset,
+        }))
+        if (hasContent) setDraftRestored(true)
+      }
+    } catch { /* 손상된 draft 무시 */ }
+    hydrated.current = true
+  }, [isEdit, draftKey])
+
+  // 자동 저장
+  useEffect(() => {
+    if (isEdit || !hydrated.current) return
+    const t = setTimeout(() => {
+      const d: Draft = {
+        name: form.name, description: form.description, linkUrl: form.linkUrl, nickname: form.nickname,
+        days: form.days, borderEffect: form.borderEffect,
+        exteriorFit: form.exteriorFit, exteriorScale: form.exteriorScale, exteriorOffset: form.exteriorOffset,
+        interiorScale: form.interiorScale, interiorOffset: form.interiorOffset,
+      }
+      try { localStorage.setItem(draftKey, JSON.stringify(d)) } catch { /* 무시 */ }
+    }, 300)
+    return () => clearTimeout(t)
+  }, [isEdit, draftKey, form])
+
+  const resetDraft = () => {
+    clearDraft()
+    setDraftRestored(false)
+    setForm(f => ({
+      ...f,
+      name: '', description: '', linkUrl: '', nickname: '',
+      borderEffect: 'none',
+      exteriorFit: 'cover', exteriorScale: 1, exteriorOffset: { x: 0, y: 0 },
+      interiorScale: 1, interiorOffset: { x: 0, y: 0 },
+    }))
+  }
 
   // 미니맵 (Step 1) — 4구역 + 선택 셀 표시
   useEffect(() => {
@@ -125,7 +279,8 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
     if (!file) return
     const preview = URL.createObjectURL(file)
     if (type === 'exterior') setForm(f => ({ ...f, exteriorImage: file, exteriorPreview: preview, exteriorScale: 1, exteriorOffset: { x: 0, y: 0 } }))
-    else setForm(f => ({ ...f, interiorImage: file, interiorPreview: preview }))
+    else setForm(f => ({ ...f, interiorImage: file, interiorPreview: preview, interiorScale: 1, interiorOffset: { x: 0, y: 0 } }))
+    e.target.value = '' // 같은 파일을 다시 골라도 onChange가 발생하도록
   }
 
   const uploadImage = async (file: File, path: string): Promise<string | null> => {
@@ -135,7 +290,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
     return data.publicUrl
   }
 
-  /* ─── 외관 이미지 크롭 (미리보기 = 지도 = 업로드 결과가 동일) ─── */
+  /* ─── 이미지 크롭 (미리보기 = 지도 = 업로드 결과가 동일) ─── */
   const cw = selectedCell.width ?? 1
   const ch = selectedCell.height ?? 1
   const cellAR = cw / ch
@@ -146,91 +301,115 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
   // 우측 지도 미리보기 캔버스 크기 (같은 비율)
   let pvW = 240, pvH = Math.round(240 / cellAR)
   if (pvH > 140) { pvH = 140; pvW = Math.round(140 * cellAR) }
+  // 내부 이미지는 1:1 고정
+  const INT_EDIT = 200
+  // 신청 확인 카드의 외관 미리보기 캔버스 크기 (같은 비율)
+  let cfW = 320, cfH = Math.round(320 / cellAR)
+  if (cfH > 190) { cfH = 190; cfW = Math.round(190 * cellAR) }
 
-  const extImgRef = useRef<HTMLImageElement | null>(null)
   const cropRef = useRef<HTMLCanvasElement>(null)
   const mapPreviewRef = useRef<HTMLCanvasElement>(null)
-  const [imgReady, setImgReady] = useState(false)
-  const dragRef = useRef<{ x: number; y: number } | null>(null)
+  const intCropRef = useRef<HTMLCanvasElement>(null)
+  const confirmRef = useRef<HTMLCanvasElement>(null)
+  // 로드된 이미지를 state로 보관 — 파일을 교체하면 항상 새 객체라 리렌더+재페인트가 보장됨
+  // (기존 imgReady 불리언은 true→true 갱신이 no-op이라 교체가 즉시 반영되지 않는 버그가 있었음)
+  const [extImg, setExtImg] = useState<HTMLImageElement | null>(null)
+  const [intImg, setIntImg] = useState<HTMLImageElement | null>(null)
+  const dragRef = useRef<{ x: number; y: number; target: 'exterior' | 'interior' } | null>(null)
+
+  const neonOn = form.borderEffect === 'neon'
+  const neonPaint = neonOn ? { color: zone.color } : undefined
 
   // 새로 고른 파일만 크롭 대상 (기존 저장된 URL은 CORS/변조 이슈로 제외)
-  const cropEnabled = !!form.exteriorImage && imgReady
+  const cropEnabled = !!form.exteriorImage && !!extImg
+  const intCropEnabled = !!form.interiorImage && !!intImg
 
-  // 공통 변환: 기본맞춤(cover/contain) × 사용자 배율 + 정규화 이동
-  const drawTransformed = useCallback((ctx: CanvasRenderingContext2D, img: HTMLImageElement, TW: number, TH: number) => {
-    const iw = img.naturalWidth, ih = img.naturalHeight
-    if (!iw || !ih) return
-    const base = form.exteriorFit === 'cover' ? Math.max(TW / iw, TH / ih) : Math.min(TW / iw, TH / ih)
-    const s = base * form.exteriorScale
-    const dw = iw * s, dh = ih * s
-    const dx = (TW - dw) / 2 + form.exteriorOffset.x * TW
-    const dy = (TH - dh) / 2 + form.exteriorOffset.y * TH
-    ctx.drawImage(img, dx, dy, dw, dh)
-  }, [form.exteriorFit, form.exteriorScale, form.exteriorOffset])
+  const extTransform: Transform = { fit: form.exteriorFit, scale: form.exteriorScale, offset: form.exteriorOffset }
+  const intTransform: Transform = { fit: 'cover', scale: form.interiorScale, offset: form.interiorOffset }
 
-  const paint = useCallback((canvas: HTMLCanvasElement | null) => {
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-    ctx.fillStyle = '#ffffff'
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-    const img = extImgRef.current
-    if (img) drawTransformed(ctx, img, canvas.width, canvas.height)
-  }, [drawTransformed])
-
-  // 파일 선택 시 이미지 로드
+  // 파일 선택 시 이미지 로드 (외관)
   useEffect(() => {
-    if (!form.exteriorImage || !form.exteriorPreview) { extImgRef.current = null; setImgReady(false); return }
+    if (!form.exteriorImage || !form.exteriorPreview) { setExtImg(null); return }
+    let alive = true
     const im = new Image()
-    im.onload = () => { extImgRef.current = im; setImgReady(true) }
-    im.onerror = () => { extImgRef.current = null; setImgReady(false) }
+    im.onload = () => { if (alive) setExtImg(im) }
+    im.onerror = () => { if (alive) setExtImg(null) }
     im.src = form.exteriorPreview
+    return () => { alive = false }
   }, [form.exteriorImage, form.exteriorPreview])
 
-  // 에디터 + 지도 미리보기 동시 렌더
+  // 파일 선택 시 이미지 로드 (내부)
+  useEffect(() => {
+    if (!form.interiorImage || !form.interiorPreview) { setIntImg(null); return }
+    let alive = true
+    const im = new Image()
+    im.onload = () => { if (alive) setIntImg(im) }
+    im.onerror = () => { if (alive) setIntImg(null) }
+    im.src = form.interiorPreview
+    return () => { alive = false }
+  }, [form.interiorImage, form.interiorPreview])
+
+  // 내부 이미지 크롭 에디터 (Step 2)
+  useEffect(() => {
+    if (step !== 2) return
+    paintCanvas(intCropRef.current, intImg, intTransform)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, intImg, form.interiorScale, form.interiorOffset])
+
+  // 외관 에디터 + 지도 미리보기 동시 렌더 (Step 3) — 지도 미리보기엔 네온 이펙트도 반영
   useEffect(() => {
     if (step !== 3) return
-    paint(cropRef.current)
-    paint(mapPreviewRef.current)
-  }, [step, imgReady, paint])
+    paintCanvas(cropRef.current, extImg, extTransform)
+    paintCanvas(mapPreviewRef.current, extImg, extTransform, neonPaint)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, extImg, form.exteriorFit, form.exteriorScale, form.exteriorOffset, neonOn, zone.color])
 
-  // 드래그로 위치 조정
-  const onCropDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!cropEnabled) return
+  // 신청 확인 미리보기 카드 (Step 4)
+  useEffect(() => {
+    if (step !== 4) return
+    paintCanvas(confirmRef.current, extImg, extTransform, neonPaint)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, extImg, form.exteriorFit, form.exteriorScale, form.exteriorOffset, neonOn, zone.color])
+
+  // 드래그로 위치 조정 (외관·내부 공용)
+  const onCropDown = (target: 'exterior' | 'interior') => (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (target === 'exterior' ? !cropEnabled : !intCropEnabled) return
     e.currentTarget.setPointerCapture(e.pointerId)
-    dragRef.current = { x: e.clientX, y: e.clientY }
+    dragRef.current = { x: e.clientX, y: e.clientY, target }
   }
   const onCropMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!dragRef.current || !cropEnabled) return
+    const d = dragRef.current
+    if (!d) return
     const rect = e.currentTarget.getBoundingClientRect()
-    const dx = (e.clientX - dragRef.current.x) / rect.width
-    const dy = (e.clientY - dragRef.current.y) / rect.height
-    dragRef.current = { x: e.clientX, y: e.clientY }
-    setForm(f => ({ ...f, exteriorOffset: { x: f.exteriorOffset.x + dx, y: f.exteriorOffset.y + dy } }))
+    const dx = (e.clientX - d.x) / rect.width
+    const dy = (e.clientY - d.y) / rect.height
+    dragRef.current = { ...d, x: e.clientX, y: e.clientY }
+    if (d.target === 'exterior') setForm(f => ({ ...f, exteriorOffset: { x: f.exteriorOffset.x + dx, y: f.exteriorOffset.y + dy } }))
+    else setForm(f => ({ ...f, interiorOffset: { x: f.interiorOffset.x + dx, y: f.interiorOffset.y + dy } }))
   }
   const onCropUp = () => { dragRef.current = null }
 
   const resetCrop = () => setForm(f => ({ ...f, exteriorScale: 1, exteriorOffset: { x: 0, y: 0 } }))
+  const resetIntCrop = () => setForm(f => ({ ...f, interiorScale: 1, interiorOffset: { x: 0, y: 0 } }))
 
-  // 조정한 그대로 구워낸 업로드용 파일 생성
-  const buildExteriorFile = async (): Promise<File | null> => {
+  // 조정한 그대로 구워낸 업로드용 파일 생성 (외관: 선택 영역 비율)
+  const buildExteriorFile = useCallback(async (): Promise<File | null> => {
     if (!form.exteriorImage) return null
-    const img = extImgRef.current
-    if (!img || !img.naturalWidth) return form.exteriorImage // 폴백: 원본 그대로
+    if (!extImg || !extImg.naturalWidth) return form.exteriorImage // 폴백: 원본 그대로
     const MAX = 1200
     const ew = cellAR >= 1 ? MAX : Math.round(MAX * cellAR)
     const eh = cellAR >= 1 ? Math.round(MAX / cellAR) : MAX
-    const cv = document.createElement('canvas')
-    cv.width = Math.max(1, ew); cv.height = Math.max(1, eh)
-    const ctx = cv.getContext('2d')
-    if (!ctx) return form.exteriorImage
-    ctx.fillStyle = '#ffffff'
-    ctx.fillRect(0, 0, cv.width, cv.height)
-    drawTransformed(ctx, img, cv.width, cv.height)
-    const blob: Blob | null = await new Promise(res => cv.toBlob(res, 'image/jpeg', 0.92))
-    if (!blob) return form.exteriorImage
-    return new File([blob], 'exterior.jpg', { type: 'image/jpeg' })
-  }
+    return (await bakeFile(extImg, extTransform, ew, eh, 'exterior.jpg')) ?? form.exteriorImage
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.exteriorImage, extImg, cellAR, form.exteriorFit, form.exteriorScale, form.exteriorOffset])
+
+  // 내부 이미지: 1:1 정사각형으로 구워냄
+  const buildInteriorFile = useCallback(async (): Promise<File | null> => {
+    if (!form.interiorImage) return null
+    if (!intImg || !intImg.naturalWidth) return form.interiorImage
+    return (await bakeFile(intImg, intTransform, 1200, 1200, 'interior.jpg')) ?? form.interiorImage
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.interiorImage, intImg, form.interiorScale, form.interiorOffset])
 
   // 수정 모드 저장
   const handleEditSave = async () => {
@@ -240,7 +419,8 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
       const extFile = await buildExteriorFile()
       if (extFile) exteriorUrl = await uploadImage(extFile, `${userId}/exterior-${selectedCell.address}.jpg`)
       let interiorUrl: string | null = selectedCell.interior_image_url ?? null
-      if (form.interiorImage) interiorUrl = await uploadImage(form.interiorImage, `${userId}/interior-${selectedCell.address}.${form.interiorImage.name.split('.').pop()}`)
+      const intFile = await buildInteriorFile()
+      if (intFile) interiorUrl = await uploadImage(intFile, `${userId}/interior-${selectedCell.address}.jpg`)
 
       const pwdFields = form.removePassword
         ? { password_hash: null, has_password: false }
@@ -256,6 +436,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
         ...pwdFields,
       }).eq('address', selectedCell.address).eq('user_id', userId)
       if (error) { setErrorMsg(`저장 실패: ${toUserMessage(error)}`); return }
+      clearDraft()
       setShowSuccess(true)
       setTimeout(() => { setShowSuccess(false); onSuccess() }, 2200)
     } catch { setErrorMsg('오류가 발생했습니다.') }
@@ -271,7 +452,8 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
       const extFile = await buildExteriorFile()
       if (extFile) exteriorUrl = await uploadImage(extFile, `${userId}/exterior-${selectedCell.address}.jpg`)
       let interiorUrl: string | null = selectedCell.interior_image_url ?? null
-      if (form.interiorImage) interiorUrl = await uploadImage(form.interiorImage, `${userId}/interior-${selectedCell.address}.${form.interiorImage.name.split('.').pop()}`)
+      const intFile = await buildInteriorFile()
+      if (intFile) interiorUrl = await uploadImage(intFile, `${userId}/interior-${selectedCell.address}.jpg`)
 
       const orderId = `zipzip-${Date.now()}-${selectedCell.address}`
 
@@ -328,6 +510,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
         return
       }
       // 성공 — 검증+입주 처리 페이지로 이동
+      clearDraft()
       window.location.href = `${window.location.origin}/payment-redirect?paymentId=${orderId}`
     } catch (e: unknown) {
       setErrorMsg(toUserMessage(e))
@@ -348,7 +531,8 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
       const extFile = await buildExteriorFile()
       if (extFile) exteriorUrl = await uploadImage(extFile, `${userId}/exterior-${selectedCell.address}.jpg`)
       let interiorUrl: string | null = selectedCell.interior_image_url ?? null
-      if (form.interiorImage) interiorUrl = await uploadImage(form.interiorImage, `${userId}/interior-${selectedCell.address}.${form.interiorImage.name.split('.').pop()}`)
+      const intFile = await buildInteriorFile()
+      if (intFile) interiorUrl = await uploadImage(intFile, `${userId}/interior-${selectedCell.address}.jpg`)
 
       // 신규 입주 DB 업데이트
       const expiresAt = form.days === PERMANENT_DAYS ? null : new Date(Date.now() + form.days * 86400000).toISOString()
@@ -390,15 +574,21 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
         status: 'completed',
       })
 
+      clearDraft()
       setShowSuccess(true)
       setTimeout(() => { setShowSuccess(false); onSuccess() }, 2200)
     } catch { setErrorMsg('오류가 발생했습니다. 다시 시도해주세요.') }
     finally { setLoading(false); setContentChecking(false) }
   }
 
+  const pwd = pwdChecks(form.password)
+  const pwdOk = isPwdValid(form.password)
+
   const canNext = () => {
     if (step === 2 && !form.name.trim()) return false
     if (step === 2 && !isEdit && !form.password) return false
+    // 비밀번호를 입력했다면(신규는 필수) 규칙 충족 + 확인 일치해야 통과
+    if (step === 2 && form.password && !pwdOk) return false
     if (step === 2 && form.password && form.password !== form.passwordConfirm) return false
     // 결제 단계: 필수 동의 3개를 모두 체크해야 결제 버튼 활성화
     if (step === lastStep && !isEdit && !paymentDone && !allAgreed) return false
@@ -549,6 +739,15 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
             <div className="af-row" style={{ display:'flex', gap:0 }}>
               {/* 왼쪽: 폼 */}
               <div className="af-col" style={{ flex:1, padding:'24px 20px', borderRight:'1px solid #e9e7e4', overflowY:'auto', maxHeight:'calc(92vh - 160px)' }}>
+                {draftRestored && (
+                  <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', borderRadius:10, background:'#faf9f8', border:'1px solid #e9e7e4', marginBottom:14 }}>
+                    <div style={{ flex:1, fontSize:12, color:'#6f6d6a', lineHeight:1.6 }}>
+                      <span style={{ fontWeight:700, color:'#1a1a1a' }}>이어서 작성 중인 내용을 불러왔어요.</span><br />
+                      이미지와 비밀번호는 보안상 저장되지 않아 다시 선택해주세요.
+                    </div>
+                    <button type="button" onClick={resetDraft} style={{ flexShrink:0, padding:'7px 10px', borderRadius:8, border:'1px solid #e0ddd9', background:'#fff', color:'#1a1a1a', fontSize:11, fontWeight:600, cursor:'pointer' }}>초기화</button>
+                  </div>
+                )}
                 <SectionTitle>집 정보를 입력해주세요</SectionTitle>
                 <Field label="집 이름 *" hint="최대 20자">
                   <input style={inputStyle} placeholder="예) 토토의 작은 집" maxLength={20} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
@@ -565,25 +764,75 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                   <Field label="집 놀러가기 링크" hint="">
                     <input style={inputStyle} placeholder="https://" type="url" value={form.linkUrl} onChange={e => setForm(f => ({ ...f, linkUrl: e.target.value }))} />
                   </Field>
-                  <div style={{ fontSize:11, color:'#6f6d6a', marginTop:4 }}>방문객이 클릭하면 이 링크로 이동해요!</div>
                 </div>
 
                 <div style={{ marginTop:4, marginBottom:16 }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8, flexWrap:'wrap' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6, flexWrap:'wrap' }}>
                     <span style={{ fontSize:14, fontWeight:700, color:'#1a1a1a' }}>내부 인테리어 이미지 등록</span>
-                    <span style={{ fontSize:11, color:'#6f6d6a', background:'#f4f3f1', padding:'3px 8px', borderRadius:8 }}>집을 열었을 때 가장 크게 보이는 사진이에요.</span>
+                    <span style={{ fontSize:11, color:'#6f6d6a', background:'#f4f3f1', padding:'3px 8px', borderRadius:8 }}>권장 비율 1:1 (정사각형)</span>
                   </div>
-                  <label style={{ display:'block', cursor:'pointer' }}>
-                    <div style={{ height:120, borderRadius:10, border:`1px dashed ${form.interiorPreview ? '#1a1a1a' : '#d5d2ce'}`, background:'#faf9f8', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden' }}>
-                      {form.interiorPreview ? <img src={form.interiorPreview} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} /> : (
-                        <div style={{ textAlign:'center', color:'#6f6d6a' }}>
-                          <div style={{ fontSize:12, fontWeight:600 }}>이미지 선택 또는 드래그</div>
-                          <div style={{ fontSize:10, marginTop:3, color:'#97948f' }}>JPG, PNG, WEBP (최대 10MB)</div>
-                        </div>
-                      )}
+                  <div style={{ fontSize:11, color:'#6f6d6a', marginBottom:8, lineHeight:1.6 }}>
+                    집을 열었을 때 가장 크게 보이는 사진이에요. 정사각형으로 잘려서 올라갑니다.
+                  </div>
+                  <label style={{ display:'block', cursor:'pointer', marginBottom: form.interiorPreview ? 12 : 0 }}>
+                    <div style={{ height: form.interiorPreview ? 52 : 120, borderRadius:10, border:`1px dashed ${form.interiorPreview ? '#1a1a1a' : '#d5d2ce'}`, background:'#faf9f8', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden' }}>
+                      <div style={{ textAlign:'center', color:'#6f6d6a' }}>
+                        <div style={{ fontSize:12, fontWeight:600 }}>{form.interiorPreview ? '다른 이미지 선택' : '이미지 선택 또는 드래그'}</div>
+                        {!form.interiorPreview && <div style={{ fontSize:10, marginTop:3, color:'#97948f' }}>JPG, PNG, WEBP (최대 10MB)</div>}
+                      </div>
                     </div>
                     <input type="file" accept="image/*" onChange={handleFile('interior')} style={{ display:'none' }} />
                   </label>
+
+                  {/* 1:1 크롭 에디터 — 외관과 동일한 방식 */}
+                  {form.interiorPreview && (
+                    <div>
+                      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
+                        <div style={{ fontSize:12, fontWeight:700, color:'#1a1a1a' }}>위치 · 크기 조정 (1:1)</div>
+                        {intCropEnabled && (
+                          <button type="button" onClick={resetIntCrop} style={{ padding:'5px 10px', borderRadius:8, border:'1px solid #e0ddd9', background:'#fff', color:'#1a1a1a', fontSize:11, fontWeight:600, cursor:'pointer' }}>초기화</button>
+                        )}
+                      </div>
+                      <div style={{ display:'flex', justifyContent:'center', marginBottom:10 }}>
+                        {intCropEnabled ? (
+                          <canvas
+                            ref={intCropRef}
+                            width={INT_EDIT}
+                            height={INT_EDIT}
+                            onPointerDown={onCropDown('interior')}
+                            onPointerMove={onCropMove}
+                            onPointerUp={onCropUp}
+                            onPointerCancel={onCropUp}
+                            style={{ width:INT_EDIT, height:INT_EDIT, maxWidth:'100%', aspectRatio:'1/1', borderRadius:10, border:'1px solid #e9e7e4', cursor:'grab', touchAction:'none', display:'block' }}
+                          />
+                        ) : (
+                          <div style={{ width:INT_EDIT, maxWidth:'100%', aspectRatio:'1/1', borderRadius:10, border:'1px solid #e9e7e4', overflow:'hidden', background:'#faf9f8' }}>
+                            <img src={form.interiorPreview} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
+                          </div>
+                        )}
+                      </div>
+                      {intCropEnabled && (
+                        <>
+                          <div style={{ fontSize:11, color:'#6f6d6a', textAlign:'center', marginBottom:10 }}>
+                            드래그해서 위치를 옮기고, 슬라이더로 크기를 조절하세요.
+                          </div>
+                          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                            <span style={{ fontSize:11, color:'#6f6d6a', flexShrink:0 }}>축소</span>
+                            <input
+                              type="range" min={0.5} max={3} step={0.01}
+                              value={form.interiorScale}
+                              onChange={e => setForm(f => ({ ...f, interiorScale: Number(e.target.value) }))}
+                              style={{ flex:1, accentColor:'#1c1c1e', cursor:'pointer' }}
+                            />
+                            <span style={{ fontSize:11, color:'#6f6d6a', flexShrink:0 }}>확대</span>
+                            <span style={{ fontSize:11, fontWeight:600, color:'#1a1a1a', width:44, textAlign:'right', flexShrink:0 }}>
+                              {form.interiorScale.toFixed(2)}×
+                            </span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <Field label="닉네임" hint="최대 7자 · 지도에 표시됨">
@@ -599,7 +848,8 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                     {isEdit && <span style={{ fontSize:11, fontWeight:500, color:'#6f6d6a', marginLeft:6 }}>(변경 선택사항)</span>}
                   </div>
                   <div style={{ fontSize:11, color:'#6f6d6a', marginBottom:10, lineHeight:1.6 }}>
-                    {isEdit ? '변경하려면 새 비밀번호를 입력하세요.' : '수정·삭제 시 필요한 비밀번호를 설정해주세요.'}
+                    {isEdit ? '변경하려면 새 비밀번호를 입력하세요.' : '수정·삭제 시 필요한 비밀번호를 설정해주세요.'}<br />
+                    영문 + 숫자 + 특수문자를 모두 포함해 10자 이상이어야 해요.
                   </div>
                   {isEdit && selectedCell.has_password && (
                     <label style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10, cursor:'pointer' }}>
@@ -611,11 +861,33 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                     <>
                       <input
                         type="password"
-                        style={{ ...inputStyle, marginBottom:8 }}
+                        style={{ ...inputStyle, marginBottom:8, borderColor: form.password && !pwdOk ? '#dc2626' : '#e9e7e4' }}
                         placeholder={isEdit ? '새 비밀번호 (변경하려면 입력)' : '비밀번호 입력 (필수)'}
                         value={form.password}
                         onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
                       />
+                      {form.password && (
+                        <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:8 }}>
+                          {[
+                            { ok: pwd.len, label: '10자 이상' },
+                            { ok: pwd.alpha, label: '영문' },
+                            { ok: pwd.num, label: '숫자' },
+                            { ok: pwd.special, label: '특수문자' },
+                          ].map(({ ok, label }) => (
+                            <span key={label} style={{
+                              fontSize:11, fontWeight:600, padding:'3px 8px', borderRadius:8,
+                              border:`1px solid ${ok ? '#1a1a1a' : '#e0ddd9'}`,
+                              background: ok ? '#1c1c1e' : '#fff',
+                              color: ok ? '#fff' : '#97948f',
+                            }}>{label}</span>
+                          ))}
+                        </div>
+                      )}
+                      {form.password && !pwdOk && (
+                        <div style={{ fontSize:11, color:'#dc2626', marginBottom:8, lineHeight:1.6 }}>
+                          영문 + 숫자 + 특수문자를 포함해 10자 이상으로 입력해주세요.
+                        </div>
+                      )}
                       {form.password && (
                         <>
                           <input
@@ -663,16 +935,32 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                           <div style={{ fontSize:11, color:'#6f6d6a', lineHeight:1.6, marginTop:4 }}>{form.description}</div>
                         </div>
                       )}
-                      {form.linkUrl && (
+                      {form.linkUrl.trim() && (
                         <div>
                           <span style={{ fontSize:9, fontWeight:600, padding:'2px 6px', borderRadius:6, background:'#f4f3f1', color:'#6f6d6a', marginBottom:4, display:'inline-block' }}>링크</span>
-                          <div style={{ marginTop:4 }}><span style={{ fontSize:10, padding:'4px 8px', borderRadius:8, background:'#f4f3f1', color:'#1a1a1a', fontWeight:600 }}>홈페이지</span></div>
+                          <div style={{ marginTop:4 }}>
+                            <span style={{
+                              display:'inline-flex', alignItems:'center', gap:5, maxWidth:'100%',
+                              fontSize:10, fontWeight:700, padding:'6px 9px', borderRadius:8,
+                              background:'#1c1c1e', color:'#fff',
+                            }}>
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink:0 }}>
+                                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                              </svg>
+                              <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                                {linkHost(form.linkUrl) ?? '집 놀러가기'}
+                              </span>
+                            </span>
+                          </div>
                         </div>
                       )}
                     </div>
                     {form.interiorPreview && (
                       <div style={{ width:80, padding:'8px 8px 8px 0', flexShrink:0 }}>
-                        <img src={form.interiorPreview} alt="" style={{ width:'100%', height:70, objectFit:'cover', borderRadius:8, border:'1px solid #e9e7e4' }} />
+                        <div style={{ width:'100%', aspectRatio:'1/1', borderRadius:8, border:'1px solid #e9e7e4', overflow:'hidden', background:'#faf9f8' }}>
+                          <img src={form.interiorPreview} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
+                        </div>
                       </div>
                     )}
                   </div>
@@ -725,7 +1013,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                         ref={cropRef}
                         width={editW}
                         height={editH}
-                        onPointerDown={onCropDown}
+                        onPointerDown={onCropDown('exterior')}
                         onPointerMove={onCropMove}
                         onPointerUp={onCropUp}
                         onPointerCancel={onCropUp}
@@ -803,9 +1091,20 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                   {cropEnabled ? (
                     <canvas ref={mapPreviewRef} width={pvW} height={pvH} style={{ width:pvW, height:pvH, maxWidth:'92%', maxHeight:'88%', borderRadius:6, border:'1px solid #e9e7e4', display:'block' }} />
                   ) : form.exteriorPreview ? (
-                    <img src={form.exteriorPreview} alt="" style={{ maxWidth:'80%', maxHeight:'80%', objectFit: form.exteriorFit, borderRadius:8, border:'1px solid #e9e7e4' }} />
+                    <img src={form.exteriorPreview} alt="" style={{
+                      maxWidth:'80%', maxHeight:'80%', objectFit: form.exteriorFit, borderRadius:8,
+                      border: neonOn ? `2px solid ${zone.color}` : '1px solid #e9e7e4',
+                      boxShadow: neonOn ? `0 0 12px ${zone.color}` : 'none',
+                    }} />
                   ) : (
-                    <div style={{ textAlign:'center', color:'#97948f', fontSize:12 }}>이미지를 업로드하면<br/>미리보기가 표시됩니다</div>
+                    <div style={{
+                      width:'82%', height:'76%', display:'flex', alignItems:'center', justifyContent:'center',
+                      textAlign:'center', color:'#97948f', fontSize:12, lineHeight:1.6, borderRadius:8,
+                      border: neonOn ? `2px solid ${zone.color}` : '1px dashed #e0ddd9',
+                      boxShadow: neonOn ? `0 0 12px ${zone.color}` : 'none',
+                    }}>
+                      {neonOn ? <span>네온 테두리 적용 예시<br/>이미지를 올리면 함께 보여요</span> : <span>이미지를 업로드하면<br/>미리보기가 표시됩니다</span>}
+                    </div>
                   )}
                 </div>
 
@@ -815,20 +1114,28 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                   <div style={{ display:'flex', gap:8 }}>
                     {(['none','neon'] as const).map(effect => {
                       const active = form.borderEffect === effect
+                      const add = EFFECT_PRICES[effect] ?? 0
                       return (
                       <button key={effect} onClick={() => setForm(f => ({ ...f, borderEffect: effect }))} style={{
                         flex:1, padding:'10px 8px', borderRadius:10, cursor:'pointer',
                         border:`1px solid ${active ? '#1c1c1e' : '#e9e7e4'}`,
                         background: active ? '#1c1c1e' : '#fff',
                         color: active ? '#fff' : '#1a1a1a',
-                        fontSize:11, fontWeight:600, position:'relative',
+                        fontSize:11, fontWeight:600, position:'relative', lineHeight:1.5,
                       }}>
-                        {effect === 'none' ? '기본 (이펙트 없음)' : '네온 테두리'}
+                        {EFFECT_LABELS[effect]}
+                        {add > 0 && <span style={{ display:'block', fontSize:10, fontWeight:700, marginTop:2, color: active ? '#ffffff' : '#6f6d6a' }}>+{formatKRW(add)}</span>}
                         {effect === 'neon' && <span style={{ position:'absolute', top:-8, right:-4, fontSize:8, background:'#dc2626', color:'#fff', padding:'2px 5px', borderRadius:6, fontWeight:600 }}>신규</span>}
                       </button>
                       )
                     })}
                   </div>
+                  {effectPrice > 0 && (
+                    <div style={{ marginTop:8, padding:'8px 10px', borderRadius:10, background:'#fff', border:'1px solid #e9e7e4', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                      <span style={{ fontSize:11, color:'#6f6d6a' }}>이펙트 추가금</span>
+                      <span style={{ fontSize:12, fontWeight:700, color:'#1a1a1a' }}>+{formatKRW(effectPrice)}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -837,8 +1144,65 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
           {/* ── STEP 4: 신청 확인 ── */}
           {step === 4 && (
             <div className="af-row" style={{ display:'flex', gap:0, padding:0 }}>
-              <div className="af-col" style={{ flex:1, padding:'24px 20px' }}>
-                <SectionTitle>입력 내용 확인</SectionTitle>
+              <div className="af-col" style={{ flex:1, padding:'24px 20px', overflowY:'auto', maxHeight:'calc(92vh - 160px)' }}>
+                <SectionTitle>이렇게 보여요</SectionTitle>
+
+                {/* 실제 집 미리보기 카드 */}
+                <div style={{
+                  borderRadius:14, border:'1px solid #e9e7e4', background:'#fff', overflow:'hidden', marginBottom:18,
+                  boxShadow: neonOn ? `0 0 0 2px ${zone.color}, 0 0 18px ${zone.color}66` : '0 1px 3px rgba(0,0,0,0.05)',
+                }}>
+                  {/* 외관 (지도에 올라갈 모습 그대로) */}
+                  <div style={{ height:200, background:'#faf9f8', borderBottom:'1px solid #e9e7e4', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden' }}>
+                    {cropEnabled ? (
+                      <canvas ref={confirmRef} width={cfW} height={cfH} style={{ width:cfW, height:cfH, maxWidth:'92%', maxHeight:'90%', borderRadius:8, display:'block' }} />
+                    ) : form.exteriorPreview ? (
+                      <img src={form.exteriorPreview} alt="외관" style={{ maxWidth:'92%', maxHeight:'90%', objectFit: form.exteriorFit, borderRadius:8, border:'1px solid #e9e7e4' }} />
+                    ) : (
+                      <div style={{ fontSize:12, color:'#97948f', textAlign:'center', lineHeight:1.6 }}>외관 이미지가 없어요<br />이전 단계에서 등록할 수 있어요</div>
+                    )}
+                  </div>
+
+                  {/* 정보 */}
+                  <div style={{ padding:'14px 16px' }}>
+                    <div style={{ display:'flex', gap:6, marginBottom:6, flexWrap:'wrap' }}>
+                      <span style={{ fontSize:10, padding:'3px 7px', borderRadius:6, background:'#f4f3f1', color:'#6f6d6a', fontWeight:600 }}>{selectedCell.address}</span>
+                      {form.nickname && <span style={{ fontSize:10, padding:'3px 7px', borderRadius:6, background:'#1c1c1e', color:'#fff', fontWeight:700 }}>{form.nickname}</span>}
+                      {neonOn && <span style={{ fontSize:10, padding:'3px 7px', borderRadius:6, border:`1px solid ${zone.color}`, color: zone.color, fontWeight:700 }}>{EFFECT_LABELS.neon}</span>}
+                    </div>
+                    <div style={{ fontSize:17, fontWeight:800, color:'#1a1a1a', marginBottom:6 }}>{form.name || '집 이름 없음'}</div>
+
+                    <div style={{ display:'flex', gap:12, alignItems:'flex-start' }}>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontSize:12, color: form.description ? '#6f6d6a' : '#97948f', lineHeight:1.7, whiteSpace:'pre-wrap', wordBreak:'break-word' }}>
+                          {form.description || '소개글 없음'}
+                        </div>
+                        {form.linkUrl.trim() && (
+                          <div style={{ marginTop:10 }}>
+                            <span style={{ display:'inline-flex', alignItems:'center', gap:6, maxWidth:'100%', fontSize:11, fontWeight:700, padding:'7px 10px', borderRadius:8, background:'#1c1c1e', color:'#fff' }}>
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink:0 }}>
+                                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                              </svg>
+                              <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{linkHost(form.linkUrl) ?? '집 놀러가기'}</span>
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      {form.interiorPreview && (
+                        <div style={{ width:88, flexShrink:0 }}>
+                          <div style={{ width:'100%', aspectRatio:'1/1', borderRadius:10, border:'1px solid #e9e7e4', overflow:'hidden', background:'#faf9f8' }}>
+                            <img src={form.interiorPreview} alt="내부" style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
+                          </div>
+                          <div style={{ fontSize:10, color:'#97948f', textAlign:'center', marginTop:4 }}>내부</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 텍스트 요약 */}
+                <div style={{ fontSize:13, fontWeight:700, color:'#1a1a1a', marginBottom:6 }}>입력 내용 확인</div>
                 {[
                   { label:'위치', value:`${selectedCell.address} (${zone.label})` },
                   { label:'크기', value:`${selectedCell.width??1} × ${selectedCell.height??1} (${cellCount}칸)` },
@@ -846,33 +1210,26 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                   { label:'닉네임', value: form.nickname || '(없음)' },
                   { label:'소개글', value: form.description || '(없음)' },
                   { label:'링크', value: form.linkUrl || '(없음)' },
+                  { label:'이펙트', value: effectPrice > 0 ? `${EFFECT_LABELS[form.borderEffect]} (+${formatKRW(effectPrice)})` : EFFECT_LABELS[form.borderEffect] },
                 ].map(({ label, value, highlight }) => (
                   <InfoRow key={label} label={label} value={value} highlight={highlight} />
                 ))}
 
-                {/* 대표 이미지 썸네일 */}
-                {(form.exteriorPreview || form.interiorPreview) && (
-                  <div style={{ marginTop:16 }}>
-                    <div style={{ fontSize:12, color:'#6f6d6a', marginBottom:8, fontWeight:600 }}>대표 이미지</div>
-                    <div style={{ display:'flex', gap:10 }}>
-                      {form.interiorPreview && <img src={form.interiorPreview} alt="내부" style={{ width:80, height:80, objectFit:'cover', borderRadius:10, border:'1px solid #e9e7e4' }} />}
-                      {form.exteriorPreview && (
-                        <div style={{ position:'relative' }}>
-                          <img src={form.exteriorPreview} alt="외관" style={{ width:80, height:80, objectFit:'cover', borderRadius:10, border:'1px solid #e9e7e4' }} />
-                          {form.nickname && <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center' }}><span style={{ fontSize:10, fontWeight:600, color:'#fff', background:'rgba(28,28,30,0.85)', padding:'2px 6px', borderRadius:6 }}>{form.nickname}</span></div>}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
                 {!isEdit && (
-                  <div style={{ marginTop:20, padding:'16px 18px', borderRadius:12, background:'#faf9f8', border:'1px solid #e9e7e4', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                    <div>
-                      <div style={{ fontSize:13, fontWeight:700, color:'#1a1a1a' }}>영구 입주</div>
-                      <div style={{ fontSize:11, color:'#6f6d6a', marginTop:3 }}>한번 입주하면 영구적으로 유지됩니다.</div>
+                  <div style={{ marginTop:20, padding:'16px 18px', borderRadius:12, background:'#faf9f8', border:'1px solid #e9e7e4' }}>
+                    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                      <div>
+                        <div style={{ fontSize:13, fontWeight:700, color:'#1a1a1a' }}>영구 입주</div>
+                        <div style={{ fontSize:11, color:'#6f6d6a', marginTop:3 }}>한번 입주하면 영구적으로 유지됩니다.</div>
+                      </div>
+                      <div style={{ fontSize:18, fontWeight:800, color:'#1a1a1a' }}>{formatKRW(price)}</div>
                     </div>
-                    <div style={{ fontSize:18, fontWeight:800, color:'#1a1a1a' }}>{formatKRW(calcTotalPrice(PERMANENT_DAYS))}</div>
+                    {effectPrice > 0 && (
+                      <div style={{ display:'flex', justifyContent:'space-between', marginTop:10, paddingTop:10, borderTop:'1px solid #e9e7e4', fontSize:12, color:'#6f6d6a' }}>
+                        <span>입주비 {formatKRW(calcTotalPrice(form.days))} + {EFFECT_LABELS[form.borderEffect]}</span>
+                        <span style={{ fontWeight:700, color:'#1a1a1a' }}>+{formatKRW(effectPrice)}</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -898,6 +1255,8 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                 {[
                   { label:'위치', value:`${selectedCell.address} (${zone.label})` },
                   { label:'크기', value:`${selectedCell.width??1} × ${selectedCell.height??1} (${cellCount}칸)` },
+                  { label:'입주비', value: formatKRW(calcTotalPrice(form.days)) },
+                  ...(effectPrice > 0 ? [{ label:`이펙트 · ${EFFECT_LABELS[form.borderEffect]}`, value: `+${formatKRW(effectPrice)}` }] : []),
                   { label:'금액', value: formatKRW(price), highlight: true },
                 ].map(({ label, value, highlight }) => (
                   <InfoRow key={label} label={label} value={value} highlight={highlight} />

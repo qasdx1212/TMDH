@@ -19,9 +19,6 @@ interface FloatingHeaderProps {
   onLogout: () => void
   houses: CellData[]
   onSearchSelect: (house: CellData) => void
-  onZoomIn?: () => void
-  onZoomOut?: () => void
-  onFitView?: () => void
 }
 
 export default function FloatingHeader({
@@ -29,7 +26,6 @@ export default function FloatingHeader({
   activeZone, onZoneFilter,
   onApplyClick, onMyHouseClick, onLogin, onLogout,
   houses, onSearchSelect,
-  onZoomIn, onZoomOut, onFitView,
 }: FloatingHeaderProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchFocused, setSearchFocused] = useState(false)
@@ -267,10 +263,10 @@ export default function FloatingHeader({
         </div>
       </div>
 
-      {/* 하단 줄: 범례 + 줌 컨트롤 */}
+      {/* 하단 줄: 모바일 검색 + 링크 (줌 컨트롤은 StatsPanel 미니맵 옆으로 이동) */}
       <div style={{
         display:'flex', alignItems:'center', justifyContent:'space-between',
-        padding:'0 16px 8px', borderTop:'1px solid #e9e7e4', gap:12,
+        padding:'0 16px 8px', borderTop:'1px solid #e9e7e4', gap:12, minHeight:28,
       }}>
         <div style={{ flex: 1 }} />
 
@@ -317,25 +313,9 @@ export default function FloatingHeader({
           <span style={{ fontSize:10, color:'#97948f' }}>·</span>
           <span style={{ fontSize:10, color:'#6f6d6a' }}>스트릿애드</span>
         </div>
-
-        {/* 줌 컨트롤 */}
-        <div style={{ display:'flex', alignItems:'center', gap:6, flexShrink:0 }}>
-          <span style={{ fontSize:10, color:'#6f6d6a', marginRight:4 }} className="hide-on-mobile">지도 확대/축소</span>
-          <button onClick={onZoomIn} style={zoomBtnStyle} title="확대">+</button>
-          <button onClick={onZoomOut} style={zoomBtnStyle} title="축소">−</button>
-          <button onClick={onFitView} style={{ ...zoomBtnStyle, fontSize:14 }} title="전체 보기">⤢</button>
-        </div>
       </div>
     </div>
   )
-}
-
-const zoomBtnStyle: React.CSSProperties = {
-  width:28, height:28, borderRadius:10, border:'1px solid #e0ddd9',
-  background:'#ffffff', color:'#1a1a1a',
-  fontSize:16, fontWeight:600, cursor:'pointer',
-  display:'flex', alignItems:'center', justifyContent:'center', lineHeight:1,
-  padding:0,
 }
 
 function StatItem({ label, value, valueColor }: { label: string; value: string; valueColor: string }) {
