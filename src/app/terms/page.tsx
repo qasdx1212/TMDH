@@ -130,8 +130,9 @@ export default async function TermsPage({ searchParams }: Props) {
 
             <Section title="제2조 (서비스 소개 및 이용 조건)">
               <p>
-                집.zip은 400×200 격자 지도 위에서 칸(1칸 = 10×10 픽셀)을 구매하여 자신만의 디지털
-                공간(이하 &quot;집&quot;)을 꾸밀 수 있는 인터넷 서비스입니다.
+                집.zip은 400×200 격자(총 <Strong>80,000칸</Strong>) 지도 위에서 칸(1칸 = 10×10
+                픽셀)을 구매하여 자신만의 디지털 공간(이하 &quot;집&quot;)을 꾸밀 수 있는 인터넷
+                서비스입니다.
               </p>
               <ul>
                 <li>서비스는 만 14세 이상인 자가 이용할 수 있습니다.</li>
@@ -169,12 +170,22 @@ export default async function TermsPage({ searchParams }: Props) {
               </p>
               <ul>
                 <li>
-                  가격은 <Strong>칸(픽셀)당 1,000원</Strong>이며, 구매 후 해당 칸은 영구적으로
-                  이용자에게 귀속됩니다.
+                  기본 가격은 <Strong>칸(픽셀)당 1,000원</Strong>부터이며, 최종 결제 금액은 선택한
+                  칸 수와 이용기간에 따라 산정됩니다.
                 </li>
                 <li>
-                  결제 수단: 신용카드·체크카드, 카카오페이, 토스페이 (토스페이먼츠 결제 시스템
-                  이용)
+                  이용기간은 <Strong>30일 · 90일 · 180일 · 365일 · 영구</Strong> 중에서 선택할 수
+                  있으며, 선택한 이용기간 동안 해당 칸은 이용자에게 귀속됩니다. (영구를 선택한
+                  경우 기간 제한 없이 귀속됩니다.)
+                </li>
+                <li>
+                  <Strong>이펙트 추가금</Strong>: 네온 테두리 등 이펙트를 선택하는 경우 기본 이용료
+                  외에 <Strong>추가금(현재 1,000원)</Strong>이 부과됩니다. 추가금은 결제 화면에
+                  합산되어 표시됩니다.
+                </li>
+                <li>
+                  결제 수단: 신용카드·체크카드, 카카오페이 (<Strong>포트원(PortOne)</Strong> 결제
+                  시스템 이용)
                 </li>
                 <li>
                   결제 완료 후 &quot;입주하기&quot; 버튼을 클릭하면 AI 콘텐츠 검수를 거쳐 지도에
@@ -241,7 +252,7 @@ export default async function TermsPage({ searchParams }: Props) {
                   피해가 발생한 경우, 이용자는 회사에 합리적인 보상을 요청할 수 있습니다.
                 </li>
                 <li>
-                  천재지변, 서비스 제공업체(Supabase, 토스페이먼츠 등)의 장애 등 불가항력적
+                  천재지변, 서비스 제공업체(Supabase, 포트원(PortOne) 등)의 장애 등 불가항력적
                   사유로 인한 서비스 중단에 대해서는 회사가 책임을 지지 않습니다.
                 </li>
               </ul>
@@ -293,7 +304,7 @@ export default async function TermsPage({ searchParams }: Props) {
                     ['전화', '0502-1946-1697'],
                     ['이메일', 'qasdx1212@gmail.com'],
                     ['서비스 도메인', 'zipzipworld.com'],
-                    ['약관 시행일', '2025년 7월 1일'],
+                    ['약관 시행일', '2026년 7월 1일'],
                   ].map(([label, value]) => (
                     <tr key={label} style={{ borderBottom: '1px solid #f0efec' }}>
                       <td
@@ -378,7 +389,7 @@ export default async function TermsPage({ searchParams }: Props) {
                 <RefundCase
                   num="③"
                   title="결제 오류"
-                  desc="결제 시스템(토스페이먼츠)의 기술적 오류로 인해 승인 금액이 표시 금액과 다를 경우 차액 또는 전액을 환불합니다."
+                  desc="결제 시스템(포트원(PortOne))의 기술적 오류로 인해 승인 금액이 표시 금액과 다를 경우 차액 또는 전액을 환불합니다."
                 />
               </div>
             </Section>
@@ -426,7 +437,7 @@ export default async function TermsPage({ searchParams }: Props) {
                     <li>가입 이메일 주소</li>
                     <li>결제 일시 및 결제 금액</li>
                     <li>환불 사유 (구체적으로 기재)</li>
-                    <li>주문 번호 (결제 완료 이메일 또는 토스페이먼츠 영수증 참고)</li>
+                    <li>주문 번호 (결제 완료 이메일 또는 포트원(PortOne) 결제 영수증 참고)</li>
                   </ul>
                 </div>
               </div>
@@ -501,7 +512,7 @@ export default async function TermsPage({ searchParams }: Props) {
 
         {/* 하단 공통 */}
         <div style={{ marginTop: 40, fontSize: 12, color: '#97948f', textAlign: 'center' }}>
-          © 2025 집.zip (zipzipworld.com) — 스트릿애드 (StreetAd) · All rights reserved.
+          © 2026 집.zip (zipzipworld.com) — 스트릿애드 (StreetAd) · All rights reserved.
         </div>
       </div>
     </div>

@@ -23,6 +23,7 @@ interface RecentHouse {
 
 export default function StatsPanel({ houses, mapViewport, onZoomIn, onZoomOut, onFitView }: StatsPanelProps) {
   const [recentHouses, setRecentHouses] = useState<RecentHouse[]>([])
+  const [bizOpen, setBizOpen] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const donutRef = useRef<HTMLCanvasElement>(null)
 
@@ -122,6 +123,7 @@ export default function StatsPanel({ houses, mapViewport, onZoomIn, onZoomOut, o
   }, [occupiedCount, pendingCount, availableCount, occupancyRate])
 
   return (
+    <div style={{ background:'#ffffff' }}>
     <div style={{ overflowX:'auto', borderTop:'1px solid #e9e7e4' }}>
     <div style={{
       display:'grid', gridTemplateColumns:'156px 340px 1fr 1fr',
@@ -189,26 +191,97 @@ export default function StatsPanel({ houses, mapViewport, onZoomIn, onZoomOut, o
         ))}
       </div>
     </div>
-    {/* 사업자정보 + 상품/요금 (PG 심사·전자상거래법 표기) */}
+    </div>
+
+    {/* 사업자정보 푸터 (전자상거래법 제10조 표시 의무 — 항상 DOM에 존재, 접힘 시 시각적으로만 숨김) */}
     <div style={{
-      background:'#ffffff', borderTop:'1px solid #e9e7e4',
-      padding:'8px 16px', fontSize:10, color:'#6f6d6a',
-      whiteSpace:'nowrap', overflowX:'auto', minWidth:720,
+      position:'relative',
+      height:28, boxSizing:'border-box',
+      borderTop:'1px solid #e9e7e4', background:'#ffffff',
+      padding:'0 16px',
+      display:'flex', alignItems:'center', gap:10,
+      fontSize:10, color:'#6f6d6a', whiteSpace:'nowrap',
     }}>
-      <strong style={{ color:'#1a1a1a', fontWeight:600 }}>스트릿애드 (StreetAd)</strong>
-      {' · 대표 이승원 · 사업자등록번호 593-17-02833 · 경기도 의정부시 태평로 13, 14층 1401호 · 전화 0502-1946-1697 · '}
-      qasdx1212@gmail.com
-      {' · 통신판매업신고 신고 중 · '}
-      <strong style={{ color:'#1a1a1a', fontWeight:600 }}>집.zip 디지털 공간 이용권 1칸(픽셀) 1,000원~ (이용기간 30일·90일·180일·365일·영구)</strong>
-      {' · '}
-      <a href="/terms" style={{ color:'#6f6d6a', textDecoration:'none' }}>이용약관</a>
-      {' · '}
-      <a href="/privacy" style={{ color:'#6f6d6a', textDecoration:'none' }}>개인정보처리방침</a>
-      {' · '}
-      <a href="/terms?tab=refund" style={{ color:'#6f6d6a', textDecoration:'none' }}>환불정책</a>
+      <button
+        type="button"
+        onClick={() => setBizOpen(v => !v)}
+        aria-expanded={bizOpen}
+        aria-controls="biz-info-panel"
+        style={{
+          display:'flex', alignItems:'center', gap:4,
+          padding:'2px 8px', height:18,
+          borderRadius:8, border:'1px solid #e9e7e4',
+          background: bizOpen ? '#1c1c1e' : '#ffffff',
+          color: bizOpen ? '#ffffff' : '#1a1a1a',
+          fontSize:10, fontWeight:600, lineHeight:1,
+          cursor:'pointer', flexShrink:0,
+        }}
+      >
+        사업자정보
+        <span style={{ fontSize:8, transform: bizOpen ? 'rotate(180deg)' : 'none', lineHeight:1 }}>▾</span>
+      </button>
+
+      <span style={{ color:'#e9e7e4' }}>|</span>
+
+      <a href="/terms" style={footerLinkStyle}>이용약관</a>
+      <span style={{ color:'#e9e7e4' }}>·</span>
+      <a href="/privacy" style={footerLinkStyle}>개인정보처리방침</a>
+      <span style={{ color:'#e9e7e4' }}>·</span>
+      <a href="/terms?tab=refund" style={footerLinkStyle}>환불정책</a>
+
+      {/* 펼침 팝오버 — absolute(위로 열림)라 푸터 높이(28px)는 그대로 유지됨 */}
+      <div
+        id="biz-info-panel"
+        style={{
+          position:'absolute', bottom:'calc(100% + 8px)', left:12,
+          maxWidth:'min(680px, calc(100vw - 24px))',
+          background:'#ffffff',
+          border:'1px solid #e9e7e4', borderRadius:14,
+          boxShadow:'0 4px 20px rgba(0,0,0,0.08)',
+          padding:'14px 16px',
+          fontSize:11, color:'#6f6d6a', lineHeight:1.9,
+          whiteSpace:'normal',
+          visibility: bizOpen ? 'visible' : 'hidden',
+          opacity: bizOpen ? 1 : 0,
+          pointerEvents: bizOpen ? 'auto' : 'none',
+          transition:'opacity 120ms ease',
+          zIndex:20,
+        }}
+      >
+        <div style={{ fontSize:12, fontWeight:700, color:'#1a1a1a', marginBottom:8 }}>
+          스트릿애드 (StreetAd)
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'auto 1fr', columnGap:14, rowGap:2 }}>
+          {[
+            ['대표자', '이승원'],
+            ['사업자등록번호', '593-17-02833'],
+            ['통신판매업신고번호', '신고 중'],
+            ['주소', '경기도 의정부시 태평로 13, 14층 1401호'],
+            ['전화', '0502-1946-1697'],
+            ['이메일', 'qasdx1212@gmail.com'],
+          ].map(([label, value]) => (
+            <div key={label} style={{ display:'contents' }}>
+              <span style={{ color:'#97948f', whiteSpace:'nowrap' }}>{label}</span>
+              <span style={{ color:'#1a1a1a' }}>{value}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{ marginTop:10, paddingTop:10, borderTop:'1px solid #e9e7e4' }}>
+          <div style={{ fontSize:11, fontWeight:600, color:'#1a1a1a' }}>
+            집.zip 디지털 공간 이용권 — 1칸(픽셀) 1,000원~
+          </div>
+          <div style={{ marginTop:2 }}>
+            이용기간 30일 · 90일 · 180일 · 365일 · 영구 / 이펙트(네온 테두리) 선택 시 추가금 1,000원
+          </div>
+        </div>
+      </div>
     </div>
     </div>
   )
+}
+
+const footerLinkStyle: React.CSSProperties = {
+  color:'#6f6d6a', textDecoration:'none', flexShrink:0,
 }
 
 const zoomBtnStyle: React.CSSProperties = {
