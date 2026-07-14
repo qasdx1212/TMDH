@@ -411,10 +411,63 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.interiorImage, intImg, form.interiorScale, form.interiorOffset])
 
+  // ── AI 콘텐츠 검사 ────────────────────────────────────────────────
+  // 이미지는 아직 업로드 전이라 URL이 없음 → 파일을 축소해 base64로 직접 검사한다.
+  // 768px면 유해물 판별에 충분하고 토큰 비용이 크게 줄어듦.
+  const fileToCheckData = async (file: File): Promise<{ media_type: string; data: string } | null> => {
+    try {
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const im = new Image()
+        im.onload = () => resolve(im)
+        im.onerror = reject
+        im.src = URL.createObjectURL(file)
+      })
+      const MAX = 768
+      const scale = Math.min(1, MAX / Math.max(img.naturalWidth, img.naturalHeight))
+      const w = Math.max(1, Math.round(img.naturalWidth * scale))
+      const h = Math.max(1, Math.round(img.naturalHeight * scale))
+      const cv = document.createElement('canvas')
+      cv.width = w; cv.height = h
+      const ctx = cv.getContext('2d')
+      if (!ctx) return null
+      ctx.drawImage(img, 0, 0, w, h)
+      URL.revokeObjectURL(img.src)
+      const dataUrl = cv.toDataURL('image/jpeg', 0.8)
+      return { media_type: 'image/jpeg', data: dataUrl.split(',')[1] }
+    } catch { return null }
+  }
+
+  // 통과하면 null, 막히면 사용자에게 보여줄 사유 문자열을 반환한다.
+  const runContentCheck = async (): Promise<string | null> => {
+    const files = [await buildExteriorFile(), await buildInteriorFile()].filter((f): f is File => !!f)
+    const text = [form.name, form.nickname, form.description, form.linkUrl].filter(Boolean).join('\n')
+    if (files.length === 0 && !text.trim()) return null   // 검사할 내용 없음
+
+    const images = (await Promise.all(files.map(fileToCheckData))).filter((x): x is { media_type: string; data: string } => !!x)
+
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return '로그인이 만료되었어요. 다시 로그인해 주세요.'
+
+    const res = await fetch('/api/check-content', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ images, text }),
+    })
+    const json = await res.json().catch(() => null)
+    if (json?.ok === true) return null
+    return json?.reason ?? '콘텐츠 검사에 실패했어요. 잠시 후 다시 시도해 주세요.'
+  }
+
   // 수정 모드 저장
   const handleEditSave = async () => {
     setLoading(true); setErrorMsg(null)
     try {
+      // ⚠️ 수정 시에도 반드시 재검사. 없으면 깨끗한 이미지로 통과 후 유해물로 교체 가능.
+      setContentChecking(true)
+      const blocked = await runContentCheck()
+      setContentChecking(false)
+      if (blocked) { setErrorMsg(blocked); return }
+
       let exteriorUrl: string | null = selectedCell.exterior_image_url ?? null
       const extFile = await buildExteriorFile()
       if (extFile) exteriorUrl = await uploadImage(extFile, `${userId}/exterior-${selectedCell.address}.jpg`)
@@ -440,7 +493,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
       setShowSuccess(true)
       setTimeout(() => { setShowSuccess(false); onSuccess() }, 2200)
     } catch { setErrorMsg('오류가 발생했습니다.') }
-    finally { setLoading(false) }
+    finally { setLoading(false); setContentChecking(false) }
   }
 
   // 1단계: 이미지 업로드 → DB orders 저장 → Toss 결제창 오픈
@@ -522,9 +575,10 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
   const handleMoveIn = async () => {
     setLoading(true); setContentChecking(true); setErrorMsg(null)
     try {
-      // AI 콘텐츠 검사 시뮬레이션 (2.5s)
-      await new Promise(r => setTimeout(r, 2500))
+      // AI 콘텐츠 검사 (Claude Vision). 통과해야만 업로드·입주가 진행된다.
+      const blocked = await runContentCheck()
       setContentChecking(false)
+      if (blocked) { setErrorMsg(blocked); setLoading(false); return }
 
       // 이미지 업로드
       let exteriorUrl: string | null = selectedCell.exterior_image_url ?? null

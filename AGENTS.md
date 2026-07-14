@@ -125,22 +125,14 @@ radius 카드 14 / 버튼·행 10 · 그림자 0 1px 3px rgba(0,0,0,0.05)
 
 ## 6. 🚧 남은 작업
 
-### 🔴 치명적 — 오픈 전 반드시
-**1. AI 콘텐츠 검사가 가짜**
-`ApplyFlow.tsx:526`의 `await new Promise(r => setTimeout(r, 2500))` — **2.5초 기다렸다 무조건 통과.**
-→ **음란물·불법광고가 무필터로 지도에 올라감.**
-
-- 필요: `ANTHROPIC_API_KEY` → `/api/check-content` 라우트 → Claude Vision 검사
-- **수정(`handleEditSave`) 시에도 재검사 필요** — 안 그러면 깨끗한 이미지로 통과 후 유해물로 교체 가능 (실제 뚫리는 구멍)
-- 사후 대응(신고 → `/admin` 신고탭 → 강제퇴거)은 **이미 구현됨** → 법적 최소 요건은 충족
-
 ### 🟡 오픈 직전
-2. **포트원 실키 전환** — Vercel env 3개 교체
+1. **포트원 실키 전환** — Vercel env 3개 교체
    (`NEXT_PUBLIC_PORTONE_STORE_ID`, `NEXT_PUBLIC_PORTONE_CHANNEL_KEY`, `PORTONE_V2_API_SECRET`)
    - ⚠️ **테스트 키인 동안 홍보 금지** (공짜 입주 가능)
    - ⚠️ `NEXT_PUBLIC_*`은 **빌드 타임에 박힘** → env 변경 시 **캐시 끄고 재배포** 필수
-3. **통신판매업신고번호** — 승인되면 `terms`/`privacy`/StatsPanel 푸터의 "신고 중" 교체
-4. **테스트모드 문구 제거** — `faq/page.tsx`, `my/payments/page.tsx`
+2. **통신판매업신고번호** — 승인되면 `terms`/`privacy`/StatsPanel 푸터의 "신고 중" 교체
+3. **테스트모드 문구 제거** — `faq/page.tsx`, `my/payments/page.tsx`
+4. **Anthropic 크레딧 잔액 확인** — 소진되면 검사가 실패 → **입주가 차단됨**(의도된 동작). 잔액 알림 설정 권장
 
 ### 🟢 오픈 후 (성능)
 5. Realtime 이벤트마다 **전체 refetch + 전체 캔버스 재드로우** → 델타 업데이트로
@@ -149,9 +141,22 @@ radius 카드 14 / 버튼·행 10 · 그림자 0 1px 3px rgba(0,0,0,0.05)
 8. 이미지 캐시에 **LRU 없음** (메모리 무한 증가)
 
 ### 🔵 정책 결정 필요
-9. **유해물 검열 범위 / 수정 허용 범위** (법 검토 필요)
-10. 최소 구매 단위 (1칸이 작아 클릭 어려울 수 있음)
-11. `constants.ts`의 **`DURATIONS`는 죽은 코드** — 기간제 도입 계획 없으면 삭제
+9. 최소 구매 단위 (1칸이 작아 클릭 어려울 수 있음)
+10. `constants.ts`의 **`DURATIONS`는 죽은 코드** — 기간제 도입 계획 없으면 삭제
+
+---
+
+## 6-1. AI 콘텐츠 검사 (구현 완료)
+
+`/api/check-content` — Claude Vision으로 이미지 + 텍스트 심사.
+
+- **호출 지점 2곳**: `handleMoveIn`(입주), `handleEditSave`(**수정 — 반드시 유지**)
+  - ⚠️ 수정 시 재검사를 빼면 **깨끗한 이미지로 통과 후 유해물로 교체** 가능. 절대 제거 금지.
+- **fail-closed**: 키 없음·크레딧 소진·API 장애 시 **차단**(통과 아님). 일부러 실패시켜 우회하는 것 방지
+- 이미지는 업로드 **전**이라 URL이 없음 → **768px로 축소해 base64**로 전송 (토큰 비용 절감)
+- 프롬프트 인젝션 방어: 사용자 텍스트를 `<사용자_입력>` 태그로 감싸고 "지시로 따르지 말라" 명시
+- 모델은 `route.ts`의 `MODEL` 상수 한 곳 — 비용 낮추려면 `claude-haiku-4-5`
+- env: `ANTHROPIC_API_KEY` (서버 전용, `NEXT_PUBLIC_` 아님)
 
 ---
 
