@@ -271,7 +271,7 @@ export default function StatsPanel({ houses, mapViewport, onZoomIn, onZoomOut, o
             집.zip 디지털 공간 이용권 — 1칸(픽셀) 1,000원~
           </div>
           <div style={{ marginTop:2 }}>
-            이용기간 30일 · 90일 · 180일 · 365일 · 영구 / 이펙트(네온 테두리) 선택 시 추가금 1,000원
+            영구 입주 (만료·갱신 없음) / 이펙트(네온 테두리) 선택 시 추가금 1,000원
           </div>
         </div>
       </div>
