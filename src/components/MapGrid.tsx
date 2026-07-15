@@ -85,6 +85,9 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
   const [selection, setSelection] = useState<{ c1: number; r1: number; c2: number; r2: number } | null>(null)
   // 입주 신청 모드: 확정 전 "미리 보여주는" 선택 범위 (드래그·탭탭 공통 결과)
   const [pendingSel, setPendingSel] = useState<{ c1: number; r1: number; c2: number; r2: number } | null>(null)
+  // 시작점 찍은 뒤 칸 수(가로×세로) 직접 입력
+  const [dimW, setDimW] = useState('')
+  const [dimH, setDimH] = useState('')
   const [blockMsg, setBlockMsg] = useState('')
   // 탭-탭 범위 선택 (모바일 드래그 대체, 데스크탑에서도 동일 동작)
   const [rangeMode, setRangeMode] = useState(false)
@@ -353,18 +356,29 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
     if (!pendingSel) return
     const zone = getZone(pendingSel.c1, pendingSel.r1)
     onAreaSelect({ col: pendingSel.c1, row: pendingSel.r1, width: pendingSel.c2 - pendingSel.c1 + 1, height: pendingSel.r2 - pendingSel.r1 + 1, zone })
-    setPendingSel(null)
+    setPendingSel(null); setDimW(''); setDimH('')
   }, [pendingSel, onAreaSelect])
 
   const clearPending = useCallback(() => {
-    setPendingSel(null); anchorRef.current = null; setAnchorUI(null); setSelection(null)
+    setPendingSel(null); anchorRef.current = null; setAnchorUI(null); setSelection(null); setDimW(''); setDimH('')
   }, [])
 
   const exitRangeMode = useCallback(() => {
     rangeModeRef.current = false
     anchorRef.current = null
-    setRangeMode(false); setAnchorUI(null); setSelection(null); setPendingSel(null)
+    setRangeMode(false); setAnchorUI(null); setSelection(null); setPendingSel(null); setDimW(''); setDimH('')
   }, [])
+
+  // 시작점 + 입력한 칸 수(가로×세로)로 범위 확정 (오른쪽·아래로 확장)
+  const applyDims = useCallback(() => {
+    const a = anchorRef.current
+    if (!a) return
+    const wn = parseInt(dimW, 10), hn = parseInt(dimH, 10)
+    if (!wn || !hn || wn < 1 || hn < 1) { setBlockMsg('가로·세로 칸 수를 입력해주세요'); setTimeout(() => setBlockMsg(''), 2500); return }
+    const c2 = a.col + wn - 1, r2 = a.row + hn - 1
+    if (c2 >= GRID_COLS || r2 >= GRID_ROWS) { setBlockMsg('지도 범위를 벗어나요. 시작점을 옮기거나 칸 수를 줄여주세요'); setTimeout(() => setBlockMsg(''), 3000); return }
+    if (setPending(a, { col: c2, row: r2 })) { setDimW(''); setDimH('') }
+  }, [dimW, dimH, setPending])
 
   // 입주 신청 모드 ↔ 탭탭 범위 선택 모드 동기화 (상단 "입주 신청하기" 버튼이 켬)
   useEffect(() => {
@@ -591,7 +605,12 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
 
       {/* 입주 신청 모드 배너 (상단 "입주 신청하기" 버튼으로 켜짐 — 화면 중앙 버튼은 제거함) */}
       {applyMode && (
-        <div style={{ position:'absolute', left:'50%', bottom:16, transform:'translateX(-50%)', zIndex:20, maxWidth:'92vw' }}>
+        <div
+          onMouseDown={e => e.stopPropagation()}
+          onMouseUp={e => e.stopPropagation()}
+          onPointerDown={e => e.stopPropagation()}
+          style={{ position:'absolute', left:'50%', bottom:16, transform:'translateX(-50%)', zIndex:20, maxWidth:'92vw' }}
+        >
           <div style={{
             display:'flex', alignItems:'center', gap:10,
             padding:'10px 12px 10px 16px', borderRadius:10, border:'1px solid #e9e7e4',
@@ -612,9 +631,33 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
                   style={{ padding:'7px 12px', borderRadius:8, border:'1px solid #e0ddd9', background:'#fff', color:'#1a1a1a', fontSize:12, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap' }}
                 >다시 선택</button>
               </>
+            ) : anchorUI ? (
+              <>
+                <span style={{ fontSize:13, color:'#1a1a1a', fontWeight:600, whiteSpace:'nowrap' }}>끝 칸 클릭</span>
+                <span style={{ fontSize:12, color:'#97948f', whiteSpace:'nowrap' }}>또는 칸 수 입력</span>
+                <div style={{ display:'flex', alignItems:'center', gap:5, whiteSpace:'nowrap' }}>
+                  <input
+                    type="number" min={1} inputMode="numeric" placeholder="가로" value={dimW}
+                    onChange={e => setDimW(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') applyDims() }}
+                    style={{ width:52, padding:'6px 8px', borderRadius:8, border:'1px solid #e0ddd9', fontSize:13, textAlign:'center', outline:'none' }}
+                  />
+                  <span style={{ fontSize:13, color:'#6f6d6a', fontWeight:600 }}>×</span>
+                  <input
+                    type="number" min={1} inputMode="numeric" placeholder="세로" value={dimH}
+                    onChange={e => setDimH(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') applyDims() }}
+                    style={{ width:52, padding:'6px 8px', borderRadius:8, border:'1px solid #e0ddd9', fontSize:13, textAlign:'center', outline:'none' }}
+                  />
+                  <button
+                    onClick={applyDims}
+                    style={{ padding:'6px 12px', borderRadius:8, border:'1px solid #1c1c1e', background:'#1c1c1e', color:'#fff', fontSize:12, fontWeight:700, cursor:'pointer' }}
+                  >적용</button>
+                </div>
+              </>
             ) : (
               <span style={{ fontSize:13, color:'#1a1a1a', fontWeight:600, whiteSpace:'nowrap' }}>
-                {anchorUI ? '끝 칸을 클릭하세요 (한 칸이면 같은 칸 다시)' : '입주할 칸을 드래그하거나 두 번 클릭하세요'}
+                입주할 칸을 드래그하거나, 시작 칸을 클릭하세요
               </span>
             )}
             <button
