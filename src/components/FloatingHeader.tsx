@@ -30,6 +30,7 @@ export default function FloatingHeader({
   const [searchQuery, setSearchQuery] = useState('')
   const [searchFocused, setSearchFocused] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [alarmOpen, setAlarmOpen] = useState(false)
   const searchRef = useRef<HTMLDivElement>(null)
   const profileRef = useRef<HTMLDivElement>(null)
   const occupancyRate = ((occupiedCount / totalCells) * 100).toFixed(1)
@@ -151,6 +152,31 @@ export default function FloatingHeader({
             border:'1px solid #1c1c1e',
             display:'flex', alignItems:'center', gap:6, whiteSpace:'nowrap',
           }}><span className="fh-btn-icon">✏️</span><span className="fh-btn-label">입주 신청하기</span></button>
+
+          <div style={{ position:'relative', flexShrink:0 }}>
+            <button onClick={() => setAlarmOpen(o => !o)} style={{
+              width:40, height:40, borderRadius:10,
+              border: alarmOpen ? '1px solid #1c1c1e' : '1px solid #e0ddd9',
+              background:'#ffffff', color:'#1a1a1a', fontSize:17, cursor:'pointer',
+              display:'flex', alignItems:'center', justifyContent:'center',
+            }}>🔔</button>
+            {alarmOpen && (
+              <>
+                {/* 바깥 클릭 닫기 */}
+                <div onClick={() => setAlarmOpen(false)} style={{ position:'fixed', inset:0, zIndex:399 }} />
+                <div style={{
+                  position:'absolute', top:'calc(100% + 6px)', right:0, width:240, zIndex:400,
+                  background:'#ffffff', border:'1px solid #e9e7e4', borderRadius:12,
+                  boxShadow:'0 8px 28px rgba(0,0,0,0.10)', overflow:'hidden',
+                }}>
+                  <div style={{ padding:'12px 14px', borderBottom:'1px solid #f0efec', fontSize:13, fontWeight:700, color:'#1a1a1a' }}>알림</div>
+                  <div style={{ padding:'28px 14px', textAlign:'center', fontSize:12.5, color:'#97948f', lineHeight:1.7 }}>
+                    새로운 알림이 없어요
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
 
           {userId && (
             <button onClick={onMyHouseClick} className="fh-action-btn" style={{
