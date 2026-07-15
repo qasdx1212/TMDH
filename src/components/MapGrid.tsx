@@ -361,6 +361,7 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
 
   const clearPending = useCallback(() => {
     setPendingSel(null); anchorRef.current = null; setAnchorUI(null); setSelection(null); setDimW(''); setDimH('')
+    selectStart.current = null; selectEnd.current = null; isSelecting.current = false   // 첫 클릭 상태로 완전 초기화
   }, [])
 
   const exitRangeMode = useCallback(() => {
@@ -483,7 +484,7 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
     if (e.button === 2) return
     // 입주 신청 모드에서도 드래그 선택 허용 (아래에서 클릭/드래그를 구분함)
     mouseDownPos.current = { x: e.clientX, y: e.clientY }
-    isMouseDown.current = true; setTooltip(null)
+    isMouseDown.current = true; isSelecting.current = false; setTooltip(null)  // 새 누름마다 드래그 상태 초기화
     if (e.button === 1 || e.altKey) {
       isPanning.current = true; setCursor('grabbing')
       panStart.current = { x: e.clientX - lastOffset.current.x, y: e.clientY - lastOffset.current.y }

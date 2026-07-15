@@ -29,7 +29,6 @@ export default function FloatingHeader({
 }: FloatingHeaderProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchFocused, setSearchFocused] = useState(false)
-  const [alarmMsg, setAlarmMsg] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const searchRef = useRef<HTMLDivElement>(null)
   const profileRef = useRef<HTMLDivElement>(null)
@@ -152,22 +151,6 @@ export default function FloatingHeader({
             border:'1px solid #1c1c1e',
             display:'flex', alignItems:'center', gap:6, whiteSpace:'nowrap',
           }}><span className="fh-btn-icon">✏️</span><span className="fh-btn-label">입주 신청하기</span></button>
-
-          <div style={{ position:'relative', flexShrink:0 }}>
-            <button onClick={() => { setAlarmMsg(true); setTimeout(() => setAlarmMsg(false), 2000) }} style={{
-              width:40, height:40, borderRadius:10, border:'1px solid #e0ddd9',
-              background:'#ffffff', color:'#1a1a1a', fontSize:17, cursor:'pointer',
-              display:'flex', alignItems:'center', justifyContent:'center',
-            }}>🔔</button>
-            {alarmMsg && (
-              <div style={{
-                position:'absolute', top:'calc(100% + 6px)', right:0, whiteSpace:'nowrap',
-                background:'#ffffff', border:'1px solid #e9e7e4', borderRadius:10,
-                padding:'8px 14px', fontSize:11, color:'#1a1a1a', zIndex:400,
-                boxShadow:'0 1px 3px rgba(0,0,0,0.05)',
-              }}>알림 기능 준비 중이에요</div>
-            )}
-          </div>
 
           {userId && (
             <button onClick={onMyHouseClick} className="fh-action-btn" style={{
