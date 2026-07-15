@@ -568,9 +568,16 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       )}
 
       {/* 우측 세로 스크롤바 — 지도가 화면보다 길 때 드래그로 상하 이동 */}
-      <VScrollbar viewH={viewSize.h} scale={scale} offsetY={offset.y}
+      <Scrollbar axis="y" view={viewSize.h} mapSize={H * scale} pos={offset.y}
         onScrollTo={(y) => {
           const clamped = clampOffset(lastOffset.current.x, y, scaleRef.current)
+          lastOffset.current = clamped; setOffset(clamped)
+        }} />
+
+      {/* 하단 가로 스크롤바 — 지도가 화면보다 넓을 때 드래그로 좌우 이동 */}
+      <Scrollbar axis="x" view={viewSize.w} mapSize={W * scale} pos={offset.x}
+        onScrollTo={(x) => {
+          const clamped = clampOffset(x, lastOffset.current.y, scaleRef.current)
           lastOffset.current = clamped; setOffset(clamped)
         }} />
 
@@ -626,35 +633,36 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
   )
 }
 
-// 우측 세로 스크롤바: 지도(H*scale)가 뷰 높이보다 클 때만 표시. 트랙 클릭·썸 드래그로 offset.y 변경.
-function VScrollbar({ viewH, scale, offsetY, onScrollTo }: {
-  viewH: number; scale: number; offsetY: number; onScrollTo: (y: number) => void
+// 스크롤바 (세로 axis='y' / 가로 axis='x' 겸용):
+// 지도(mapSize)가 뷰(view)보다 클 때만 표시. 트랙 클릭·썸 드래그로 offset 변경.
+function Scrollbar({ axis, view, mapSize, pos, onScrollTo }: {
+  axis: 'x' | 'y'; view: number; mapSize: number; pos: number; onScrollTo: (v: number) => void
 }) {
-  const mapH = H * scale
   const trackRef = useRef<HTMLDivElement>(null)
-  const dragRef = useRef<{ startY: number; startOffset: number } | null>(null)
-  if (viewH <= 0 || mapH <= viewH + 1) return null   // 스크롤 불필요
+  const dragRef = useRef<{ start: number; startThumb: number } | null>(null)
+  if (view <= 0 || mapSize <= view + 1) return null   // 스크롤 불필요
 
   const PAD = 8
-  const trackH = viewH - PAD * 2
-  const thumbH = Math.max(28, trackH * (viewH / mapH))
-  const scrollRange = mapH - viewH               // -offsetY 의 최대값
-  const thumbTravel = trackH - thumbH
-  const thumbTop = scrollRange > 0 ? (-offsetY / scrollRange) * thumbTravel : 0
+  const GAP = 14                 // 반대 축 스크롤바와 겹치지 않게 여백
+  const trackLen = view - PAD - GAP
+  const thumbLen = Math.max(28, trackLen * (view / mapSize))
+  const scrollRange = mapSize - view          // -pos 의 최대값
+  const thumbTravel = trackLen - thumbLen
+  const thumbPos = scrollRange > 0 ? (-pos / scrollRange) * thumbTravel : 0
 
-  // 썸 위치(px) → offset.y 로 환산
-  const posToOffset = (topPx: number) => {
-    const t = Math.max(0, Math.min(thumbTravel, topPx))
+  const posToOffset = (px: number) => {
+    const t = Math.max(0, Math.min(thumbTravel, px))
     return -(t / thumbTravel) * scrollRange
   }
 
   const onThumbDown = (e: React.PointerEvent) => {
     e.stopPropagation(); e.preventDefault()
-    dragRef.current = { startY: e.clientY, startOffset: thumbTop }
+    const client = axis === 'y' ? e.clientY : e.clientX
+    dragRef.current = { start: client, startThumb: thumbPos }
     const move = (ev: PointerEvent) => {
       if (!dragRef.current) return
-      const next = dragRef.current.startOffset + (ev.clientY - dragRef.current.startY)
-      onScrollTo(posToOffset(next))
+      const c = axis === 'y' ? ev.clientY : ev.clientX
+      onScrollTo(posToOffset(dragRef.current.startThumb + (c - dragRef.current.start)))
     }
     const up = () => { dragRef.current = null; window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up) }
     window.addEventListener('pointermove', move)
@@ -664,27 +672,24 @@ function VScrollbar({ viewH, scale, offsetY, onScrollTo }: {
   const onTrackDown = (e: React.PointerEvent) => {
     if (e.target !== trackRef.current) return
     const rect = trackRef.current!.getBoundingClientRect()
-    const clickY = e.clientY - rect.top - thumbH / 2
-    onScrollTo(posToOffset(clickY))
+    const click = axis === 'y' ? e.clientY - rect.top : e.clientX - rect.left
+    onScrollTo(posToOffset(click - thumbLen / 2))
   }
+
+  const trackStyle: React.CSSProperties = axis === 'y'
+    ? { position:'absolute', right:4, top:PAD, width:8, height:trackLen }
+    : { position:'absolute', bottom:4, left:PAD, height:8, width:trackLen }
+  const thumbStyle: React.CSSProperties = axis === 'y'
+    ? { position:'absolute', left:0, top:thumbPos, width:8, height:thumbLen }
+    : { position:'absolute', top:0, left:thumbPos, height:8, width:thumbLen }
 
   return (
     <div
       ref={trackRef}
       onPointerDown={onTrackDown}
-      style={{
-        position:'absolute', right:4, top:PAD, width:8, height:trackH,
-        borderRadius:8, background:'rgba(0,0,0,0.05)', zIndex:15, touchAction:'none',
-        cursor:'pointer',
-      }}
+      style={{ ...trackStyle, borderRadius:8, background:'rgba(0,0,0,0.05)', zIndex:15, touchAction:'none', cursor:'pointer' }}
     >
-      <div
-        onPointerDown={onThumbDown}
-        style={{
-          position:'absolute', left:0, top:thumbTop, width:8, height:thumbH,
-          borderRadius:8, background:'rgba(28,28,30,0.32)', cursor:'pointer',
-        }}
-      />
+      <div onPointerDown={onThumbDown} style={{ ...thumbStyle, borderRadius:8, background:'rgba(28,28,30,0.32)', cursor:'pointer' }} />
     </div>
   )
 }
