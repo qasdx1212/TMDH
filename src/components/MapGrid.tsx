@@ -675,13 +675,14 @@ function VScrollbar({ viewH, scale, offsetY, onScrollTo }: {
       style={{
         position:'absolute', right:4, top:PAD, width:8, height:trackH,
         borderRadius:8, background:'rgba(0,0,0,0.05)', zIndex:15, touchAction:'none',
+        cursor:'pointer',
       }}
     >
       <div
         onPointerDown={onThumbDown}
         style={{
           position:'absolute', left:0, top:thumbTop, width:8, height:thumbH,
-          borderRadius:8, background:'rgba(28,28,30,0.32)', cursor:'grab',
+          borderRadius:8, background:'rgba(28,28,30,0.32)', cursor:'pointer',
         }}
       />
     </div>
