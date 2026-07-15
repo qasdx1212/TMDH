@@ -45,7 +45,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ### ⏳ 진행 중 (외부 대기)
 - **포트원 실연동 심사** — NHN KCP · 한국결제네트웍스 · 카카오페이 (현재 **테스트 키**)
-- **통신판매업신고** — 등록면허세 납부 완료, 정부 승인 대기
+- ✅ **통신판매업신고 완료** — 제 2026-의정부흥선-0490 호 (사이트 반영 완료)
 
 ---
 
@@ -130,8 +130,7 @@ radius 카드 14 / 버튼·행 10 · 그림자 0 1px 3px rgba(0,0,0,0.05)
    (`NEXT_PUBLIC_PORTONE_STORE_ID`, `NEXT_PUBLIC_PORTONE_CHANNEL_KEY`, `PORTONE_V2_API_SECRET`)
    - ⚠️ **테스트 키인 동안 홍보 금지** (공짜 입주 가능)
    - ⚠️ `NEXT_PUBLIC_*`은 **빌드 타임에 박힘** → env 변경 시 **캐시 끄고 재배포** 필수
-2. **통신판매업신고번호** — 승인되면 `terms`/`privacy`/StatsPanel 푸터의 "신고 중" 교체
-3. **테스트모드 문구 제거** — `faq/page.tsx`, `my/payments/page.tsx`
+2. **테스트모드 문구 제거** — `faq/page.tsx`, `my/payments/page.tsx`
 4. **Anthropic 크레딧 잔액 확인** — 소진되면 검사가 실패 → **입주가 차단됨**(의도된 동작). 잔액 알림 설정 권장
 
 ### 🟢 오픈 후 (성능)
