@@ -7,7 +7,6 @@ import type { CellData } from '@/types/cell'
 interface FloatingHeaderProps {
   occupiedCount: number
   totalCells: number
-  totalDonation: number
   userId?: string
   userEmail?: string
   isAdmin?: boolean
@@ -22,7 +21,7 @@ interface FloatingHeaderProps {
 }
 
 export default function FloatingHeader({
-  occupiedCount, totalCells, totalDonation, userId, userEmail, isAdmin,
+  occupiedCount, totalCells, userId, userEmail, isAdmin,
   activeZone, onZoneFilter,
   onApplyClick, onMyHouseClick, onLogin, onLogout,
   houses, onSearchSelect,
@@ -95,7 +94,7 @@ export default function FloatingHeader({
         <div style={{ display:'flex', gap:24 }} className="hide-on-mobile">
           <StatItem label="전체 면적" value={`${totalCells.toLocaleString()}칸`} valueColor="#1a1a1a" />
           <StatItem label="분양률" value={`${occupancyRate}%`} valueColor="#1a1a1a" />
-          <StatItem label="누적 기부금" value={`₩ ${totalDonation.toLocaleString()}`} valueColor="#1a1a1a" />
+          <StatItem label="입주한 집" value={`${occupiedCount.toLocaleString()}채`} valueColor="#1a1a1a" />
         </div>
 
         <div style={{ flex:1 }} />

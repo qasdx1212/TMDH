@@ -50,7 +50,7 @@ export default function CertificateModal({ house, onClose }: CertificateModalPro
     ctx.font = `600 13px ${SANS}`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillText('집.zip · 디지털 부동산 기부 증서', W / 2, 52)
+    ctx.fillText('집.zip · 디지털 공간 소유 증서', W / 2, 52)
 
     // 집 이름
     ctx.fillStyle = '#1a1a1a'
@@ -117,7 +117,7 @@ export default function CertificateModal({ house, onClose }: CertificateModalPro
     const canvas = canvasRef.current
     if (!canvas) return
     const link = document.createElement('a')
-    link.download = `집zip-기부증서-${house.address}.png`
+    link.download = `집zip-소유증서-${house.address}.png`
     link.href = canvas.toDataURL('image/png')
     link.click()
   }
@@ -158,7 +158,7 @@ export default function CertificateModal({ house, onClose }: CertificateModalPro
         }}
       >
         <div style={{ padding: '16px 20px', borderBottom: '1px solid #e9e7e4', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a' }}>기부 증서</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a' }}>소유 증서</div>
           <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 10, background: '#f4f3f1', border: '1px solid #e9e7e4', color: '#6f6d6a', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>×</button>
         </div>
 

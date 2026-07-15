@@ -176,7 +176,7 @@ export default function MyHousesDrawer({ userId, isAdmin, onClose, onEdit, onRef
                       : ''}
                   </div>
 
-                  {/* 버튼 행 1: 수정 / 비공개 토글 / 기부증서 */}
+                  {/* 버튼 행 1: 수정 / 비공개 토글 / 소유증서 */}
                   <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
                     <button onClick={() => onEdit(h)} style={{
                       flex: 2, padding: '9px', borderRadius: 10,

@@ -58,7 +58,6 @@ export default function Home() {
   }, [selectedCell])
 
   const occupiedCount = houses.filter(h => h.status === 'occupied').length
-  const totalDonation = occupiedCount * 5000
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -169,7 +168,6 @@ export default function Home() {
       <FloatingHeader
         occupiedCount={occupiedCount}
         totalCells={80000}
-        totalDonation={totalDonation}
         userId={userId}
         userEmail={userEmail}
         isAdmin={isAdmin}
