@@ -244,6 +244,7 @@ export default function Home() {
         <ApplyFlow
           selectedCell={applyCell}
           userId={userId}
+          isAdmin={isAdmin}
           onClose={() => { setShowApply(false); setApplyCell(null) }}
           onSuccess={handleApplySuccess}
         />

@@ -11,6 +11,7 @@ import type { CellData } from '@/types/cell'
 interface ApplyFlowProps {
   selectedCell: CellData
   userId: string
+  isAdmin?: boolean
   onClose: () => void
   onSuccess: () => void
 }
@@ -123,7 +124,7 @@ function linkHost(url: string): string | null {
   } catch { return null }
 }
 
-export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: ApplyFlowProps) {
+export default function ApplyFlow({ selectedCell, userId, isAdmin, onClose, onSuccess }: ApplyFlowProps) {
   const isEdit = selectedCell.status === 'occupied'
   const [step, setStep] = useState<Step>(isEdit ? 2 : 1)
   const [form, setForm] = useState<FormData>({
@@ -497,6 +498,59 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
     finally { setLoading(false); setContentChecking(false) }
   }
 
+  // 관리자 전용: 결제 없이 즉시 입주 (테스트/운영용). AI 검사도 건너뜀.
+  const handleAdminMoveIn = async () => {
+    if (!isAdmin) return
+    setLoading(true); setErrorMsg(null)
+    try {
+      let exteriorUrl: string | null = selectedCell.exterior_image_url ?? null
+      const extFile = await buildExteriorFile()
+      if (extFile) exteriorUrl = await uploadImage(extFile, `${userId}/exterior-${selectedCell.address}.jpg`)
+      let interiorUrl: string | null = selectedCell.interior_image_url ?? null
+      const intFile = await buildInteriorFile()
+      if (intFile) interiorUrl = await uploadImage(intFile, `${userId}/interior-${selectedCell.address}.jpg`)
+
+      const expiresAt = form.days === PERMANENT_DAYS ? null : new Date(Date.now() + form.days * 86400000).toISOString()
+      const occupiedAt = new Date().toISOString()
+      const col = selectedCell.col, row = selectedCell.row
+      const width = selectedCell.width ?? 1, height = selectedCell.height ?? 1
+      const pwdHash = form.password ? await hashPwd(form.password) : null
+
+      const { error } = await supabase.from('houses').update({
+        user_id: userId, name: form.name || null, nickname: form.nickname || null,
+        description: form.description || null, link_url: safeUrl(form.linkUrl),
+        exterior_image_url: exteriorUrl, interior_image_url: interiorUrl,
+        border_effect: form.borderEffect, status: 'occupied', is_visible: true,
+        width, height, occupied_at: occupiedAt, expires_at: expiresAt,
+        is_permanent: form.days === PERMANENT_DAYS,
+        password_hash: pwdHash, has_password: !!pwdHash,
+      }).eq('address', selectedCell.address)
+      if (error) { setErrorMsg(`저장 실패: ${toUserMessage(error)}`); setLoading(false); return }
+
+      if (width > 1 || height > 1) {
+        for (let c = col; c < col + width; c++) {
+          for (let r = row; r < row + height; r++) {
+            if (c === col && r === row) continue
+            await supabase.from('houses').update({
+              user_id: userId, status: 'occupied', parent_address: selectedCell.address,
+              occupied_at: occupiedAt, expires_at: expiresAt, is_permanent: form.days === PERMANENT_DAYS,
+            }).eq('address', getAddress(c, r))
+          }
+        }
+      }
+
+      await supabase.from('payments').insert({
+        user_id: userId, house_address: selectedCell.address,
+        amount: 0, type: 'admin', method: 'admin', status: 'completed',
+      })
+
+      clearDraft()
+      setShowSuccess(true)
+      setTimeout(() => { setShowSuccess(false); onSuccess() }, 2200)
+    } catch { setErrorMsg('오류가 발생했습니다. 다시 시도해주세요.') }
+    finally { setLoading(false) }
+  }
+
   // 1단계: AI 콘텐츠 검사 → 이미지 업로드 → DB orders 저장 → 포트원 결제창 오픈
   const handlePayment = async () => {
     setLoading(true); setErrorMsg(null)
@@ -652,8 +706,8 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
     // 비밀번호를 입력했다면(신규는 필수) 규칙 충족 + 확인 일치해야 통과
     if (step === 2 && form.password && !pwdOk) return false
     if (step === 2 && form.password && form.password !== form.passwordConfirm) return false
-    // 결제 단계: 필수 동의 3개를 모두 체크해야 결제 버튼 활성화
-    if (step === lastStep && !isEdit && !paymentDone && !allAgreed) return false
+    // 결제 단계: 필수 동의 3개를 모두 체크해야 결제 버튼 활성화 (관리자 무료 입주는 예외)
+    if (step === lastStep && !isEdit && !paymentDone && !allAgreed && !isAdmin) return false
     return true
   }
 
@@ -1440,6 +1494,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
             onClick={() => {
               if (step < lastStep) { setStep(s => (s + 1) as Step) }
               else if (isEdit) { handleEditSave() }
+              else if (isAdmin) { handleAdminMoveIn() }   // 관리자: 결제 없이 즉시 입주
               else if (!paymentDone) { handlePayment() }
               else { handleMoveIn() }
             }}
@@ -1457,6 +1512,8 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
               ? '다음 단계로'
               : isEdit
               ? '저장하기'
+              : isAdmin
+              ? '관리자 무료 입주'
               : paymentDone
               ? '입주하기'
               : `결제하기 ${formatKRW(price)}`}
