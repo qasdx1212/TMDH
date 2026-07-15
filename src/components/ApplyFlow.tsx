@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { ZONES, ZONE_PRICES, DURATIONS, PERMANENT_DAYS, PERMANENT_MULTIPLIER, EFFECT_PRICES, EFFECT_LABELS, calcPrice, formatKRW, getAddress, getZone } from '@/lib/constants'
+import { safeUrl } from '@/lib/url'
 import { hashPwd } from '@/lib/hash'
 import { toUserMessage } from '@/lib/errorMessage'
 import type { CellData } from '@/types/cell'
@@ -483,7 +484,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
 
       const { error } = await supabase.from('houses').update({
         name: form.name || null, nickname: form.nickname || null,
-        description: form.description || null, link_url: form.linkUrl || null,
+        description: form.description || null, link_url: safeUrl(form.linkUrl),
         exterior_image_url: exteriorUrl, interior_image_url: interiorUrl,
         border_effect: form.borderEffect,
         ...pwdFields,
@@ -496,11 +497,18 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
     finally { setLoading(false); setContentChecking(false) }
   }
 
-  // 1단계: 이미지 업로드 → DB orders 저장 → Toss 결제창 오픈
+  // 1단계: AI 콘텐츠 검사 → 이미지 업로드 → DB orders 저장 → 포트원 결제창 오픈
   const handlePayment = async () => {
     setLoading(true); setErrorMsg(null)
     try {
-      // 이미지 먼저 업로드 (Toss 리다이렉트 전에 완료해야 함)
+      // ⚠️ 결제·업로드 전에 유해 콘텐츠 검사. 통과해야만 결제 진행.
+      //    (실제 입주는 payment-redirect에서 일어나므로 반드시 결제 전에 걸러야 함)
+      setContentChecking(true)
+      const blocked = await runContentCheck()
+      setContentChecking(false)
+      if (blocked) { setErrorMsg(blocked); setLoading(false); return }
+
+      // 이미지 먼저 업로드 (결제 리다이렉트 전에 완료해야 함)
       let exteriorUrl: string | null = selectedCell.exterior_image_url ?? null
       const extFile = await buildExteriorFile()
       if (extFile) exteriorUrl = await uploadImage(extFile, `${userId}/exterior-${selectedCell.address}.jpg`)
@@ -519,7 +527,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
         width: selectedCell.width ?? 1, height: selectedCell.height ?? 1,
         zone: selectedCell.zone,
         name: form.name || null, nickname: form.nickname || null,
-        description: form.description || null, link_url: form.linkUrl || null,
+        description: form.description || null, link_url: safeUrl(form.linkUrl),
         border_effect: form.borderEffect, days: form.days,
         exterior_url: exteriorUrl, interior_url: interiorUrl,
         amount: price, pay_method: payMethod,
@@ -567,7 +575,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
       window.location.href = `${window.location.origin}/payment-redirect?paymentId=${orderId}`
     } catch (e: unknown) {
       setErrorMsg(toUserMessage(e))
-      setLoading(false)
+      setLoading(false); setContentChecking(false)
     }
   }
 
@@ -597,7 +605,7 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
 
       const { error } = await supabase.from('houses').update({
         user_id: userId, name: form.name || null, nickname: form.nickname || null,
-        description: form.description || null, link_url: form.linkUrl || null,
+        description: form.description || null, link_url: safeUrl(form.linkUrl),
         exterior_image_url: exteriorUrl, interior_image_url: interiorUrl,
         border_effect: form.borderEffect, status: 'occupied', is_visible: true,
         width, height, occupied_at: occupiedAt, expires_at: expiresAt,

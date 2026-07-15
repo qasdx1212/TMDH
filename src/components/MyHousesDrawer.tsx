@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { ZONES } from '@/lib/constants'
+import { safeUrl } from '@/lib/url'
 import type { CellData } from '@/types/cell'
 import CertificateModal from './CertificateModal'
 
@@ -205,8 +206,8 @@ export default function MyHousesDrawer({ userId, isAdmin, onClose, onEdit, onRef
 
                   {/* 버튼 행 2: 방문 링크 / 퇴거 */}
                   <div style={{ display: 'flex', gap: 6 }}>
-                    {h.link_url && (
-                      <a href={h.link_url} target="_blank" rel="noopener noreferrer" style={{
+                    {safeUrl(h.link_url) && (
+                      <a href={safeUrl(h.link_url)!} target="_blank" rel="noopener noreferrer" style={{
                         flex: 1, padding: '9px', borderRadius: 10,
                         border: '1px solid #e0ddd9', background: '#ffffff',
                         color: '#1a1a1a', fontSize: 12, fontWeight: 600,
