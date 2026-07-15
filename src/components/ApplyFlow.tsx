@@ -1206,14 +1206,18 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                   borderRadius:14, border:'1px solid #e9e7e4', background:'#fff', overflow:'hidden', marginBottom:18,
                   boxShadow: neonOn ? `0 0 0 2px ${zone.color}, 0 0 18px ${zone.color}66` : '0 1px 3px rgba(0,0,0,0.05)',
                 }}>
-                  {/* 외관 (지도에 올라갈 모습 그대로) */}
-                  <div style={{ height:200, background:'#faf9f8', borderBottom:'1px solid #e9e7e4', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden' }}>
+                  {/* 대표 이미지 (지도에 올라갈 모습 그대로) */}
+                  <div style={{ padding:'10px 14px 0', display:'flex', alignItems:'center', gap:6 }}>
+                    <span style={{ fontSize:11, fontWeight:700, padding:'3px 8px', borderRadius:6, background:'#1c1c1e', color:'#fff' }}>대표 이미지</span>
+                    <span style={{ fontSize:11, color:'#6f6d6a' }}>지도(메인 화면)에 보이는 이미지예요</span>
+                  </div>
+                  <div style={{ height:186, background:'#faf9f8', borderBottom:'1px solid #e9e7e4', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden', margin:'8px 0 0' }}>
                     {cropEnabled ? (
                       <canvas ref={confirmRef} width={cfW} height={cfH} style={{ width:cfW, height:cfH, maxWidth:'92%', maxHeight:'90%', borderRadius:8, display:'block' }} />
                     ) : form.exteriorPreview ? (
-                      <img src={form.exteriorPreview} alt="외관" style={{ maxWidth:'92%', maxHeight:'90%', objectFit: form.exteriorFit, borderRadius:8, border:'1px solid #e9e7e4' }} />
+                      <img src={form.exteriorPreview} alt="대표 이미지" style={{ maxWidth:'92%', maxHeight:'90%', objectFit: form.exteriorFit, borderRadius:8, border:'1px solid #e9e7e4' }} />
                     ) : (
-                      <div style={{ fontSize:12, color:'#97948f', textAlign:'center', lineHeight:1.6 }}>외관 이미지가 없어요<br />이전 단계에서 등록할 수 있어요</div>
+                      <div style={{ fontSize:12, color:'#97948f', textAlign:'center', lineHeight:1.6 }}>대표 이미지가 없어요<br />이전 단계에서 등록할 수 있어요</div>
                     )}
                   </div>
 
@@ -1246,9 +1250,10 @@ export default function ApplyFlow({ selectedCell, userId, onClose, onSuccess }: 
                       {form.interiorPreview && (
                         <div style={{ width:88, flexShrink:0 }}>
                           <div style={{ width:'100%', aspectRatio:'1/1', borderRadius:10, border:'1px solid #e9e7e4', overflow:'hidden', background:'#faf9f8' }}>
-                            <img src={form.interiorPreview} alt="내부" style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
+                            <img src={form.interiorPreview} alt="내관" style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
                           </div>
-                          <div style={{ fontSize:10, color:'#97948f', textAlign:'center', marginTop:4 }}>내부</div>
+                          <div style={{ fontSize:10, color:'#6f6d6a', textAlign:'center', marginTop:4, fontWeight:600 }}>내 집 내관</div>
+                          <div style={{ fontSize:9, color:'#97948f', textAlign:'center', marginTop:1 }}>집을 클릭하면 보여요</div>
                         </div>
                       )}
                     </div>

@@ -21,6 +21,7 @@ export default function Home() {
   const [selectedCell, setSelectedCell] = useState<CellData | null>(null)
   const [showApply, setShowApply] = useState(false)
   const [applyCell, setApplyCell] = useState<CellData | null>(null)
+  const [applyMode, setApplyMode] = useState(false)   // 지도에서 입주할 칸 고르는 모드
   const [loading, setLoading] = useState(true)
   const [activeZone, setActiveZone] = useState<string | null>(null)
   const [showMyHouses, setShowMyHouses] = useState(false)
@@ -36,7 +37,7 @@ export default function Home() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        setSelectedCell(null); setShowApply(false); setApplyCell(null); setShowMyHouses(false)
+        setSelectedCell(null); setShowApply(false); setApplyCell(null); setShowMyHouses(false); setApplyMode(false)
       }
     }
     window.addEventListener('keydown', onKey)
@@ -124,6 +125,7 @@ export default function Home() {
       exterior_image_url: null, border_effect: 'none',
       like_count: 0, visit_count: 0, occupied_at: null, expires_at: null, is_permanent: false,
     }
+    setApplyMode(false)
     openApply(cell)
   }, [openApply])
 
@@ -173,7 +175,7 @@ export default function Home() {
         isAdmin={isAdmin}
         activeZone={activeZone}
         onZoneFilter={setActiveZone}
-        onApplyClick={() => setShowApply(true)}
+        onApplyClick={() => { if (!userId) setShowApply(true); else setApplyMode(m => !m) }}
         onMyHouseClick={() => setShowMyHouses(true)}
         onLogin={() => supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/auth/callback` } })}
         onLogout={() => supabase.auth.signOut()}
@@ -207,6 +209,8 @@ export default function Home() {
             onEditCell={(cell) => { setSelectedCell(null); openApply(cell) }}
             onVacateCell={handleVacate}
             onViewportChange={setMapViewport}
+            applyMode={applyMode}
+            onCancelApply={() => setApplyMode(false)}
           />
         )}
       </div>

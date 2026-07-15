@@ -22,6 +22,8 @@ interface MapGridProps {
   onEditCell?: (cell: CellData) => void
   onVacateCell?: (cell: CellData) => void
   onViewportChange?: (info: { scale: number; offset: { x: number; y: number }; containerW: number; containerH: number; mapW: number }) => void
+  applyMode?: boolean          // 입주 신청 모드: 입주된 칸을 어둡게, 빈 칸만 밝게 + 탭탭 선택
+  onCancelApply?: () => void
 }
 
 const CELL = 5
@@ -63,7 +65,7 @@ function buildTerrainCanvas(): HTMLCanvasElement {
   return tc
 }
 
-export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds, activeZone, centerTarget, zoomInRef, zoomOutRef, fitViewRef, isAdmin, onViewCell, onEditCell, onVacateCell, onViewportChange }: MapGridProps) {
+export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds, activeZone, centerTarget, zoomInRef, zoomOutRef, fitViewRef, isAdmin, onViewCell, onEditCell, onVacateCell, onViewportChange, applyMode, onCancelApply }: MapGridProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState(1)
@@ -102,12 +104,14 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
 
   useEffect(() => { scaleRef.current = scale }, [scale])
 
+  const [viewSize, setViewSize] = useState({ w: 0, h: 0 })
   const onViewportChangeRef = useRef(onViewportChange)
   useEffect(() => { onViewportChangeRef.current = onViewportChange }, [onViewportChange])
   useEffect(() => {
     const c = containerRef.current
     if (!c) return
     const { width: cw, height: ch } = c.getBoundingClientRect()
+    setViewSize({ w: cw, h: ch })
     onViewportChangeRef.current?.({ scale, offset, containerW: cw, containerH: ch, mapW: W })
   }, [scale, offset])
 
@@ -237,6 +241,13 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       }
     })
 
+    // 입주 신청 모드: 이미 입주된 칸을 어둡게 덮어 빈 칸이 도드라지게 함
+    // (자식 셀도 각각 occupied 행으로 존재 → 1×1씩 덮으면 중첩 없이 정확히 커버)
+    if (applyMode) {
+      ctx.fillStyle = 'rgba(18,18,22,0.5)'
+      houses.forEach(h => { ctx.fillRect(h.col*CELL, h.row*CELL, CELL, CELL) })
+    }
+
     if (activeZone) {
       const HALF_R = GRID_ROWS / 2  // 100
       const zoneBounds: Record<string, [number,number,number,number]> = {
@@ -262,7 +273,7 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       ctx.fillText(`${Math.abs(c2-c1)+1}×${Math.abs(r2-r1)+1}`, sx+sw/2, sy+sh/2)
     }
     ctx.restore()
-  }, [houses, myHouseIds, selection, activeZone, terrainReady])
+  }, [houses, myHouseIds, selection, activeZone, terrainReady, applyMode])
 
   useEffect(() => {
     houses.forEach(h => {
@@ -319,6 +330,16 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
     anchorRef.current = null
     setRangeMode(false); setAnchorUI(null); setSelection(null)
   }, [])
+
+  // 입주 신청 모드 ↔ 탭탭 범위 선택 모드 동기화 (상단 "입주 신청하기" 버튼이 켬)
+  useEffect(() => {
+    if (applyMode) {
+      rangeModeRef.current = true
+      setRangeMode(true); setTooltip(null)
+    } else {
+      exitRangeMode()
+    }
+  }, [applyMode, exitRangeMode])
 
   // 범위 선택 모드에서의 탭/클릭 한 번 처리 (첫 탭=시작, 둘째 탭=끝)
   const handleRangeTap = useCallback((grid: { col: number; row: number }) => {
@@ -522,25 +543,16 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
         />
       </div>
 
-      {/* 범위 선택 (모바일·데스크탑 공통 탭탭 방식) */}
-      <div style={{ position:'absolute', left:'50%', bottom:16, transform:'translateX(-50%)', zIndex:20, display:'flex', alignItems:'center', gap:8 }}>
-        {!rangeMode ? (
-          <button
-            onClick={() => { rangeModeRef.current = true; setRangeMode(true); setTooltip(null) }}
-            style={{
-              padding:'10px 16px', borderRadius:10, border:'1px solid #e9e7e4', background:'#ffffff',
-              color:'#1a1a1a', fontSize:13, fontWeight:600, cursor:'pointer',
-              boxShadow:'0 4px 16px rgba(0,0,0,0.10)', whiteSpace:'nowrap',
-            }}
-          >범위 선택</button>
-        ) : (
+      {/* 입주 신청 모드 배너 (상단 "입주 신청하기" 버튼으로 켜짐 — 화면 중앙 버튼은 제거함) */}
+      {applyMode && (
+        <div style={{ position:'absolute', left:'50%', bottom:16, transform:'translateX(-50%)', zIndex:20 }}>
           <div style={{
             display:'flex', alignItems:'center', gap:10,
             padding:'10px 12px 10px 16px', borderRadius:10, border:'1px solid #e9e7e4',
             background:'#ffffff', boxShadow:'0 4px 16px rgba(0,0,0,0.10)',
           }}>
             <span style={{ fontSize:13, color:'#1a1a1a', fontWeight:600, whiteSpace:'nowrap' }}>
-              {anchorUI ? '끝 칸을 탭하세요' : '시작 칸을 탭하세요'}
+              {anchorUI ? '끝 칸을 탭하세요 (한 칸이면 같은 칸 다시 탭)' : '입주할 칸을 선택하세요'}
             </span>
             {anchorUI && (
               <span style={{ fontSize:12, color:'#6f6d6a', whiteSpace:'nowrap' }}>
@@ -548,12 +560,19 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
               </span>
             )}
             <button
-              onClick={exitRangeMode}
+              onClick={() => onCancelApply?.()}
               style={{ padding:'6px 12px', borderRadius:8, border:'1px solid #e0ddd9', background:'#fff', color:'#1a1a1a', fontSize:12, fontWeight:600, cursor:'pointer' }}
             >취소</button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* 우측 세로 스크롤바 — 지도가 화면보다 길 때 드래그로 상하 이동 */}
+      <VScrollbar viewH={viewSize.h} scale={scale} offsetY={offset.y}
+        onScrollTo={(y) => {
+          const clamped = clampOffset(lastOffset.current.x, y, scaleRef.current)
+          lastOffset.current = clamped; setOffset(clamped)
+        }} />
 
       {tooltip && (
         <div style={{
@@ -603,6 +622,68 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// 우측 세로 스크롤바: 지도(H*scale)가 뷰 높이보다 클 때만 표시. 트랙 클릭·썸 드래그로 offset.y 변경.
+function VScrollbar({ viewH, scale, offsetY, onScrollTo }: {
+  viewH: number; scale: number; offsetY: number; onScrollTo: (y: number) => void
+}) {
+  const mapH = H * scale
+  const trackRef = useRef<HTMLDivElement>(null)
+  const dragRef = useRef<{ startY: number; startOffset: number } | null>(null)
+  if (viewH <= 0 || mapH <= viewH + 1) return null   // 스크롤 불필요
+
+  const PAD = 8
+  const trackH = viewH - PAD * 2
+  const thumbH = Math.max(28, trackH * (viewH / mapH))
+  const scrollRange = mapH - viewH               // -offsetY 의 최대값
+  const thumbTravel = trackH - thumbH
+  const thumbTop = scrollRange > 0 ? (-offsetY / scrollRange) * thumbTravel : 0
+
+  // 썸 위치(px) → offset.y 로 환산
+  const posToOffset = (topPx: number) => {
+    const t = Math.max(0, Math.min(thumbTravel, topPx))
+    return -(t / thumbTravel) * scrollRange
+  }
+
+  const onThumbDown = (e: React.PointerEvent) => {
+    e.stopPropagation(); e.preventDefault()
+    dragRef.current = { startY: e.clientY, startOffset: thumbTop }
+    const move = (ev: PointerEvent) => {
+      if (!dragRef.current) return
+      const next = dragRef.current.startOffset + (ev.clientY - dragRef.current.startY)
+      onScrollTo(posToOffset(next))
+    }
+    const up = () => { dragRef.current = null; window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up) }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+  }
+
+  const onTrackDown = (e: React.PointerEvent) => {
+    if (e.target !== trackRef.current) return
+    const rect = trackRef.current!.getBoundingClientRect()
+    const clickY = e.clientY - rect.top - thumbH / 2
+    onScrollTo(posToOffset(clickY))
+  }
+
+  return (
+    <div
+      ref={trackRef}
+      onPointerDown={onTrackDown}
+      style={{
+        position:'absolute', right:4, top:PAD, width:8, height:trackH,
+        borderRadius:8, background:'rgba(0,0,0,0.05)', zIndex:15, touchAction:'none',
+      }}
+    >
+      <div
+        onPointerDown={onThumbDown}
+        style={{
+          position:'absolute', left:0, top:thumbTop, width:8, height:thumbH,
+          borderRadius:8, background:'rgba(28,28,30,0.32)', cursor:'grab',
+        }}
+      />
     </div>
   )
 }

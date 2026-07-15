@@ -146,15 +146,15 @@ export default function StatsPanel({ houses, mapViewport, onZoomIn, onZoomOut, o
         <PanelLabel>실시간 분양 현황</PanelLabel>
         <div style={{ display:'flex', alignItems:'center', gap:12 }}>
           <canvas ref={donutRef} width={80} height={80} style={{ flexShrink:0 }} />
-          <div style={{ display:'flex', alignItems:'center', gap:10, minWidth:0 }}>
+          <div style={{ display:'flex', flexDirection:'column', gap:5, minWidth:0 }}>
             {[
               { label:'분양 완료', value: occupiedCount, color:'#16a34a' },
               { label:'판매 중',   value: pendingCount,  color:'#2563eb' },
               { label:'관심 구역', value: availableCount, color:'#e9e7e4' },
             ].map(item => (
-              <div key={item.label} style={{ display:'flex', alignItems:'center', gap:4, whiteSpace:'nowrap', flexShrink:0 }}>
+              <div key={item.label} style={{ display:'flex', alignItems:'center', gap:6, whiteSpace:'nowrap' }}>
                 <div style={{ width:7, height:7, borderRadius:'50%', background:item.color, flexShrink:0 }} />
-                <span style={{ fontSize:10, color:'#6f6d6a' }}>{item.label}</span>
+                <span style={{ fontSize:10, color:'#6f6d6a', minWidth:44 }}>{item.label}</span>
                 <span style={{ fontSize:10, fontWeight:600, color:'#1a1a1a' }}>{((item.value/totalCells)*100).toFixed(1)}%</span>
               </div>
             ))}
