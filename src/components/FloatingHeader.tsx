@@ -33,6 +33,8 @@ export default function FloatingHeader({
   const searchRef = useRef<HTMLDivElement>(null)
   const profileRef = useRef<HTMLDivElement>(null)
   const occupancyRate = ((occupiedCount / totalCells) * 100).toFixed(1)
+  const remainingCells = totalCells - occupiedCount                       // 남은 면적(칸)
+  const houseCount = houses.filter(h => h.status === 'occupied' && !h.parent_address).length  // 실제 집 수(부모칸만)
 
   const results = searchQuery.trim().length >= 1
     ? houses.filter(h =>
@@ -94,7 +96,8 @@ export default function FloatingHeader({
         <div style={{ display:'flex', gap:24 }} className="hide-on-mobile">
           <StatItem label="전체 면적" value={`${totalCells.toLocaleString()}칸`} valueColor="#1a1a1a" />
           <StatItem label="분양률" value={`${occupancyRate}%`} valueColor="#1a1a1a" />
-          <StatItem label="입주한 집" value={`${occupiedCount.toLocaleString()}채`} valueColor="#1a1a1a" />
+          <StatItem label="남은 면적" value={`${remainingCells.toLocaleString()}칸`} valueColor="#1a1a1a" />
+          <StatItem label="입주한 집" value={`${houseCount.toLocaleString()}채`} valueColor="#1a1a1a" />
         </div>
 
         <div style={{ flex:1 }} />

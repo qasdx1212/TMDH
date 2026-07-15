@@ -100,7 +100,6 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
 
   const houseMap = useRef<Map<string, CellData>>(new Map())
   const addressMap = useRef<Map<string, CellData>>(new Map())
-  const imageCache = useRef<Map<string, HTMLImageElement>>(new Map())
   const terrainCanvas = useRef<HTMLCanvasElement | null>(null)
 
   const lastPinchDist = useRef<number | null>(null)
@@ -221,27 +220,19 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
     ctx.save(); ctx.scale(RS, RS)
 
     houses.filter(h => !h.parent_address).forEach(h => {
+      // 이미지 있는 집은 DOM <img> 오버레이로 렌더 (저해상도 캔버스 대신 → 확대해도 선명)
+      if (h.exterior_image_url || h.interior_image_url) return
       const x = h.col*CELL, y = h.row*CELL
       const w = (h.width??1)*CELL, ht = (h.height??1)*CELL
       const zone = ZONES[h.zone]
-      const cachedImg = imageCache.current.get(h.address)
-      const hasImage = !!(cachedImg && cachedImg.naturalWidth > 0)
-      if (hasImage) {
-        ctx.save(); ctx.beginPath(); ctx.rect(x+1,y+1,w-2,ht-2); ctx.clip()
-        ctx.drawImage(cachedImg!, x+1, y+1, w-2, ht-2); ctx.restore()
-        if (h.visit_count >= 5) { ctx.shadowColor=zone.color; ctx.shadowBlur=10; ctx.strokeStyle=zone.color; ctx.lineWidth=2; ctx.strokeRect(x+1,y+1,w-2,ht-2); ctx.shadowBlur=0 }
-      } else {
-        if (h.visit_count >= 5) { ctx.shadowColor=zone.color; ctx.shadowBlur=10 }
-        ctx.fillStyle=zone.color+'cc'; ctx.fillRect(x+1,y+1,w-2,ht-2); ctx.shadowBlur=0
-      }
+      if (h.visit_count >= 5) { ctx.shadowColor=zone.color; ctx.shadowBlur=10 }
+      ctx.fillStyle=zone.color+'cc'; ctx.fillRect(x+1,y+1,w-2,ht-2); ctx.shadowBlur=0
       if (h.border_effect==='neon') { ctx.shadowColor=zone.color; ctx.shadowBlur=6; ctx.strokeStyle=zone.color; ctx.lineWidth=1.5; ctx.strokeRect(x+1,y+1,w-2,ht-2); ctx.shadowBlur=0 }
       if (myHouseIds?.has(h.id)) { ctx.strokeStyle='#1a1a1a'; ctx.lineWidth=2; ctx.strokeRect(x,y,w,ht) }
       if (h.nickname && w >= 20) {
-        // 이미지 위엔 흰 글씨+그림자, 밝은 지형 위엔 진한 글씨
-        ctx.fillStyle = hasImage ? '#fff' : '#1a1a1a'
+        ctx.fillStyle = '#1a1a1a'
         ctx.font=`bold ${Math.min(8,w/h.nickname.length)}px sans-serif`
         ctx.textAlign='center'; ctx.textBaseline='middle'
-        if (hasImage) { ctx.shadowColor='rgba(0,0,0,0.8)'; ctx.shadowBlur=3 }
         ctx.fillText(h.nickname, x+w/2, y+ht/2); ctx.shadowBlur=0
       }
     })
@@ -286,18 +277,6 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
     }
     ctx.restore()
   }, [houses, myHouseIds, selection, pendingSel, activeZone, terrainReady, applyMode])
-
-  useEffect(() => {
-    houses.forEach(h => {
-      const imgUrl = h.exterior_image_url || h.interior_image_url
-      if (!imgUrl || h.parent_address) return
-      if (imageCache.current.has(h.address)) return
-      const img = new Image(); img.crossOrigin = 'anonymous'
-      img.onload = () => { imageCache.current.set(h.address, img); draw() }
-      img.onerror = () => { imageCache.current.set(h.address, img) }
-      img.src = imgUrl
-    })
-  }, [houses, draw])
 
   useEffect(() => { draw() }, [draw])
 
@@ -591,7 +570,7 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       onMouseLeave={() => { isPanning.current=false; isMouseDown.current=false; isSelecting.current=false; if (!rangeModeRef.current) setSelection(null); setCursor('default'); setTooltip(null) }}
       onContextMenu={handleContextMenu}
     >
-      <div style={{ transform:`translate(${offset.x}px,${offset.y}px) scale(${scale})`, transformOrigin:'0 0' }}>
+      <div style={{ position:'relative', transform:`translate(${offset.x}px,${offset.y}px) scale(${scale})`, transformOrigin:'0 0' }}>
         <canvas
           ref={canvasRef}
           width={W * RS}
@@ -602,6 +581,38 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
             imageRendering: scale >= 1 ? 'pixelated' : 'auto',
           }}
         />
+        {/* 이미지 집: 실제 <img> 오버레이 — 캔버스와 달리 원본 해상도라 확대해도 선명 */}
+        {houses.filter(h => !h.parent_address && (h.exterior_image_url || h.interior_image_url)).map(h => {
+          const zone = ZONES[h.zone]
+          const wPx = (h.width ?? 1) * CELL, htPx = (h.height ?? 1) * CELL
+          const isMine = myHouseIds?.has(h.id)
+          const neon = h.border_effect === 'neon'
+          const glow = neon || h.visit_count >= 5
+          const showName = h.nickname && wPx >= 20
+          return (
+            <div key={h.id} style={{
+              position:'absolute', left:h.col*CELL, top:h.row*CELL, width:wPx, height:htPx,
+              pointerEvents:'none', overflow:'hidden',
+              boxShadow: glow ? `0 0 6px ${zone.color}` : undefined,
+              outline: isMine ? '1px solid #1a1a1a' : (neon ? `0.8px solid ${zone.color}` : undefined),
+              outlineOffset: '-0.5px',
+            }}>
+              <img
+                src={h.exterior_image_url || h.interior_image_url || ''} alt="" draggable={false}
+                style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
+              />
+              {showName && (
+                <div style={{
+                  position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center',
+                  color:'#fff', fontWeight:700, fontSize:Math.min(8, wPx / h.nickname!.length),
+                  textShadow:'0 0 3px rgba(0,0,0,0.85)', textAlign:'center', padding:'0 2px', lineHeight:1.1,
+                  overflow:'hidden',
+                }}>{h.nickname}</div>
+              )}
+              {applyMode && <div style={{ position:'absolute', inset:0, background:'rgba(18,18,22,0.5)' }} />}
+            </div>
+          )
+        })}
       </div>
 
       {/* 입주 신청 모드 배너 (상단 "입주 신청하기" 버튼으로 켜짐 — 화면 중앙 버튼은 제거함) */}
