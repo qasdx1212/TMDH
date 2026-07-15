@@ -78,8 +78,10 @@ export default function Home() {
   }, [userId])
 
   const fetchHouses = useCallback(async () => {
+    // public_houses 뷰: 비공개 집의 이름·소개글·이미지는 소유자 외엔 null 로 마스킹됨
+    // (직접 houses 테이블을 읽지 않으므로 F12 네트워크 탭에도 비공개 내용이 안 보임)
     const { data } = await supabase
-      .from('houses')
+      .from('public_houses')
       .select('id, address, col, row, width, height, zone, status, name, nickname, description, link_url, exterior_image_url, interior_image_url, border_effect, like_count, visit_count, occupied_at, expires_at, is_permanent, parent_address, is_visible, has_password')
       .neq('status', 'available')
       .range(0, 79999)  // 전체 80,000칸 — Supabase 기본 1,000행 제한 회피

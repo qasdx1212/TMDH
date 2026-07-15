@@ -40,7 +40,8 @@ export default function StatsPanel({ houses, mapViewport, onZoomIn, onZoomOut, o
     .map((h, i) => ({ name: h.name ?? h.nickname ?? h.address, zone: h.zone, count: h.visit_count, rank: i + 1 }))
 
   useEffect(() => {
-    supabase.from('houses').select('id, name, nickname, zone, occupied_at')
+    // 최근 입주자도 마스킹 뷰에서 — 비공개 집은 이름이 null 로 내려와 '이름 없음'으로 표시됨
+    supabase.from('public_houses').select('id, name, nickname, zone, occupied_at')
       .eq('status', 'occupied').order('occupied_at', { ascending: false }).limit(5)
       .then(({ data }) => setRecentHouses((data ?? []) as RecentHouse[]))
   }, [houses])
