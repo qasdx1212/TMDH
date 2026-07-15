@@ -83,6 +83,8 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
   const mouseDownPos = useRef({ x: 0, y: 0 })
   const isMouseDown = useRef(false)
   const [selection, setSelection] = useState<{ c1: number; r1: number; c2: number; r2: number } | null>(null)
+  // 입주 신청 모드: 확정 전 "미리 보여주는" 선택 범위 (드래그·탭탭 공통 결과)
+  const [pendingSel, setPendingSel] = useState<{ c1: number; r1: number; c2: number; r2: number } | null>(null)
   const [blockMsg, setBlockMsg] = useState('')
   // 탭-탭 범위 선택 (모바일 드래그 대체, 데스크탑에서도 동일 동작)
   const [rangeMode, setRangeMode] = useState(false)
@@ -263,17 +265,24 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       })
     }
 
-    if (selection) {
-      const { c1,r1,c2,r2 } = selection
+    // 드래그 중(selection) 또는 확정 대기(pendingSel) 범위 표시
+    const sel = selection ?? pendingSel
+    if (sel) {
+      const { c1,r1,c2,r2 } = sel
       const sx=Math.min(c1,c2)*CELL, sy=Math.min(r1,r2)*CELL
       const sw=(Math.abs(c2-c1)+1)*CELL, sh=(Math.abs(r2-r1)+1)*CELL
-      ctx.fillStyle='rgba(28,28,30,0.12)'; ctx.fillRect(sx,sy,sw,sh)
-      ctx.strokeStyle='#1a1a1a'; ctx.lineWidth=1.5; ctx.setLineDash([4,3]); ctx.strokeRect(sx,sy,sw,sh); ctx.setLineDash([])
-      ctx.fillStyle='#1a1a1a'; ctx.font='bold 9px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'
+      const confirmed = !selection && !!pendingSel
+      // 확정 대기 범위는 살짝 강조 (파란 테두리), 드래그 중엔 검정 점선
+      ctx.fillStyle = confirmed ? 'rgba(37,99,235,0.16)' : 'rgba(28,28,30,0.12)'
+      ctx.fillRect(sx,sy,sw,sh)
+      ctx.strokeStyle = confirmed ? '#2563eb' : '#1a1a1a'
+      ctx.lineWidth=1.5; if (!confirmed) ctx.setLineDash([4,3]); ctx.strokeRect(sx,sy,sw,sh); ctx.setLineDash([])
+      ctx.fillStyle = confirmed ? '#2563eb' : '#1a1a1a'
+      ctx.font='bold 9px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'
       ctx.fillText(`${Math.abs(c2-c1)+1}×${Math.abs(r2-r1)+1}`, sx+sw/2, sy+sh/2)
     }
     ctx.restore()
-  }, [houses, myHouseIds, selection, activeZone, terrainReady, applyMode])
+  }, [houses, myHouseIds, selection, pendingSel, activeZone, terrainReady, applyMode])
 
   useEffect(() => {
     houses.forEach(h => {
@@ -313,22 +322,48 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
     return () => canvas.removeEventListener('wheel', handler)
   }, [clampOffset])
 
-  // 두 지점으로 영역 확정 (드래그·탭탭 공통)
+  // 영역 내 입주된 칸이 있으면 true (선택 불가)
+  const areaHasOccupied = useCallback((c1: number, r1: number, c2: number, r2: number) => {
+    for (let c = c1; c <= c2; c++) for (let r = r1; r <= r2; r++) if (houseMap.current.has(`${c},${r}`)) return true
+    return false
+  }, [])
+
+  // 두 지점으로 영역 확정 (드래그·탭탭 공통) — 즉시 신청창으로 넘어감 (일반 모드)
   const commitArea = useCallback((a: { col: number; row: number }, b: { col: number; row: number }) => {
     const c1 = Math.min(a.col, b.col), c2 = Math.max(a.col, b.col)
     const r1 = Math.min(a.row, b.row), r2 = Math.max(a.row, b.row)
-    let hasOccupied = false
-    outer: for (let c = c1; c <= c2; c++) for (let r = r1; r <= r2; r++) if (houseMap.current.has(`${c},${r}`)) { hasOccupied = true; break outer }
-    if (hasOccupied) { setBlockMsg('선택 영역에 이미 입주된 칸이 있어요'); setTimeout(() => setBlockMsg(''), 2500); return false }
+    if (areaHasOccupied(c1, r1, c2, r2)) { setBlockMsg('선택 영역에 이미 입주된 칸이 있어요'); setTimeout(() => setBlockMsg(''), 2500); return false }
     const zone = getZone(c1, r1)
     onAreaSelect({ col: c1, row: r1, width: c2 - c1 + 1, height: r2 - r1 + 1, zone })
     return true
-  }, [onAreaSelect])
+  }, [onAreaSelect, areaHasOccupied])
+
+  // 입주 신청 모드: 두 지점을 "확정 전 범위(pendingSel)"로 설정 (신청창은 아직 안 열림)
+  const setPending = useCallback((a: { col: number; row: number }, b: { col: number; row: number }) => {
+    const c1 = Math.min(a.col, b.col), c2 = Math.max(a.col, b.col)
+    const r1 = Math.min(a.row, b.row), r2 = Math.max(a.row, b.row)
+    if (areaHasOccupied(c1, r1, c2, r2)) { setBlockMsg('선택 영역에 이미 입주된 칸이 있어요'); setTimeout(() => setBlockMsg(''), 2500); return false }
+    setPendingSel({ c1, r1, c2, r2 })
+    setSelection(null); anchorRef.current = null; setAnchorUI(null)
+    return true
+  }, [areaHasOccupied])
+
+  // pendingSel 을 실제 신청으로 확정 (확인 버튼)
+  const confirmPending = useCallback(() => {
+    if (!pendingSel) return
+    const zone = getZone(pendingSel.c1, pendingSel.r1)
+    onAreaSelect({ col: pendingSel.c1, row: pendingSel.r1, width: pendingSel.c2 - pendingSel.c1 + 1, height: pendingSel.r2 - pendingSel.r1 + 1, zone })
+    setPendingSel(null)
+  }, [pendingSel, onAreaSelect])
+
+  const clearPending = useCallback(() => {
+    setPendingSel(null); anchorRef.current = null; setAnchorUI(null); setSelection(null)
+  }, [])
 
   const exitRangeMode = useCallback(() => {
     rangeModeRef.current = false
     anchorRef.current = null
-    setRangeMode(false); setAnchorUI(null); setSelection(null)
+    setRangeMode(false); setAnchorUI(null); setSelection(null); setPendingSel(null)
   }, [])
 
   // 입주 신청 모드 ↔ 탭탭 범위 선택 모드 동기화 (상단 "입주 신청하기" 버튼이 켬)
@@ -341,18 +376,19 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
     }
   }, [applyMode, exitRangeMode])
 
-  // 범위 선택 모드에서의 탭/클릭 한 번 처리 (첫 탭=시작, 둘째 탭=끝)
+  // 입주 신청 모드 탭/클릭 (첫 탭=시작, 둘째 탭=끝 → pendingSel 로 미리보기)
+  // 이미 pendingSel 이 있으면 이번 탭은 "다시 선택"의 새 시작점이 됨
   const handleRangeTap = useCallback((grid: { col: number; row: number }) => {
+    if (pendingSel) { setPendingSel(null); anchorRef.current = null; setAnchorUI(null) }
     if (!anchorRef.current) {
       anchorRef.current = grid
       setAnchorUI(grid)
       setSelection({ c1: grid.col, r1: grid.row, c2: grid.col, r2: grid.row })
       return
     }
-    const ok = commitArea(anchorRef.current, grid)
-    if (ok) exitRangeMode()
-    else { anchorRef.current = null; setAnchorUI(null); setSelection(null) }
-  }, [commitArea, exitRangeMode])
+    const ok = setPending(anchorRef.current, grid)
+    if (!ok) { anchorRef.current = null; setAnchorUI(null); setSelection(null) }
+  }, [pendingSel, setPending])
 
   useEffect(() => {
     const el = containerRef.current
@@ -431,7 +467,7 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button === 2) return
-    if (rangeModeRef.current) return
+    // 입주 신청 모드에서도 드래그 선택 허용 (아래에서 클릭/드래그를 구분함)
     mouseDownPos.current = { x: e.clientX, y: e.clientY }
     isMouseDown.current = true; setTooltip(null)
     if (e.button === 1 || e.altKey) {
@@ -470,13 +506,23 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
 
   const handleMouseUp = useCallback((e: React.MouseEvent) => {
     if (e.button === 2) return
-    // 범위 선택 모드: 클릭 두 번으로 영역 지정 (모바일과 동일 동작)
+    const hadMouseDown = isMouseDown.current
+    const wasDragging = isSelecting.current
+    // 입주 신청 모드: 클릭=탭탭 / 드래그=범위. 둘 다 확정이 아니라 pendingSel(미리보기)로 감
     if (rangeModeRef.current) {
-      const g = toGrid(e.clientX, e.clientY)
-      if (g) handleRangeTap(g)
+      isPanning.current = false; isMouseDown.current = false; isSelecting.current = false; setCursor('crosshair')
+      if (wasDragging && selectStart.current && selectEnd.current) {
+        // (드래그) — 시작·끝으로 pending 설정
+        if (pendingSel) { setPendingSel(null); anchorRef.current = null; setAnchorUI(null) }
+        setPending(selectStart.current, selectEnd.current)
+      } else {
+        // (클릭) — 탭탭 로직
+        const g = toGrid(e.clientX, e.clientY)
+        if (g) handleRangeTap(g)
+      }
+      selectStart.current = null; selectEnd.current = null
       return
     }
-    const hadMouseDown = isMouseDown.current
     isPanning.current = false; isMouseDown.current = false; setCursor('default')
     if (!hadMouseDown) return
     const dx = Math.abs(e.clientX - mouseDownPos.current.x)
@@ -500,7 +546,7 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       commitArea(selectStart.current, selectEnd.current)
     }
     selectStart.current = null; selectEnd.current = null
-  }, [toGrid, onCellClick, commitArea, handleRangeTap])
+  }, [toGrid, onCellClick, commitArea, handleRangeTap, pendingSel, setPending])
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault(); setTooltip(null)
@@ -545,23 +591,35 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
 
       {/* 입주 신청 모드 배너 (상단 "입주 신청하기" 버튼으로 켜짐 — 화면 중앙 버튼은 제거함) */}
       {applyMode && (
-        <div style={{ position:'absolute', left:'50%', bottom:16, transform:'translateX(-50%)', zIndex:20 }}>
+        <div style={{ position:'absolute', left:'50%', bottom:16, transform:'translateX(-50%)', zIndex:20, maxWidth:'92vw' }}>
           <div style={{
             display:'flex', alignItems:'center', gap:10,
             padding:'10px 12px 10px 16px', borderRadius:10, border:'1px solid #e9e7e4',
-            background:'#ffffff', boxShadow:'0 4px 16px rgba(0,0,0,0.10)',
+            background:'#ffffff', boxShadow:'0 4px 16px rgba(0,0,0,0.10)', flexWrap:'wrap',
           }}>
-            <span style={{ fontSize:13, color:'#1a1a1a', fontWeight:600, whiteSpace:'nowrap' }}>
-              {anchorUI ? '끝 칸을 탭하세요 (한 칸이면 같은 칸 다시 탭)' : '입주할 칸을 선택하세요'}
-            </span>
-            {anchorUI && (
-              <span style={{ fontSize:12, color:'#6f6d6a', whiteSpace:'nowrap' }}>
-                시작 {anchorUI.col},{anchorUI.row}
+            {pendingSel ? (
+              <>
+                <span style={{ fontSize:13, color:'#1a1a1a', fontWeight:600, whiteSpace:'nowrap' }}>
+                  선택 범위 {pendingSel.c2 - pendingSel.c1 + 1} × {pendingSel.r2 - pendingSel.r1 + 1}
+                  <span style={{ color:'#6f6d6a', fontWeight:500 }}> · {(pendingSel.c2 - pendingSel.c1 + 1) * (pendingSel.r2 - pendingSel.r1 + 1)}칸</span>
+                </span>
+                <button
+                  onClick={confirmPending}
+                  style={{ padding:'7px 14px', borderRadius:8, border:'1px solid #1c1c1e', background:'#1c1c1e', color:'#fff', fontSize:12, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }}
+                >이 범위로 신청</button>
+                <button
+                  onClick={clearPending}
+                  style={{ padding:'7px 12px', borderRadius:8, border:'1px solid #e0ddd9', background:'#fff', color:'#1a1a1a', fontSize:12, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap' }}
+                >다시 선택</button>
+              </>
+            ) : (
+              <span style={{ fontSize:13, color:'#1a1a1a', fontWeight:600, whiteSpace:'nowrap' }}>
+                {anchorUI ? '끝 칸을 클릭하세요 (한 칸이면 같은 칸 다시)' : '입주할 칸을 드래그하거나 두 번 클릭하세요'}
               </span>
             )}
             <button
               onClick={() => onCancelApply?.()}
-              style={{ padding:'6px 12px', borderRadius:8, border:'1px solid #e0ddd9', background:'#fff', color:'#1a1a1a', fontSize:12, fontWeight:600, cursor:'pointer' }}
+              style={{ padding:'7px 12px', borderRadius:8, border:'1px solid #e0ddd9', background:'#fff', color:'#6f6d6a', fontSize:12, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap' }}
             >취소</button>
           </div>
         </div>
