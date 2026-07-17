@@ -531,6 +531,7 @@ export default function ApplyFlow({ selectedCell, userId, isAdmin, onClose, onSu
         width, height, occupied_at: occupiedAt, expires_at: expiresAt,
         is_permanent: form.days === PERMANENT_DAYS,
         password_hash: pwdHash, has_password: !!pwdHash,
+        parent_address: null,   // 부모 칸은 항상 parent_address 비움 (고아/자기참조 방지)
       }).eq('address', selectedCell.address)
       if (error) { setErrorMsg(`저장 실패: ${toUserMessage(error)}`); setLoading(false); return }
 

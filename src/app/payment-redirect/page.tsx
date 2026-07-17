@@ -109,6 +109,7 @@ function PaymentRedirectContent() {
         width: order.width, height: order.height,
         occupied_at: occupiedAt, expires_at: expiresAt,
         is_permanent: order.days === PERMANENT_DAYS,
+        parent_address: null,   // 부모 칸은 항상 parent_address 비움 (고아/자기참조 방지)
       }).eq('address', order.address).eq('status', 'available').select('id')
 
       if (houseErr || !claimed || claimed.length === 0) {
