@@ -310,6 +310,9 @@ export default function ApplyFlow({ selectedCell, userId, isAdmin, onClose, onSu
   // 신청 확인 카드의 외관 미리보기 캔버스 크기 (같은 비율)
   let cfW = 320, cfH = Math.round(320 / cellAR)
   if (cfH > 190) { cfH = 190; cfW = Math.round(190 * cellAR) }
+  // 2단계 "메인 지도 모습" 미리보기 박스 크기 (같은 비율)
+  let mpW = 190, mpH = Math.round(190 / cellAR)
+  if (mpH > 120) { mpH = 120; mpW = Math.round(120 * cellAR) }
 
   const cropRef = useRef<HTMLCanvasElement>(null)
   const mapPreviewRef = useRef<HTMLCanvasElement>(null)
@@ -1032,6 +1035,34 @@ export default function ApplyFlow({ selectedCell, userId, isAdmin, onClose, onSu
 
               {/* 오른쪽: 라이브 미리보기 */}
               <div className="af-col" style={{ width:280, flexShrink:0, padding:'16px', background:'#faf9f8', display:'flex', flexDirection:'column', gap:8 }}>
+                {/* 메인 지도에서 보이는 모습 */}
+                <div>
+                  <div style={{ fontSize:11, fontWeight:600, color:'#6f6d6a', textAlign:'center', marginBottom:8 }}>메인 지도에서 보이는 모습</div>
+                  <div style={{ display:'flex', justifyContent:'center' }}>
+                    <div style={{
+                      width:mpW, height:mpH, position:'relative', overflow:'hidden', borderRadius:3,
+                      background: form.exteriorPreview ? '#faf9f8' : zone.color,
+                      boxShadow: neonOn ? `0 0 ${(8*neonFrac).toFixed(1)}px ${neonPaintColor}, inset 0 0 ${(5*neonFrac).toFixed(1)}px ${neonPaintColor}` : '0 1px 3px rgba(0,0,0,0.08)',
+                      outline: neonOn ? `${Math.max(1, 2.4*neonFrac).toFixed(2)}px solid ${neonPaintColor}` : '1px solid #e0ddd9',
+                      outlineOffset:'-1px',
+                    }}>
+                      {form.exteriorPreview && (
+                        <img src={form.exteriorPreview} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
+                      )}
+                      {form.nickname && (
+                        <div style={{
+                          position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center',
+                          color:'#fff', fontWeight:800, fontSize:Math.max(9, Math.min(15, mpW / form.nickname.length)),
+                          textShadow:'0 1px 3px rgba(0,0,0,0.75)', textAlign:'center', padding:'0 4px', lineHeight:1.1,
+                        }}>{form.nickname}</div>
+                      )}
+                    </div>
+                  </div>
+                  <div style={{ fontSize:10, color:'#97948f', marginTop:6, textAlign:'center', lineHeight:1.5 }}>
+                    {(selectedCell.width ?? 1)}×{(selectedCell.height ?? 1)}칸 비율{form.exteriorPreview ? '' : ' · 외관 이미지는 다음 단계에서'}
+                  </div>
+                </div>
+                <div style={{ height:1, background:'#e9e7e4', margin:'2px 0' }} />
                 <div style={{ fontSize:11, fontWeight:600, color:'#6f6d6a', textAlign:'center' }}>집을 클릭하면 이렇게 보여요!</div>
                 <div style={{ background:'#fff', borderRadius:12, border:'1px solid #e9e7e4', overflow:'hidden', fontSize:12, position:'relative', boxShadow:'0 1px 3px rgba(0,0,0,0.05)' }}>
                   {/* 닫기 */}
