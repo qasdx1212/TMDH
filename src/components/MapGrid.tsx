@@ -266,24 +266,9 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       })
     }
 
-    // 드래그 중(selection) 또는 확정 대기(pendingSel) 범위 표시
-    const sel = selection ?? pendingSel
-    if (sel) {
-      const { c1,r1,c2,r2 } = sel
-      const sx=Math.min(c1,c2)*CELL, sy=Math.min(r1,r2)*CELL
-      const sw=(Math.abs(c2-c1)+1)*CELL, sh=(Math.abs(r2-r1)+1)*CELL
-      const confirmed = !selection && !!pendingSel
-      // 확정 대기 범위는 살짝 강조 (파란 테두리), 드래그 중엔 검정 점선
-      ctx.fillStyle = confirmed ? 'rgba(37,99,235,0.16)' : 'rgba(28,28,30,0.12)'
-      ctx.fillRect(sx,sy,sw,sh)
-      ctx.strokeStyle = confirmed ? '#2563eb' : '#1a1a1a'
-      ctx.lineWidth=1.5; if (!confirmed) ctx.setLineDash([4,3]); ctx.strokeRect(sx,sy,sw,sh); ctx.setLineDash([])
-      ctx.fillStyle = confirmed ? '#2563eb' : '#1a1a1a'
-      ctx.font='bold 9px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'
-      ctx.fillText(`${Math.abs(c2-c1)+1}×${Math.abs(r2-r1)+1}`, sx+sw/2, sy+sh/2)
-    }
+    // 선택 범위(selection/pendingSel)는 캔버스가 아니라 DOM 오버레이로 그림 (확대해도 선명)
     ctx.restore()
-  }, [houses, myHouseIds, selection, pendingSel, activeZone, terrainReady, applyMode])
+  }, [houses, myHouseIds, activeZone, terrainReady, applyMode])
 
   useEffect(() => { draw() }, [draw])
 
@@ -321,19 +306,36 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
   const setPending = useCallback((a: { col: number; row: number }, b: { col: number; row: number }) => {
     const c1 = Math.min(a.col, b.col), c2 = Math.max(a.col, b.col)
     const r1 = Math.min(a.row, b.row), r2 = Math.max(a.row, b.row)
-    if (areaHasOccupied(c1, r1, c2, r2)) { setBlockMsg('선택 영역에 이미 입주된 칸이 있어요'); setTimeout(() => setBlockMsg(''), 2500); return false }
+    // 겹쳐도 pendingSel 은 세팅 (빨갛게 보여주기 위해). 유효할 때만 true 반환.
     setPendingSel({ c1, r1, c2, r2 })
     setSelection(null); anchorRef.current = null; setAnchorUI(null)
+    if (areaHasOccupied(c1, r1, c2, r2)) {
+      setBlockMsg('선택 범위에 이미 입주된 칸이 있어요. 다시 선택해주세요')
+      setTimeout(() => setBlockMsg(''), 3500)
+      return false
+    }
     return true
   }, [areaHasOccupied])
 
-  // pendingSel 을 실제 신청으로 확정 (확인 버튼)
+  // 현재 pendingSel 이 입주된 칸과 겹치는지
+  const pendingInvalid = !!pendingSel && areaHasOccupied(
+    Math.min(pendingSel.c1, pendingSel.c2), Math.min(pendingSel.r1, pendingSel.r2),
+    Math.max(pendingSel.c1, pendingSel.c2), Math.max(pendingSel.r1, pendingSel.r2),
+  )
+
+  // pendingSel 을 실제 신청으로 확정 (확인 버튼) — 겹치면 막음
   const confirmPending = useCallback(() => {
     if (!pendingSel) return
-    const zone = getZone(pendingSel.c1, pendingSel.r1)
-    onAreaSelect({ col: pendingSel.c1, row: pendingSel.r1, width: pendingSel.c2 - pendingSel.c1 + 1, height: pendingSel.r2 - pendingSel.r1 + 1, zone })
+    const c1 = Math.min(pendingSel.c1, pendingSel.c2), c2 = Math.max(pendingSel.c1, pendingSel.c2)
+    const r1 = Math.min(pendingSel.r1, pendingSel.r2), r2 = Math.max(pendingSel.r1, pendingSel.r2)
+    if (areaHasOccupied(c1, r1, c2, r2)) {
+      setBlockMsg('선택 범위에 이미 입주된 칸이 있어요. 다시 선택해주세요')
+      setTimeout(() => setBlockMsg(''), 3500)
+      return
+    }
+    onAreaSelect({ col: c1, row: r1, width: c2 - c1 + 1, height: r2 - r1 + 1, zone: getZone(c1, r1) })
     setPendingSel(null); setDimW(''); setDimH('')
-  }, [pendingSel, onAreaSelect])
+  }, [pendingSel, onAreaSelect, areaHasOccupied])
 
   const clearPending = useCallback(() => {
     setPendingSel(null); anchorRef.current = null; setAnchorUI(null); setSelection(null); setDimW(''); setDimH('')
@@ -608,6 +610,30 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
             </div>
           )
         })}
+
+        {/* 선택 범위 오버레이 (드래그 중 selection / 확정 대기 pendingSel) — 겹치면 빨강 */}
+        {(() => {
+          const sel = selection ?? pendingSel
+          if (!sel) return null
+          const c1 = Math.min(sel.c1, sel.c2), c2 = Math.max(sel.c1, sel.c2)
+          const r1 = Math.min(sel.r1, sel.r2), r2 = Math.max(sel.r1, sel.r2)
+          const invalid = areaHasOccupied(c1, r1, c2, r2)
+          const wc = c2 - c1 + 1, hc = r2 - r1 + 1
+          const col = invalid ? '#ef4444' : '#2563eb'
+          return (
+            <div style={{
+              position:'absolute', left:c1*CELL, top:r1*CELL, width:wc*CELL, height:hc*CELL,
+              pointerEvents:'none', zIndex:6, boxSizing:'border-box',
+              background: invalid ? 'rgba(239,68,68,0.22)' : 'rgba(37,99,235,0.18)',
+              outline: `1.4px solid ${col}`, outlineOffset:'-0.7px',
+              display:'flex', alignItems:'center', justifyContent:'center',
+            }}>
+              <span style={{ color:col, fontWeight:800, fontSize:Math.min(9, (wc*CELL)/3.2), textShadow:'0 0 3px rgba(255,255,255,0.9)' }}>
+                {wc}×{hc}
+              </span>
+            </div>
+          )
+        })()}
       </div>
 
       {/* 입주 신청 모드 배너 (상단 "입주 신청하기" 버튼으로 켜짐 — 화면 중앙 버튼은 제거함) */}
@@ -625,14 +651,20 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
           }}>
             {pendingSel ? (
               <>
-                <span style={{ fontSize:13, color:'#1a1a1a', fontWeight:600, whiteSpace:'nowrap' }}>
-                  선택 범위 {pendingSel.c2 - pendingSel.c1 + 1} × {pendingSel.r2 - pendingSel.r1 + 1}
-                  <span style={{ color:'#6f6d6a', fontWeight:500 }}> · {(pendingSel.c2 - pendingSel.c1 + 1) * (pendingSel.r2 - pendingSel.r1 + 1)}칸</span>
+                <span style={{ fontSize:13, color: pendingInvalid ? '#dc2626' : '#1a1a1a', fontWeight:600, whiteSpace:'nowrap' }}>
+                  {pendingInvalid ? (
+                    <>⚠ 이미 입주된 칸이 포함돼 있어요</>
+                  ) : (
+                    <>선택 범위 {Math.abs(pendingSel.c2 - pendingSel.c1) + 1} × {Math.abs(pendingSel.r2 - pendingSel.r1) + 1}
+                      <span style={{ color:'#6f6d6a', fontWeight:500 }}> · {(Math.abs(pendingSel.c2 - pendingSel.c1) + 1) * (Math.abs(pendingSel.r2 - pendingSel.r1) + 1)}칸</span></>
+                  )}
                 </span>
-                <button
-                  onClick={confirmPending}
-                  style={{ padding:'7px 14px', borderRadius:8, border:'1px solid #1c1c1e', background:'#1c1c1e', color:'#fff', fontSize:12, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }}
-                >이 범위로 신청</button>
+                {!pendingInvalid && (
+                  <button
+                    onClick={confirmPending}
+                    style={{ padding:'7px 14px', borderRadius:8, border:'1px solid #1c1c1e', background:'#1c1c1e', color:'#fff', fontSize:12, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }}
+                  >이 범위로 신청</button>
+                )}
                 <button
                   onClick={clearPending}
                   style={{ padding:'7px 12px', borderRadius:8, border:'1px solid #e0ddd9', background:'#fff', color:'#1a1a1a', fontSize:12, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap' }}
