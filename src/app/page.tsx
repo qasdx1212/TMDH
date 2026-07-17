@@ -80,12 +80,22 @@ export default function Home() {
   const fetchHouses = useCallback(async () => {
     // public_houses 뷰: 비공개 집의 이름·소개글·이미지는 소유자 외엔 null 로 마스킹됨
     // (직접 houses 테이블을 읽지 않으므로 F12 네트워크 탭에도 비공개 내용이 안 보임)
-    const { data } = await supabase
-      .from('public_houses')
-      .select('id, address, col, row, width, height, zone, status, name, nickname, description, link_url, exterior_image_url, interior_image_url, border_effect, like_count, visit_count, occupied_at, expires_at, is_permanent, parent_address, is_visible, has_password')
-      .neq('status', 'available')
-      .range(0, 79999)  // 전체 80,000칸 — Supabase 기본 1,000행 제한 회피
-    setHouses((data ?? []) as CellData[])
+    // ⚠️ .range(0,79999) 만으로는 Supabase db-max-rows(기본 1000) 에 막힘 →
+    //    1000행씩 페이지네이션으로 전부 불러온다 (대표칸 누락으로 인한 '유령 집' 방지)
+    const COLS = 'id, address, col, row, width, height, zone, status, name, nickname, description, link_url, exterior_image_url, interior_image_url, border_effect, like_count, visit_count, occupied_at, expires_at, is_permanent, parent_address, is_visible, has_password'
+    const PAGE = 1000
+    const all: CellData[] = []
+    for (let from = 0; from < 80000; from += PAGE) {
+      const { data, error } = await supabase
+        .from('public_houses').select(COLS)
+        .neq('status', 'available')
+        .order('id', { ascending: true })
+        .range(from, from + PAGE - 1)
+      if (error || !data || data.length === 0) break
+      all.push(...(data as CellData[]))
+      if (data.length < PAGE) break
+    }
+    setHouses(all)
     setLoading(false)
   }, [])
 
