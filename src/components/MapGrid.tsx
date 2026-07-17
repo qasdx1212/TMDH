@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useEffect, useCallback, useState } from 'react'
-import { GRID_COLS, GRID_ROWS, ZONES, getZone, isNeon, neonColor } from '@/lib/constants'
+import { GRID_COLS, GRID_ROWS, ZONES, getZone, isNeon, neonColor, neonWidth } from '@/lib/constants'
 import type { CellData, Zone } from '@/types/cell'
 
 interface Selection { col: number; row: number; width: number; height: number; zone: Zone }
@@ -229,7 +229,8 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       ctx.fillStyle=zone.color+'cc'; ctx.fillRect(x+1,y+1,w-2,ht-2); ctx.shadowBlur=0
       if (isNeon(h.border_effect)) {
         const nc = neonColor(h.border_effect)
-        ctx.shadowColor = nc; ctx.shadowBlur = 8; ctx.strokeStyle = nc; ctx.lineWidth = 2
+        const lw = { 1: 1.2, 2: 2, 3: 3.2 }[neonWidth(h.border_effect)] ?? 3.2
+        ctx.shadowColor = nc; ctx.shadowBlur = 8; ctx.strokeStyle = nc; ctx.lineWidth = lw
         ctx.strokeRect(x+1, y+1, w-2, ht-2)
         ctx.shadowBlur = 4; ctx.strokeRect(x+1, y+1, w-2, ht-2)  // 이중 스트로크로 더 밝게
         ctx.shadowBlur = 0
@@ -576,6 +577,9 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
           const isMine = myHouseIds?.has(h.id)
           const neon = isNeon(h.border_effect)
           const nc = neonColor(h.border_effect)
+          const nw = neonWidth(h.border_effect)
+          const outlinePx = { 1: 0.7, 2: 1.3, 3: 2.1 }[nw] ?? 2.1
+          const innerGlow = { 1: 3, 2: 5, 3: 8 }[nw] ?? 8
           const showName = h.nickname && wPx >= 20
           return (
             <div key={h.id} style={{
@@ -583,10 +587,10 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
               pointerEvents:'none', overflow:'hidden',
               // 네온: 바깥 다중 발광 + 안쪽 발광으로 선명하게 빛남
               boxShadow: neon
-                ? `0 0 2px ${nc}, 0 0 6px ${nc}, 0 0 14px ${nc}, inset 0 0 5px ${nc}`
+                ? `0 0 2px ${nc}, 0 0 6px ${nc}, 0 0 14px ${nc}, inset 0 0 ${innerGlow}px ${nc}`
                 : (h.visit_count >= 5 ? `0 0 6px ${zone.color}` : undefined),
-              outline: neon ? `1.2px solid ${nc}` : (isMine ? '1px solid #1a1a1a' : undefined),
-              outlineOffset: '-0.6px',
+              outline: neon ? `${outlinePx}px solid ${nc}` : (isMine ? '1px solid #1a1a1a' : undefined),
+              outlineOffset: `-${outlinePx / 2}px`,
             }}>
               <img
                 src={h.exterior_image_url || h.interior_image_url || ''} alt="" draggable={false}

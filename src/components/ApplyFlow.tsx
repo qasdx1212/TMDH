@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-import { ZONES, ZONE_PRICES, DURATIONS, PERMANENT_DAYS, PERMANENT_MULTIPLIER, NEON_PRESETS, NEON_PRICE, DEFAULT_NEON, isNeon, neonColor, getEffectPrice, effectLabel, calcPrice, formatKRW, getAddress, getZone } from '@/lib/constants'
+import { ZONES, ZONE_PRICES, DURATIONS, PERMANENT_DAYS, PERMANENT_MULTIPLIER, NEON_PRESETS, NEON_PRICE, NEON_MAX_WIDTH, NEON_WIDTH_LABELS, DEFAULT_NEON, isNeon, neonColor, neonWidth, buildNeon, getEffectPrice, effectLabel, calcPrice, formatKRW, getAddress, getZone } from '@/lib/constants'
 import { safeUrl } from '@/lib/url'
 import { hashPwd } from '@/lib/hash'
 import { toUserMessage } from '@/lib/errorMessage'
@@ -1239,11 +1239,11 @@ export default function ApplyFlow({ selectedCell, userId, isAdmin, onClose, onSu
                       color: form.borderEffect === 'none' ? '#fff' : '#1a1a1a',
                       fontSize:12, fontWeight:600,
                     }}>기본</button>
-                    {/* 프리셋 색상 */}
+                    {/* 프리셋 색상 (현재 굵기 유지) */}
                     {NEON_PRESETS.map(p => {
                       const active = neonOn && neonColor(form.borderEffect).toLowerCase() === p.color.toLowerCase()
                       return (
-                        <button key={p.color} onClick={() => setForm(f => ({ ...f, borderEffect: `neon:${p.color}` }))}
+                        <button key={p.color} onClick={() => setForm(f => ({ ...f, borderEffect: buildNeon(p.color, neonWidth(f.borderEffect)) }))}
                           title={p.label}
                           style={{
                             width:32, height:32, borderRadius:'50%', cursor:'pointer', flexShrink:0, padding:0,
@@ -1269,14 +1269,36 @@ export default function ApplyFlow({ selectedCell, userId, isAdmin, onClose, onSu
                           display:'flex', alignItems:'center', justifyContent:'center',
                         }}>
                           <span style={{ fontSize:13, filter:'drop-shadow(0 0 1px rgba(0,0,0,0.5))' }}>🎨</span>
-                          <input type="color" value={curHex}
-                            onChange={e => setForm(f => ({ ...f, borderEffect: `neon:${e.target.value}` }))}
+                          <input type="color" value={customActive || isPreset ? curHex : DEFAULT_NEON}
+                            onChange={e => setForm(f => ({ ...f, borderEffect: buildNeon(e.target.value, neonWidth(f.borderEffect)) }))}
                             style={{ position:'absolute', inset:0, width:'100%', height:'100%', opacity:0, cursor:'pointer' }}
                           />
                         </label>
                       )
                     })()}
                   </div>
+
+                  {/* 굵기 (네온 선택 시) */}
+                  {neonOn && (
+                    <div style={{ marginTop:10, display:'flex', alignItems:'center', gap:8 }}>
+                      <span style={{ fontSize:11, color:'#6f6d6a', fontWeight:600 }}>테두리 굵기</span>
+                      <div style={{ display:'flex', gap:6 }}>
+                        {Array.from({ length: NEON_MAX_WIDTH }, (_, i) => i + 1).map(w => {
+                          const active = neonWidth(form.borderEffect) === w
+                          return (
+                            <button key={w} onClick={() => setForm(f => ({ ...f, borderEffect: buildNeon(neonColor(f.borderEffect), w) }))}
+                              style={{
+                                padding:'6px 12px', borderRadius:8, cursor:'pointer', fontSize:11, fontWeight:600,
+                                border:`1px solid ${active ? '#1c1c1e' : '#e0ddd9'}`,
+                                background: active ? '#1c1c1e' : '#fff',
+                                color: active ? '#fff' : '#575654',
+                              }}
+                            >{NEON_WIDTH_LABELS[w]}</button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
                   {effectPrice > 0 && (
                     <div style={{ marginTop:8, padding:'8px 10px', borderRadius:10, background:'#fff', border:'1px solid #e9e7e4', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                       <span style={{ fontSize:11, color:'#6f6d6a' }}>이펙트 추가금</span>

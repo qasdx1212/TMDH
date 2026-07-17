@@ -45,14 +45,26 @@ const LEGACY_NEON_COLORS: Record<string, string> = {
   neon_blue: '#00E5FF', neon_gold: '#FFD000', neon_purple: '#B44BFF',
 }
 
+// 굵기 단계 (1=얇게 ~ 3=굵게). 저장 형식: 'neon:#RRGGBB:굵기'
+export const NEON_MAX_WIDTH = 3
+export const NEON_WIDTH_LABELS: Record<number, string> = { 1: '얇게', 2: '보통', 3: '굵게' }
+
 export function isNeon(effect: string | null | undefined): boolean {
   return !!effect && effect.startsWith('neon')
 }
 export function neonColor(effect: string | null | undefined): string {
   if (!effect) return DEFAULT_NEON
-  const i = effect.indexOf(':')
-  if (i >= 0) return effect.slice(i + 1) || DEFAULT_NEON   // 'neon:#RRGGBB'
-  return LEGACY_NEON_COLORS[effect] || DEFAULT_NEON         // 구버전 이름
+  if (effect.includes(':')) return effect.split(':')[1] || DEFAULT_NEON   // 'neon:#RRGGBB[:굵기]'
+  return LEGACY_NEON_COLORS[effect] || DEFAULT_NEON                        // 구버전 이름
+}
+export function neonWidth(effect: string | null | undefined): number {
+  if (!effect) return NEON_MAX_WIDTH
+  const w = parseInt(effect.split(':')[2] ?? '', 10)
+  return w >= 1 && w <= NEON_MAX_WIDTH ? w : NEON_MAX_WIDTH   // 값 없으면 최대(굵게)
+}
+// 색·굵기로 border_effect 문자열 생성
+export function buildNeon(color: string, width: number): string {
+  return `neon:${color}:${width}`
 }
 export function getEffectPrice(effect: string | null | undefined): number {
   return isNeon(effect) ? NEON_PRICE : 0
