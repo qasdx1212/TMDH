@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS houses (
   interior_image_url TEXT,
 
   -- 이펙트
-  border_effect TEXT NOT NULL DEFAULT 'none' CHECK (border_effect IN ('none', 'neon')),
+  border_effect TEXT NOT NULL DEFAULT 'none',  -- 'none' 또는 'neon:#RRGGBB:굵기' (CHECK 제약 제거함)
 
   -- 상태
   status TEXT NOT NULL DEFAULT 'available' CHECK (status IN ('available', 'pending', 'occupied')),
