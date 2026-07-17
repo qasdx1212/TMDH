@@ -1,7 +1,7 @@
 export type Zone = 'neon' | 'riverside' | 'oldtown' | 'artdistrict'
 export type HouseStatus = 'available' | 'pending' | 'occupied'
 export type OrderStatus = 'pending' | 'paid' | 'failed' | 'cancelled'
-export type BorderEffect = 'none' | 'neon'
+export type BorderEffect = string   // 'none' 또는 'neon:#RRGGBB'
 
 export interface House {
   id: string

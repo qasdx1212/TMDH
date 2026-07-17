@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { calcPrice, EFFECT_PRICES } from '@/lib/constants'
+import { calcPrice, getEffectPrice } from '@/lib/constants'
 
 export async function POST(req: NextRequest) {
   const { paymentId } = await req.json()
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
 
   // 4. 서버사이드 금액 독립 계산 + 검증 (DB 값 자체가 조작된 케이스 방어)
   //    기본가(칸수×기간) + 이펙트 추가금. 클라이언트 금액은 신뢰하지 않음.
-  const effectPrice = EFFECT_PRICES[order.border_effect as string] ?? 0
+  const effectPrice = getEffectPrice(order.border_effect as string)
   const expectedAmount = calcPrice(order.zone, order.width * order.height, order.days) + effectPrice
   if (expectedAmount !== order.amount) {
     return NextResponse.json({ error: '주문 금액 불일치' }, { status: 400 })

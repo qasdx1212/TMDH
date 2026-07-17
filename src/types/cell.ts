@@ -16,7 +16,7 @@ export interface CellData {
   link_url: string | null
   exterior_image_url: string | null
   interior_image_url?: string | null
-  border_effect: 'none' | 'neon'
+  border_effect: string   // 'none' 또는 'neon:#RRGGBB' (구버전 'neon' 등도 호환)
   like_count: number
   visit_count: number
   occupied_at: string | null

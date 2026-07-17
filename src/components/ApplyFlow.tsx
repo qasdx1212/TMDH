@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-import { ZONES, ZONE_PRICES, DURATIONS, PERMANENT_DAYS, PERMANENT_MULTIPLIER, EFFECT_PRICES, EFFECT_LABELS, EFFECT_COLORS, NEON_OPTIONS, isNeon, neonColor, calcPrice, formatKRW, getAddress, getZone } from '@/lib/constants'
+import { ZONES, ZONE_PRICES, DURATIONS, PERMANENT_DAYS, PERMANENT_MULTIPLIER, NEON_PRESETS, NEON_PRICE, DEFAULT_NEON, isNeon, neonColor, getEffectPrice, effectLabel, calcPrice, formatKRW, getAddress, getZone } from '@/lib/constants'
 import { safeUrl } from '@/lib/url'
 import { hashPwd } from '@/lib/hash'
 import { toUserMessage } from '@/lib/errorMessage'
@@ -188,7 +188,7 @@ export default function ApplyFlow({ selectedCell, userId, isAdmin, onClose, onSu
   }
 
   // 이펙트 추가금 (네온 +1,000원 등) — 총액·결제버튼·orders.amount 전부 이 값을 사용
-  const effectPrice = EFFECT_PRICES[form.borderEffect] ?? 0
+  const effectPrice = getEffectPrice(form.borderEffect)
   const price = calcTotalPrice(form.days) + effectPrice
 
   /* ─── 단계별 임시저장 (셀 주소별 localStorage) ─── */
@@ -1228,9 +1228,9 @@ export default function ApplyFlow({ selectedCell, userId, isAdmin, onClose, onSu
                 {/* 이펙트 */}
                 <div style={{ marginBottom:12 }}>
                   <div style={{ fontSize:12, fontWeight:700, color:'#1a1a1a', marginBottom:8 }}>
-                    이펙트 추가 (선택) <span style={{ fontSize:11, fontWeight:600, color:'#6f6d6a' }}>· 네온 +{formatKRW(1000)}</span>
+                    이펙트 추가 (선택) <span style={{ fontSize:11, fontWeight:600, color:'#6f6d6a' }}>· 네온 +{formatKRW(NEON_PRICE)}</span>
                   </div>
-                  <div style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
+                  <div style={{ display:'flex', gap:9, alignItems:'center', flexWrap:'wrap' }}>
                     {/* 기본 (이펙트 없음) */}
                     <button onClick={() => setForm(f => ({ ...f, borderEffect: 'none' }))} style={{
                       padding:'9px 14px', borderRadius:10, cursor:'pointer',
@@ -1239,22 +1239,43 @@ export default function ApplyFlow({ selectedCell, userId, isAdmin, onClose, onSu
                       color: form.borderEffect === 'none' ? '#fff' : '#1a1a1a',
                       fontSize:12, fontWeight:600,
                     }}>기본</button>
-                    {/* 네온 색상 선택 */}
-                    {NEON_OPTIONS.map(effect => {
-                      const active = form.borderEffect === effect
-                      const c = EFFECT_COLORS[effect]
+                    {/* 프리셋 색상 */}
+                    {NEON_PRESETS.map(p => {
+                      const active = neonOn && neonColor(form.borderEffect).toLowerCase() === p.color.toLowerCase()
                       return (
-                        <button key={effect} onClick={() => setForm(f => ({ ...f, borderEffect: effect }))}
-                          title={EFFECT_LABELS[effect]}
+                        <button key={p.color} onClick={() => setForm(f => ({ ...f, borderEffect: `neon:${p.color}` }))}
+                          title={p.label}
                           style={{
-                            width:34, height:34, borderRadius:'50%', cursor:'pointer', flexShrink:0, padding:0,
-                            background:c, border:'2px solid #ffffff',
+                            width:32, height:32, borderRadius:'50%', cursor:'pointer', flexShrink:0, padding:0,
+                            background:p.color, border: p.color.toUpperCase()==='#FFFFFF' ? '1px solid #e0ddd9' : '2px solid #ffffff',
                             outline: active ? '2px solid #1c1c1e' : 'none', outlineOffset:2,
-                            boxShadow: `0 0 8px ${c}${active ? '' : '99'}`,
+                            boxShadow: `0 0 8px ${p.color}${active ? '' : '99'}`,
                           }}
                         />
                       )
                     })}
+                    {/* 직접 선택 (컬러 스펙트럼) */}
+                    {(() => {
+                      const curHex = neonOn ? neonColor(form.borderEffect) : DEFAULT_NEON
+                      const isPreset = NEON_PRESETS.some(p => p.color.toLowerCase() === curHex.toLowerCase())
+                      const customActive = neonOn && !isPreset
+                      return (
+                        <label title="직접 선택" style={{
+                          position:'relative', width:32, height:32, borderRadius:'50%', cursor:'pointer', flexShrink:0,
+                          background: customActive ? curHex : 'conic-gradient(from 0deg, #FF3B30, #FF9500, #FFCC00, #34C759, #00C7FF, #0A84FF, #AF52DE, #FF2D95, #FF3B30)',
+                          border:'2px solid #ffffff',
+                          outline: customActive ? '2px solid #1c1c1e' : 'none', outlineOffset:2,
+                          boxShadow: customActive ? `0 0 8px ${curHex}` : '0 0 4px rgba(0,0,0,0.15)',
+                          display:'flex', alignItems:'center', justifyContent:'center',
+                        }}>
+                          <span style={{ fontSize:13, filter:'drop-shadow(0 0 1px rgba(0,0,0,0.5))' }}>🎨</span>
+                          <input type="color" value={curHex}
+                            onChange={e => setForm(f => ({ ...f, borderEffect: `neon:${e.target.value}` }))}
+                            style={{ position:'absolute', inset:0, width:'100%', height:'100%', opacity:0, cursor:'pointer' }}
+                          />
+                        </label>
+                      )
+                    })()}
                   </div>
                   {effectPrice > 0 && (
                     <div style={{ marginTop:8, padding:'8px 10px', borderRadius:10, background:'#fff', border:'1px solid #e9e7e4', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
@@ -1298,7 +1319,7 @@ export default function ApplyFlow({ selectedCell, userId, isAdmin, onClose, onSu
                     <div style={{ display:'flex', gap:6, marginBottom:6, flexWrap:'wrap' }}>
                       <span style={{ fontSize:10, padding:'3px 7px', borderRadius:6, background:'#f4f3f1', color:'#6f6d6a', fontWeight:600 }}>{selectedCell.address}</span>
                       {form.nickname && <span style={{ fontSize:10, padding:'3px 7px', borderRadius:6, background:'#1c1c1e', color:'#fff', fontWeight:700 }}>{form.nickname}</span>}
-                      {neonOn && <span style={{ fontSize:10, padding:'3px 7px', borderRadius:6, border:`1px solid ${neonPaintColor}`, color: neonPaintColor, fontWeight:700 }}>{EFFECT_LABELS[form.borderEffect]}</span>}
+                      {neonOn && <span style={{ fontSize:10, padding:'3px 7px', borderRadius:6, border:`1px solid ${neonPaintColor}`, color: neonPaintColor, fontWeight:700 }}>{effectLabel(form.borderEffect)}</span>}
                     </div>
                     <div style={{ fontSize:17, fontWeight:800, color:'#1a1a1a', marginBottom:6 }}>{form.name || '집 이름 없음'}</div>
 
@@ -1341,7 +1362,7 @@ export default function ApplyFlow({ selectedCell, userId, isAdmin, onClose, onSu
                   { label:'닉네임', value: form.nickname || '(없음)' },
                   { label:'소개글', value: form.description || '(없음)' },
                   { label:'링크', value: form.linkUrl || '(없음)' },
-                  { label:'이펙트', value: effectPrice > 0 ? `${EFFECT_LABELS[form.borderEffect]} (+${formatKRW(effectPrice)})` : EFFECT_LABELS[form.borderEffect] },
+                  { label:'이펙트', value: effectPrice > 0 ? `${effectLabel(form.borderEffect)} (+${formatKRW(effectPrice)})` : effectLabel(form.borderEffect) },
                 ].map(({ label, value, highlight }) => (
                   <InfoRow key={label} label={label} value={value} highlight={highlight} />
                 ))}
@@ -1357,7 +1378,7 @@ export default function ApplyFlow({ selectedCell, userId, isAdmin, onClose, onSu
                     </div>
                     {effectPrice > 0 && (
                       <div style={{ display:'flex', justifyContent:'space-between', marginTop:10, paddingTop:10, borderTop:'1px solid #e9e7e4', fontSize:12, color:'#6f6d6a' }}>
-                        <span>입주비 {formatKRW(calcTotalPrice(form.days))} + {EFFECT_LABELS[form.borderEffect]}</span>
+                        <span>입주비 {formatKRW(calcTotalPrice(form.days))} + {effectLabel(form.borderEffect)}</span>
                         <span style={{ fontWeight:700, color:'#1a1a1a' }}>+{formatKRW(effectPrice)}</span>
                       </div>
                     )}
@@ -1387,7 +1408,7 @@ export default function ApplyFlow({ selectedCell, userId, isAdmin, onClose, onSu
                   { label:'위치', value:`${selectedCell.address} (${zone.label})` },
                   { label:'크기', value:`${selectedCell.width??1} × ${selectedCell.height??1} (${cellCount}칸)` },
                   { label:'입주비', value: formatKRW(calcTotalPrice(form.days)) },
-                  ...(effectPrice > 0 ? [{ label:`이펙트 · ${EFFECT_LABELS[form.borderEffect]}`, value: `+${formatKRW(effectPrice)}` }] : []),
+                  ...(effectPrice > 0 ? [{ label:`이펙트 · ${effectLabel(form.borderEffect)}`, value: `+${formatKRW(effectPrice)}` }] : []),
                   { label:'금액', value: formatKRW(price), highlight: true },
                 ].map(({ label, value, highlight }) => (
                   <InfoRow key={label} label={label} value={value} highlight={highlight} />

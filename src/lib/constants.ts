@@ -18,32 +18,47 @@ export const ZONE_PRICES: Record<string, number> = {
 
 export const PERMANENT_MULTIPLIER = 1 // 영구제: 기준가 × 1 (= 칸당 기준가 그대로)
 
-// 이펙트 추가금 (정액). 금액은 여기서만 고치면 전체 반영됨.
-export const EFFECT_PRICES: Record<string, number> = {
-  none: 0,
-  neon_green: 1000, neon_pink: 1000, neon_blue: 1000, neon_gold: 1000, neon_purple: 1000,
-  neon: 1000, // 구버전 호환 (기존 데이터)
+// ── 네온 이펙트 ──────────────────────────────────────────────
+// border_effect 저장 형식: 'none' 또는 'neon:#RRGGBB' (색을 함께 저장 → 별도 컬럼 불필요)
+// 구버전 값('neon', 'neon_green' 등)도 호환.
+export const NEON_PRICE = 1000            // 네온 추가금 (색 상관없이 정액)
+export const DEFAULT_NEON = '#34C759'     // 색 정보 없을 때 기본색
+
+// 프리셋 색 (엑셀/오피스 표준 계열)
+export const NEON_PRESETS: { label: string; color: string }[] = [
+  { label: '레드',   color: '#FF3B30' },
+  { label: '오렌지', color: '#FF9500' },
+  { label: '옐로',   color: '#FFCC00' },
+  { label: '라임',   color: '#A8E10C' },
+  { label: '그린',   color: '#34C759' },
+  { label: '민트',   color: '#00E5CC' },
+  { label: '시안',   color: '#00C7FF' },
+  { label: '블루',   color: '#0A84FF' },
+  { label: '퍼플',   color: '#AF52DE' },
+  { label: '핑크',   color: '#FF2D95' },
+  { label: '화이트', color: '#FFFFFF' },
+]
+
+// 구버전 이름 → 색 매핑
+const LEGACY_NEON_COLORS: Record<string, string> = {
+  neon: '#39FF14', neon_green: '#39FF14', neon_pink: '#FF1B8D',
+  neon_blue: '#00E5FF', neon_gold: '#FFD000', neon_purple: '#B44BFF',
 }
-export const EFFECT_LABELS: Record<string, string> = {
-  none: '기본 (이펙트 없음)',
-  neon_green: '네온 그린', neon_pink: '네온 핑크', neon_blue: '네온 블루',
-  neon_gold: '네온 골드', neon_purple: '네온 퍼플',
-  neon: '네온 테두리',
-}
-// 네온 발광 색 (밝고 선명하게)
-export const EFFECT_COLORS: Record<string, string> = {
-  neon_green: '#39FF14', neon_pink: '#FF1B8D', neon_blue: '#00E5FF',
-  neon_gold: '#FFD000', neon_purple: '#B44BFF',
-  neon: '#39FF14', // 구버전 기본색
-}
-// 선택 가능한 네온 색 목록 (신청 UI에서 사용)
-export const NEON_OPTIONS = ['neon_green', 'neon_pink', 'neon_blue', 'neon_gold', 'neon_purple'] as const
 
 export function isNeon(effect: string | null | undefined): boolean {
   return !!effect && effect.startsWith('neon')
 }
 export function neonColor(effect: string | null | undefined): string {
-  return (effect && EFFECT_COLORS[effect]) || '#39FF14'
+  if (!effect) return DEFAULT_NEON
+  const i = effect.indexOf(':')
+  if (i >= 0) return effect.slice(i + 1) || DEFAULT_NEON   // 'neon:#RRGGBB'
+  return LEGACY_NEON_COLORS[effect] || DEFAULT_NEON         // 구버전 이름
+}
+export function getEffectPrice(effect: string | null | undefined): number {
+  return isNeon(effect) ? NEON_PRICE : 0
+}
+export function effectLabel(effect: string | null | undefined): string {
+  return isNeon(effect) ? '네온 테두리' : '기본 (이펙트 없음)'
 }
 
 export const DURATIONS = [
