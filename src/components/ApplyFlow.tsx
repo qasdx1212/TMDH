@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-import { ZONES, ZONE_PRICES, DURATIONS, PERMANENT_DAYS, PERMANENT_MULTIPLIER, NEON_PRESETS, NEON_PRICE, NEON_MAX_WIDTH, DEFAULT_NEON, isNeon, neonColor, neonWidth, buildNeon, getEffectPrice, effectLabel, calcPrice, formatKRW, getAddress, getZone } from '@/lib/constants'
+import { ZONES, ZONE_PRICES, DURATIONS, PERMANENT_DAYS, PERMANENT_MULTIPLIER, NEON_PRESETS, NEON_PRICE, NEON_MAX_WIDTH, DEFAULT_NEON, isNeon, neonColor, neonWidth, neonWidthFrac, buildNeon, getEffectPrice, effectLabel, calcPrice, formatKRW, getAddress, getZone } from '@/lib/constants'
 import { safeUrl } from '@/lib/url'
 import { hashPwd } from '@/lib/hash'
 import { toUserMessage } from '@/lib/errorMessage'
@@ -57,7 +57,7 @@ function drawTransformed(ctx: CanvasRenderingContext2D, img: HTMLImageElement, T
 }
 
 // 캔버스 한 장을 (흰 배경 + 이미지 + 선택적 네온 테두리)로 칠함
-function paintCanvas(canvas: HTMLCanvasElement | null, img: HTMLImageElement | null, t: Transform, neon?: { color: string; width: number }) {
+function paintCanvas(canvas: HTMLCanvasElement | null, img: HTMLImageElement | null, t: Transform, neon?: { color: string; frac: number }) {
   if (!canvas) return
   const ctx = canvas.getContext('2d')
   if (!ctx) return
@@ -66,8 +66,8 @@ function paintCanvas(canvas: HTMLCanvasElement | null, img: HTMLImageElement | n
   ctx.fillRect(0, 0, canvas.width, canvas.height)
   if (img) drawTransformed(ctx, img, canvas.width, canvas.height, t)
   if (neon) {
-    // 굵기 단계(1~6)에 비례해 두께 반영
-    const lw = neon.width * 2
+    // 최대(frac=1)일 때 원래 고정 두께(3), 아래로 비례 축소
+    const lw = Math.max(0.6, 3 * neon.frac)
     const off = lw / 2 + 0.5
     ctx.save()
     ctx.shadowColor = neon.color
@@ -323,8 +323,8 @@ export default function ApplyFlow({ selectedCell, userId, isAdmin, onClose, onSu
 
   const neonOn = isNeon(form.borderEffect)
   const neonPaintColor = neonColor(form.borderEffect)
-  const neonW = neonWidth(form.borderEffect)
-  const neonPaint = neonOn ? { color: neonPaintColor, width: neonW } : undefined
+  const neonFrac = neonWidthFrac(form.borderEffect)   // 0~1, 최대=원래 고정 두께
+  const neonPaint = neonOn ? { color: neonPaintColor, frac: neonFrac } : undefined
 
   // 새로 고른 파일만 크롭 대상 (기존 저장된 URL은 CORS/변조 이슈로 제외)
   const cropEnabled = !!form.exteriorImage && !!extImg
@@ -368,14 +368,14 @@ export default function ApplyFlow({ selectedCell, userId, isAdmin, onClose, onSu
     paintCanvas(cropRef.current, extImg, extTransform)
     paintCanvas(mapPreviewRef.current, extImg, extTransform, neonPaint)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, extImg, form.exteriorFit, form.exteriorScale, form.exteriorOffset, neonOn, neonPaintColor, neonW])
+  }, [step, extImg, form.exteriorFit, form.exteriorScale, form.exteriorOffset, neonOn, neonPaintColor, neonFrac])
 
   // 신청 확인 미리보기 카드 (Step 4)
   useEffect(() => {
     if (step !== 4) return
     paintCanvas(confirmRef.current, extImg, extTransform, neonPaint)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, extImg, form.exteriorFit, form.exteriorScale, form.exteriorOffset, neonOn, neonPaintColor, neonW])
+  }, [step, extImg, form.exteriorFit, form.exteriorScale, form.exteriorOffset, neonOn, neonPaintColor, neonFrac])
 
   // 드래그로 위치 조정 (외관·내부 공용)
   const onCropDown = (target: 'exterior' | 'interior') => (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -1213,15 +1213,15 @@ export default function ApplyFlow({ selectedCell, userId, isAdmin, onClose, onSu
                   ) : form.exteriorPreview ? (
                     <img src={form.exteriorPreview} alt="" style={{
                       maxWidth:'80%', maxHeight:'80%', objectFit: form.exteriorFit, borderRadius:8,
-                      border: neonOn ? `${neonW * 1.4}px solid ${neonPaintColor}` : '1px solid #e9e7e4',
-                      boxShadow: neonOn ? `0 0 ${4 + neonW * 2}px ${neonPaintColor}, 0 0 ${10 + neonW * 3}px ${neonPaintColor}` : 'none',
+                      border: neonOn ? `${(2 * neonFrac).toFixed(2)}px solid ${neonPaintColor}` : '1px solid #e9e7e4',
+                      boxShadow: neonOn ? `0 0 ${(8 * neonFrac).toFixed(1)}px ${neonPaintColor}, 0 0 ${(18 * neonFrac).toFixed(1)}px ${neonPaintColor}` : 'none',
                     }} />
                   ) : (
                     <div style={{
                       width:'82%', height:'76%', display:'flex', alignItems:'center', justifyContent:'center',
                       textAlign:'center', color:'#97948f', fontSize:12, lineHeight:1.6, borderRadius:8,
-                      border: neonOn ? `${neonW * 1.4}px solid ${neonPaintColor}` : '1px dashed #e0ddd9',
-                      boxShadow: neonOn ? `0 0 ${4 + neonW * 2}px ${neonPaintColor}, 0 0 ${10 + neonW * 3}px ${neonPaintColor}` : 'none',
+                      border: neonOn ? `${(2 * neonFrac).toFixed(2)}px solid ${neonPaintColor}` : '1px dashed #e0ddd9',
+                      boxShadow: neonOn ? `0 0 ${(8 * neonFrac).toFixed(1)}px ${neonPaintColor}, 0 0 ${(18 * neonFrac).toFixed(1)}px ${neonPaintColor}` : 'none',
                     }}>
                       {neonOn ? <span>네온 테두리 적용 예시<br/>이미지를 올리면 함께 보여요</span> : <span>이미지를 업로드하면<br/>미리보기가 표시됩니다</span>}
                     </div>
@@ -1316,7 +1316,7 @@ export default function ApplyFlow({ selectedCell, userId, isAdmin, onClose, onSu
                 {/* 실제 집 미리보기 카드 */}
                 <div style={{
                   borderRadius:14, border:'1px solid #e9e7e4', background:'#fff', overflow:'hidden', marginBottom:18,
-                  boxShadow: neonOn ? `0 0 0 ${neonW}px ${neonPaintColor}, 0 0 22px ${neonPaintColor}` : '0 1px 3px rgba(0,0,0,0.05)',
+                  boxShadow: neonOn ? `0 0 0 ${(2 * neonFrac).toFixed(2)}px ${neonPaintColor}, 0 0 22px ${neonPaintColor}` : '0 1px 3px rgba(0,0,0,0.05)',
                 }}>
                   {/* 대표 이미지 (지도에 올라갈 모습 그대로) */}
                   <div style={{ padding:'10px 14px 0', display:'flex', alignItems:'center', gap:6 }}>

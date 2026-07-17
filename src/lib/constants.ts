@@ -61,9 +61,10 @@ export function neonWidth(effect: string | null | undefined): number {
   const w = parseInt(effect.split(':')[2] ?? '', 10)
   return w >= 1 && w <= NEON_MAX_WIDTH ? w : NEON_MAX_WIDTH   // 값 없으면 최대(굵게)
 }
-// 굵기 단계(1~6) → 실제 픽셀 두께. 지도·미리보기가 같은 비율을 쓰도록 계수만 곱해 씀.
-export function neonWidthPx(effect: string | null | undefined): number {
-  return 0.4 + neonWidth(effect) * 0.55   // 1→0.95 ~ 6→3.7 (셀 좌표 기준)
+// 굵기 비율 (0~1). 최대(NEON_MAX_WIDTH)일 때 1 = 원래 고정 두께.
+// 렌더 쪽에서 이 비율에 원래 고정값을 곱해 씀 → 최대가 옛날 그대로, 아래로 얇아짐.
+export function neonWidthFrac(effect: string | null | undefined): number {
+  return neonWidth(effect) / NEON_MAX_WIDTH
 }
 // 색·굵기로 border_effect 문자열 생성
 export function buildNeon(color: string, width: number): string {
