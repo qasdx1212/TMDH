@@ -151,7 +151,8 @@ export default function Home() {
       parent_address: null, occupied_at: null, expires_at: null,
       is_permanent: false, like_count: 0, visit_count: 0, is_visible: true,
     }).eq('id', cell.id)
-    if ((cell.width ?? 1) > 1 || (cell.height ?? 1) > 1) {
+    // 자식칸은 width/height 값에 상관없이 항상 정리 (고아 셀 방지)
+    {
       await supabase.from('houses').update({
         user_id: null, status: 'available', parent_address: null,
         occupied_at: null, expires_at: null, is_permanent: false,

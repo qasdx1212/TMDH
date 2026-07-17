@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '권한 없음' }, { status: 403 })
   }
 
-  const { houseId, address, width, height } = await req.json()
+  const { houseId, address } = await req.json()
   if (!houseId || !address) {
     return NextResponse.json({ error: '필수 파라미터 누락' }, { status: 400 })
   }
@@ -37,12 +37,11 @@ export async function POST(req: NextRequest) {
     is_permanent: false, like_count: 0, visit_count: 0, is_visible: true,
   }).eq('id', houseId)
 
-  if ((width ?? 1) > 1 || (height ?? 1) > 1) {
-    await admin.from('houses').update({
-      user_id: null, status: 'available', parent_address: null,
-      occupied_at: null, expires_at: null, is_permanent: false,
-    }).eq('parent_address', address)
-  }
+  // 자식칸은 width/height 값에 상관없이 항상 정리 (고아 셀 방지)
+  await admin.from('houses').update({
+    user_id: null, status: 'available', parent_address: null,
+    occupied_at: null, expires_at: null, is_permanent: false,
+  }).eq('parent_address', address)
 
   return NextResponse.json({ ok: true })
 }
