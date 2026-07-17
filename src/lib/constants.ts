@@ -21,11 +21,29 @@ export const PERMANENT_MULTIPLIER = 1 // 영구제: 기준가 × 1 (= 칸당 기
 // 이펙트 추가금 (정액). 금액은 여기서만 고치면 전체 반영됨.
 export const EFFECT_PRICES: Record<string, number> = {
   none: 0,
-  neon: 1000,
+  neon_green: 1000, neon_pink: 1000, neon_blue: 1000, neon_gold: 1000, neon_purple: 1000,
+  neon: 1000, // 구버전 호환 (기존 데이터)
 }
 export const EFFECT_LABELS: Record<string, string> = {
   none: '기본 (이펙트 없음)',
+  neon_green: '네온 그린', neon_pink: '네온 핑크', neon_blue: '네온 블루',
+  neon_gold: '네온 골드', neon_purple: '네온 퍼플',
   neon: '네온 테두리',
+}
+// 네온 발광 색 (밝고 선명하게)
+export const EFFECT_COLORS: Record<string, string> = {
+  neon_green: '#39FF14', neon_pink: '#FF1B8D', neon_blue: '#00E5FF',
+  neon_gold: '#FFD000', neon_purple: '#B44BFF',
+  neon: '#39FF14', // 구버전 기본색
+}
+// 선택 가능한 네온 색 목록 (신청 UI에서 사용)
+export const NEON_OPTIONS = ['neon_green', 'neon_pink', 'neon_blue', 'neon_gold', 'neon_purple'] as const
+
+export function isNeon(effect: string | null | undefined): boolean {
+  return !!effect && effect.startsWith('neon')
+}
+export function neonColor(effect: string | null | undefined): string {
+  return (effect && EFFECT_COLORS[effect]) || '#39FF14'
 }
 
 export const DURATIONS = [

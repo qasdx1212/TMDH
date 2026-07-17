@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-import { ZONES, ZONE_PRICES, DURATIONS, PERMANENT_DAYS, PERMANENT_MULTIPLIER, EFFECT_PRICES, EFFECT_LABELS, calcPrice, formatKRW, getAddress, getZone } from '@/lib/constants'
+import { ZONES, ZONE_PRICES, DURATIONS, PERMANENT_DAYS, PERMANENT_MULTIPLIER, EFFECT_PRICES, EFFECT_LABELS, EFFECT_COLORS, NEON_OPTIONS, isNeon, neonColor, calcPrice, formatKRW, getAddress, getZone } from '@/lib/constants'
 import { safeUrl } from '@/lib/url'
 import { hashPwd } from '@/lib/hash'
 import { toUserMessage } from '@/lib/errorMessage'
@@ -33,7 +33,7 @@ interface FormData {
   interiorScale: number                       // 1:1 크롭 배율
   interiorOffset: { x: number; y: number }    // 1:1 크롭 이동값 (정규화)
   days: number
-  borderEffect: 'none' | 'neon'
+  borderEffect: string
   password: string
   passwordConfirm: string
   removePassword: boolean
@@ -109,7 +109,7 @@ function isPwdValid(p: string): boolean {
 /* ─── 임시저장(draft) ─── */
 interface Draft {
   name?: string; description?: string; linkUrl?: string; nickname?: string
-  days?: number; borderEffect?: 'none' | 'neon'
+  days?: number; borderEffect?: string
   exteriorFit?: 'cover' | 'contain'
   exteriorScale?: number; exteriorOffset?: { x: number; y: number }
   interiorScale?: number; interiorOffset?: { x: number; y: number }
@@ -216,7 +216,7 @@ export default function ApplyFlow({ selectedCell, userId, isAdmin, onClose, onSu
           linkUrl: d.linkUrl ?? f.linkUrl,
           nickname: d.nickname ?? f.nickname,
           days: typeof d.days === 'number' ? d.days : f.days,
-          borderEffect: d.borderEffect === 'neon' ? 'neon' : f.borderEffect,
+          borderEffect: d.borderEffect ?? f.borderEffect,
           exteriorFit: d.exteriorFit === 'contain' ? 'contain' : f.exteriorFit,
           exteriorScale: typeof d.exteriorScale === 'number' ? d.exteriorScale : f.exteriorScale,
           exteriorOffset: d.exteriorOffset ?? f.exteriorOffset,
@@ -319,8 +319,9 @@ export default function ApplyFlow({ selectedCell, userId, isAdmin, onClose, onSu
   const [intImg, setIntImg] = useState<HTMLImageElement | null>(null)
   const dragRef = useRef<{ x: number; y: number; target: 'exterior' | 'interior' } | null>(null)
 
-  const neonOn = form.borderEffect === 'neon'
-  const neonPaint = neonOn ? { color: zone.color } : undefined
+  const neonOn = isNeon(form.borderEffect)
+  const neonPaintColor = neonColor(form.borderEffect)
+  const neonPaint = neonOn ? { color: neonPaintColor } : undefined
 
   // 새로 고른 파일만 크롭 대상 (기존 저장된 URL은 CORS/변조 이슈로 제외)
   const cropEnabled = !!form.exteriorImage && !!extImg
@@ -364,14 +365,14 @@ export default function ApplyFlow({ selectedCell, userId, isAdmin, onClose, onSu
     paintCanvas(cropRef.current, extImg, extTransform)
     paintCanvas(mapPreviewRef.current, extImg, extTransform, neonPaint)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, extImg, form.exteriorFit, form.exteriorScale, form.exteriorOffset, neonOn, zone.color])
+  }, [step, extImg, form.exteriorFit, form.exteriorScale, form.exteriorOffset, neonOn, neonPaintColor])
 
   // 신청 확인 미리보기 카드 (Step 4)
   useEffect(() => {
     if (step !== 4) return
     paintCanvas(confirmRef.current, extImg, extTransform, neonPaint)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, extImg, form.exteriorFit, form.exteriorScale, form.exteriorOffset, neonOn, zone.color])
+  }, [step, extImg, form.exteriorFit, form.exteriorScale, form.exteriorOffset, neonOn, neonPaintColor])
 
   // 드래그로 위치 조정 (외관·내부 공용)
   const onCropDown = (target: 'exterior' | 'interior') => (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -1209,15 +1210,15 @@ export default function ApplyFlow({ selectedCell, userId, isAdmin, onClose, onSu
                   ) : form.exteriorPreview ? (
                     <img src={form.exteriorPreview} alt="" style={{
                       maxWidth:'80%', maxHeight:'80%', objectFit: form.exteriorFit, borderRadius:8,
-                      border: neonOn ? `2px solid ${zone.color}` : '1px solid #e9e7e4',
-                      boxShadow: neonOn ? `0 0 12px ${zone.color}` : 'none',
+                      border: neonOn ? `2px solid ${neonPaintColor}` : '1px solid #e9e7e4',
+                      boxShadow: neonOn ? `0 0 8px ${neonPaintColor}, 0 0 18px ${neonPaintColor}` : 'none',
                     }} />
                   ) : (
                     <div style={{
                       width:'82%', height:'76%', display:'flex', alignItems:'center', justifyContent:'center',
                       textAlign:'center', color:'#97948f', fontSize:12, lineHeight:1.6, borderRadius:8,
-                      border: neonOn ? `2px solid ${zone.color}` : '1px dashed #e0ddd9',
-                      boxShadow: neonOn ? `0 0 12px ${zone.color}` : 'none',
+                      border: neonOn ? `2px solid ${neonPaintColor}` : '1px dashed #e0ddd9',
+                      boxShadow: neonOn ? `0 0 8px ${neonPaintColor}, 0 0 18px ${neonPaintColor}` : 'none',
                     }}>
                       {neonOn ? <span>네온 테두리 적용 예시<br/>이미지를 올리면 함께 보여요</span> : <span>이미지를 업로드하면<br/>미리보기가 표시됩니다</span>}
                     </div>
@@ -1226,23 +1227,32 @@ export default function ApplyFlow({ selectedCell, userId, isAdmin, onClose, onSu
 
                 {/* 이펙트 */}
                 <div style={{ marginBottom:12 }}>
-                  <div style={{ fontSize:12, fontWeight:700, color:'#1a1a1a', marginBottom:8 }}>이펙트 추가 (선택)</div>
-                  <div style={{ display:'flex', gap:8 }}>
-                    {(['none','neon'] as const).map(effect => {
+                  <div style={{ fontSize:12, fontWeight:700, color:'#1a1a1a', marginBottom:8 }}>
+                    이펙트 추가 (선택) <span style={{ fontSize:11, fontWeight:600, color:'#6f6d6a' }}>· 네온 +{formatKRW(1000)}</span>
+                  </div>
+                  <div style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
+                    {/* 기본 (이펙트 없음) */}
+                    <button onClick={() => setForm(f => ({ ...f, borderEffect: 'none' }))} style={{
+                      padding:'9px 14px', borderRadius:10, cursor:'pointer',
+                      border:`1px solid ${form.borderEffect === 'none' ? '#1c1c1e' : '#e9e7e4'}`,
+                      background: form.borderEffect === 'none' ? '#1c1c1e' : '#fff',
+                      color: form.borderEffect === 'none' ? '#fff' : '#1a1a1a',
+                      fontSize:12, fontWeight:600,
+                    }}>기본</button>
+                    {/* 네온 색상 선택 */}
+                    {NEON_OPTIONS.map(effect => {
                       const active = form.borderEffect === effect
-                      const add = EFFECT_PRICES[effect] ?? 0
+                      const c = EFFECT_COLORS[effect]
                       return (
-                      <button key={effect} onClick={() => setForm(f => ({ ...f, borderEffect: effect }))} style={{
-                        flex:1, padding:'10px 8px', borderRadius:10, cursor:'pointer',
-                        border:`1px solid ${active ? '#1c1c1e' : '#e9e7e4'}`,
-                        background: active ? '#1c1c1e' : '#fff',
-                        color: active ? '#fff' : '#1a1a1a',
-                        fontSize:11, fontWeight:600, position:'relative', lineHeight:1.5,
-                      }}>
-                        {EFFECT_LABELS[effect]}
-                        {add > 0 && <span style={{ display:'block', fontSize:10, fontWeight:700, marginTop:2, color: active ? '#ffffff' : '#6f6d6a' }}>+{formatKRW(add)}</span>}
-                        {effect === 'neon' && <span style={{ position:'absolute', top:-8, right:-4, fontSize:8, background:'#dc2626', color:'#fff', padding:'2px 5px', borderRadius:6, fontWeight:600 }}>신규</span>}
-                      </button>
+                        <button key={effect} onClick={() => setForm(f => ({ ...f, borderEffect: effect }))}
+                          title={EFFECT_LABELS[effect]}
+                          style={{
+                            width:34, height:34, borderRadius:'50%', cursor:'pointer', flexShrink:0, padding:0,
+                            background:c, border:'2px solid #ffffff',
+                            outline: active ? '2px solid #1c1c1e' : 'none', outlineOffset:2,
+                            boxShadow: `0 0 8px ${c}${active ? '' : '99'}`,
+                          }}
+                        />
                       )
                     })}
                   </div>
@@ -1266,7 +1276,7 @@ export default function ApplyFlow({ selectedCell, userId, isAdmin, onClose, onSu
                 {/* 실제 집 미리보기 카드 */}
                 <div style={{
                   borderRadius:14, border:'1px solid #e9e7e4', background:'#fff', overflow:'hidden', marginBottom:18,
-                  boxShadow: neonOn ? `0 0 0 2px ${zone.color}, 0 0 18px ${zone.color}66` : '0 1px 3px rgba(0,0,0,0.05)',
+                  boxShadow: neonOn ? `0 0 0 2px ${neonPaintColor}, 0 0 22px ${neonPaintColor}` : '0 1px 3px rgba(0,0,0,0.05)',
                 }}>
                   {/* 대표 이미지 (지도에 올라갈 모습 그대로) */}
                   <div style={{ padding:'10px 14px 0', display:'flex', alignItems:'center', gap:6 }}>
@@ -1288,7 +1298,7 @@ export default function ApplyFlow({ selectedCell, userId, isAdmin, onClose, onSu
                     <div style={{ display:'flex', gap:6, marginBottom:6, flexWrap:'wrap' }}>
                       <span style={{ fontSize:10, padding:'3px 7px', borderRadius:6, background:'#f4f3f1', color:'#6f6d6a', fontWeight:600 }}>{selectedCell.address}</span>
                       {form.nickname && <span style={{ fontSize:10, padding:'3px 7px', borderRadius:6, background:'#1c1c1e', color:'#fff', fontWeight:700 }}>{form.nickname}</span>}
-                      {neonOn && <span style={{ fontSize:10, padding:'3px 7px', borderRadius:6, border:`1px solid ${zone.color}`, color: zone.color, fontWeight:700 }}>{EFFECT_LABELS.neon}</span>}
+                      {neonOn && <span style={{ fontSize:10, padding:'3px 7px', borderRadius:6, border:`1px solid ${neonPaintColor}`, color: neonPaintColor, fontWeight:700 }}>{EFFECT_LABELS[form.borderEffect]}</span>}
                     </div>
                     <div style={{ fontSize:17, fontWeight:800, color:'#1a1a1a', marginBottom:6 }}>{form.name || '집 이름 없음'}</div>
 

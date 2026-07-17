@@ -25,13 +25,10 @@ export default function StatsPanel({ houses, mapViewport, onZoomIn, onZoomOut, o
   const [recentHouses, setRecentHouses] = useState<RecentHouse[]>([])
   const [bizOpen, setBizOpen] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const donutRef = useRef<HTMLCanvasElement>(null)
 
   const totalCells = 80000
   const occupiedHouses = houses.filter(h => h.status === 'occupied')
-  const occupiedCount = occupiedHouses.length
-  const pendingCount = houses.filter(h => h.status === 'pending').length
-  const availableCount = totalCells - occupiedCount - pendingCount
+  const occupiedCount = occupiedHouses.length   // 입주 칸 수(위성칸 포함) — 분양률·남은칸 계산용
   const occupancyRate = ((occupiedCount / totalCells) * 100).toFixed(1)
 
   const topAreas = [...occupiedHouses]
@@ -89,39 +86,6 @@ export default function StatsPanel({ houses, mapViewport, onZoomIn, onZoomOut, o
     }
   }, [houses, mapViewport])
 
-  // 도넛 차트
-  useEffect(() => {
-    const canvas = donutRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')!
-    const sz = canvas.width, cx = sz / 2, cy = sz / 2
-    const r = sz / 2 - 4, innerR = r * 0.55
-    const segments = [
-      { value: occupiedCount, color: '#16a34a' },
-      { value: pendingCount, color: '#2563eb' },
-      { value: availableCount, color: '#e9e7e4' },
-    ]
-    const total = segments.reduce((s, seg) => s + seg.value, 0) || 1
-    ctx.clearRect(0, 0, sz, sz)
-    let start = -Math.PI / 2
-    for (const seg of segments) {
-      const sweep = (seg.value / total) * 2 * Math.PI
-      ctx.beginPath()
-      ctx.moveTo(cx, cy)
-      ctx.arc(cx, cy, r, start, start + sweep)
-      ctx.closePath()
-      ctx.fillStyle = seg.color
-      ctx.fill()
-      start += sweep
-    }
-    ctx.beginPath()
-    ctx.arc(cx, cy, innerR, 0, 2 * Math.PI)
-    ctx.fillStyle = '#ffffff'
-    ctx.fill()
-    ctx.font = `bold ${sz * 0.14}px sans-serif`
-    ctx.fillStyle = '#1a1a1a'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
-    ctx.fillText(`${occupancyRate}%`, cx, cy)
-  }, [occupiedCount, pendingCount, availableCount, occupancyRate])
 
   return (
     <div style={{ background:'#ffffff' }}>
@@ -142,24 +106,20 @@ export default function StatsPanel({ houses, mapViewport, onZoomIn, onZoomOut, o
         </div>
       </div>
 
-      {/* 분양 현황 — 도넛 차트 */}
-      <div style={{ padding:'10px 14px', borderRight:'1px solid #e9e7e4', display:'flex', flexDirection:'column', gap:6 }}>
+      {/* 분양 현황 — 분양률 */}
+      <div style={{ padding:'10px 14px', borderRight:'1px solid #e9e7e4', display:'flex', flexDirection:'column', gap:6, justifyContent:'center' }}>
         <PanelLabel>실시간 분양 현황</PanelLabel>
-        <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-          <canvas ref={donutRef} width={80} height={80} style={{ flexShrink:0 }} />
-          <div style={{ display:'flex', flexDirection:'column', gap:5, minWidth:0 }}>
-            {[
-              { label:'분양 완료', value: occupiedCount, color:'#16a34a' },
-              { label:'판매 중',   value: pendingCount,  color:'#2563eb' },
-              { label:'관심 구역', value: availableCount, color:'#e9e7e4' },
-            ].map(item => (
-              <div key={item.label} style={{ display:'flex', alignItems:'center', gap:6, whiteSpace:'nowrap' }}>
-                <div style={{ width:7, height:7, borderRadius:'50%', background:item.color, flexShrink:0 }} />
-                <span style={{ fontSize:10, color:'#6f6d6a', minWidth:44 }}>{item.label}</span>
-                <span style={{ fontSize:10, fontWeight:600, color:'#1a1a1a' }}>{((item.value/totalCells)*100).toFixed(1)}%</span>
-              </div>
-            ))}
-          </div>
+        <div style={{ display:'flex', alignItems:'baseline', gap:6 }}>
+          <span style={{ fontSize:34, fontWeight:800, color:'#1a1a1a', lineHeight:1 }}>{occupancyRate}</span>
+          <span style={{ fontSize:16, fontWeight:700, color:'#6f6d6a' }}>%</span>
+          <span style={{ fontSize:11, color:'#97948f', marginLeft:2 }}>분양됨</span>
+        </div>
+        {/* 진행 바 */}
+        <div style={{ height:8, borderRadius:999, background:'#f0efec', overflow:'hidden', marginTop:2 }}>
+          <div style={{ height:'100%', width:`${occupancyRate}%`, minWidth: occupiedCount > 0 ? 3 : 0, background:'#a1834a', borderRadius:999 }} />
+        </div>
+        <div style={{ fontSize:11, color:'#6f6d6a' }}>
+          {occupiedCount.toLocaleString()}칸 분양 · {(totalCells - occupiedCount).toLocaleString()}칸 남음
         </div>
       </div>
 

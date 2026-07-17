@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useEffect, useCallback, useState } from 'react'
-import { GRID_COLS, GRID_ROWS, ZONES, getZone } from '@/lib/constants'
+import { GRID_COLS, GRID_ROWS, ZONES, getZone, isNeon, neonColor } from '@/lib/constants'
 import type { CellData, Zone } from '@/types/cell'
 
 interface Selection { col: number; row: number; width: number; height: number; zone: Zone }
@@ -227,7 +227,13 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       const zone = ZONES[h.zone]
       if (h.visit_count >= 5) { ctx.shadowColor=zone.color; ctx.shadowBlur=10 }
       ctx.fillStyle=zone.color+'cc'; ctx.fillRect(x+1,y+1,w-2,ht-2); ctx.shadowBlur=0
-      if (h.border_effect==='neon') { ctx.shadowColor=zone.color; ctx.shadowBlur=6; ctx.strokeStyle=zone.color; ctx.lineWidth=1.5; ctx.strokeRect(x+1,y+1,w-2,ht-2); ctx.shadowBlur=0 }
+      if (isNeon(h.border_effect)) {
+        const nc = neonColor(h.border_effect)
+        ctx.shadowColor = nc; ctx.shadowBlur = 8; ctx.strokeStyle = nc; ctx.lineWidth = 2
+        ctx.strokeRect(x+1, y+1, w-2, ht-2)
+        ctx.shadowBlur = 4; ctx.strokeRect(x+1, y+1, w-2, ht-2)  // 이중 스트로크로 더 밝게
+        ctx.shadowBlur = 0
+      }
       if (myHouseIds?.has(h.id)) { ctx.strokeStyle='#1a1a1a'; ctx.lineWidth=2; ctx.strokeRect(x,y,w,ht) }
       if (h.nickname && w >= 20) {
         ctx.fillStyle = '#1a1a1a'
@@ -309,16 +315,6 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
     for (let c = c1; c <= c2; c++) for (let r = r1; r <= r2; r++) if (houseMap.current.has(`${c},${r}`)) return true
     return false
   }, [])
-
-  // 두 지점으로 영역 확정 (드래그·탭탭 공통) — 즉시 신청창으로 넘어감 (일반 모드)
-  const commitArea = useCallback((a: { col: number; row: number }, b: { col: number; row: number }) => {
-    const c1 = Math.min(a.col, b.col), c2 = Math.max(a.col, b.col)
-    const r1 = Math.min(a.row, b.row), r2 = Math.max(a.row, b.row)
-    if (areaHasOccupied(c1, r1, c2, r2)) { setBlockMsg('선택 영역에 이미 입주된 칸이 있어요'); setTimeout(() => setBlockMsg(''), 2500); return false }
-    const zone = getZone(c1, r1)
-    onAreaSelect({ col: c1, row: r1, width: c2 - c1 + 1, height: r2 - r1 + 1, zone })
-    return true
-  }, [onAreaSelect, areaHasOccupied])
 
   // 입주 신청 모드: 두 지점을 "확정 전 범위(pendingSel)"로 설정 (신청창은 아직 안 열림)
   const setPending = useCallback((a: { col: number; row: number }, b: { col: number; row: number }) => {
@@ -434,14 +430,11 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
           if (grid && rangeModeRef.current) {
             handleRangeTap(grid)
           } else if (grid) {
+            // 입주된 집은 팝업 / 빈 칸은 무반응 (입주는 상단 버튼으로만)
             const existing = houseMap.current.get(`${grid.col},${grid.row}`)
             if (existing) {
               const cell = existing.parent_address ? (addressMap.current.get(existing.parent_address) ?? existing) : existing
               onCellClick(cell)
-            } else {
-              const zone = getZone(grid.col, grid.row)
-              const prefix = ZONE_PREFIX[zone]
-              onCellClick({ id:'', address:`${prefix}-${String(grid.row*GRID_COLS+grid.col).padStart(5,'0')}`, col:grid.col, row:grid.row, zone, status:'available', name:null, nickname:null, description:null, link_url:null, exterior_image_url:null, border_effect:'none', like_count:0, visit_count:0, occupied_at:null, expires_at:null, is_permanent:false })
             }
           }
         }
@@ -461,22 +454,18 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button === 2) return
-    // 입주 신청 모드에서도 드래그 선택 허용 (아래에서 클릭/드래그를 구분함)
     mouseDownPos.current = { x: e.clientX, y: e.clientY }
-    isMouseDown.current = true; isSelecting.current = false; setTooltip(null)  // 새 누름마다 드래그 상태 초기화
-    if (e.button === 1 || e.altKey) {
-      isPanning.current = true; setCursor('grabbing')
-      panStart.current = { x: e.clientX - lastOffset.current.x, y: e.clientY - lastOffset.current.y }
-      return
-    }
+    isMouseDown.current = true; isSelecting.current = false; setTooltip(null)
+    // 좌클릭 드래그로도 지도를 움직일 수 있게 패닝 시작점 준비
+    panStart.current = { x: e.clientX - lastOffset.current.x, y: e.clientY - lastOffset.current.y }
+    if (e.button === 1 || e.altKey) { isPanning.current = true; setCursor('grabbing'); return }
     const grid = toGrid(e.clientX, e.clientY)
     if (grid) { selectStart.current = grid; selectEnd.current = grid }
   }, [toGrid])
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (isPanning.current) {
-      const raw = { x: e.clientX - panStart.current.x, y: e.clientY - panStart.current.y }
-      const clamped = clampOffset(raw.x, raw.y, scaleRef.current)
+      const clamped = clampOffset(e.clientX - panStart.current.x, e.clientY - panStart.current.y, scaleRef.current)
       lastOffset.current = clamped; setOffset(clamped); return
     }
     if (!isMouseDown.current) {
@@ -487,14 +476,23 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
         if (primary?.status === 'occupied') setTooltip({ x: e.clientX, y: e.clientY, text: primary.nickname ?? primary.name ?? '이름 없음' })
         else setTooltip(null)
       } else setTooltip(null)
+      return
     }
-    if (!isMouseDown.current) return
     const dx = Math.abs(e.clientX - mouseDownPos.current.x)
     const dy = Math.abs(e.clientY - mouseDownPos.current.y)
-    if (dx > DRAG_THRESHOLD || dy > DRAG_THRESHOLD) { isSelecting.current = true; setCursor('crosshair') }
-    if (isSelecting.current && selectStart.current) {
-      const grid = toGrid(e.clientX, e.clientY)
-      if (grid) { selectEnd.current = grid; setSelection({ c1: selectStart.current.col, r1: selectStart.current.row, c2: grid.col, r2: grid.row }) }
+    const moved = dx > DRAG_THRESHOLD || dy > DRAG_THRESHOLD
+    if (rangeModeRef.current) {
+      // 입주 신청 모드: 드래그 = 범위 선택 미리보기
+      if (moved) { isSelecting.current = true; setCursor('crosshair') }
+      if (isSelecting.current && selectStart.current) {
+        const grid = toGrid(e.clientX, e.clientY)
+        if (grid) { selectEnd.current = grid; setSelection({ c1: selectStart.current.col, r1: selectStart.current.row, c2: grid.col, r2: grid.row }) }
+      }
+    } else if (moved) {
+      // 일반 모드: 드래그 = 지도 이동(패닝). 입주 신청은 상단 버튼으로만.
+      isPanning.current = true; setCursor('grabbing')
+      const clamped = clampOffset(e.clientX - panStart.current.x, e.clientY - panStart.current.y, scaleRef.current)
+      lastOffset.current = clamped; setOffset(clamped)
     }
   }, [toGrid, clampOffset])
 
@@ -502,15 +500,14 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
     if (e.button === 2) return
     const hadMouseDown = isMouseDown.current
     const wasDragging = isSelecting.current
+    const wasPanning = isPanning.current
     // 입주 신청 모드: 클릭=탭탭 / 드래그=범위. 둘 다 확정이 아니라 pendingSel(미리보기)로 감
     if (rangeModeRef.current) {
       isPanning.current = false; isMouseDown.current = false; isSelecting.current = false; setCursor('crosshair')
       if (wasDragging && selectStart.current && selectEnd.current) {
-        // (드래그) — 시작·끝으로 pending 설정
         if (pendingSel) { setPendingSel(null); anchorRef.current = null; setAnchorUI(null) }
         setPending(selectStart.current, selectEnd.current)
       } else {
-        // (클릭) — 탭탭 로직
         const g = toGrid(e.clientX, e.clientY)
         if (g) handleRangeTap(g)
       }
@@ -518,29 +515,20 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       return
     }
     isPanning.current = false; isMouseDown.current = false; setCursor('default')
-    if (!hadMouseDown) return
+    selectStart.current = null; selectEnd.current = null
+    if (!hadMouseDown || wasPanning) return   // 패닝했으면 클릭 아님
     const dx = Math.abs(e.clientX - mouseDownPos.current.x)
     const dy = Math.abs(e.clientY - mouseDownPos.current.y)
-    const wasClick = dx <= DRAG_THRESHOLD && dy <= DRAG_THRESHOLD
-    if (wasClick) {
-      isSelecting.current = false; setSelection(null)
-      const grid = toGrid(e.clientX, e.clientY)
-      if (!grid) return
-      const existing = houseMap.current.get(`${grid.col},${grid.row}`)
-      if (existing) {
-        const cell = existing.parent_address ? (addressMap.current.get(existing.parent_address) ?? existing) : existing
-        onCellClick(cell)
-      } else {
-        const zone = getZone(grid.col, grid.row)
-        const prefix = ZONE_PREFIX[zone]
-        onCellClick({ id:'', address:`${prefix}-${String(grid.row*GRID_COLS+grid.col).padStart(5,'0')}`, col:grid.col, row:grid.row, zone, status:'available', name:null, nickname:null, description:null, link_url:null, exterior_image_url:null, border_effect:'none', like_count:0, visit_count:0, occupied_at:null, expires_at:null, is_permanent:false })
-      }
-    } else if (isSelecting.current && selectStart.current && selectEnd.current) {
-      setSelection(null); isSelecting.current = false
-      commitArea(selectStart.current, selectEnd.current)
+    if (dx > DRAG_THRESHOLD || dy > DRAG_THRESHOLD) return   // 이동했으면 클릭 아님
+    // 클릭: 입주된 집은 팝업 / 빈 칸은 무반응 (입주는 상단 버튼으로만)
+    const grid = toGrid(e.clientX, e.clientY)
+    if (!grid) return
+    const existing = houseMap.current.get(`${grid.col},${grid.row}`)
+    if (existing) {
+      const cell = existing.parent_address ? (addressMap.current.get(existing.parent_address) ?? existing) : existing
+      onCellClick(cell)
     }
-    selectStart.current = null; selectEnd.current = null
-  }, [toGrid, onCellClick, commitArea, handleRangeTap, pendingSel, setPending])
+  }, [toGrid, onCellClick, handleRangeTap, pendingSel, setPending])
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault(); setTooltip(null)
@@ -586,16 +574,19 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
           const zone = ZONES[h.zone]
           const wPx = (h.width ?? 1) * CELL, htPx = (h.height ?? 1) * CELL
           const isMine = myHouseIds?.has(h.id)
-          const neon = h.border_effect === 'neon'
-          const glow = neon || h.visit_count >= 5
+          const neon = isNeon(h.border_effect)
+          const nc = neonColor(h.border_effect)
           const showName = h.nickname && wPx >= 20
           return (
             <div key={h.id} style={{
               position:'absolute', left:h.col*CELL, top:h.row*CELL, width:wPx, height:htPx,
               pointerEvents:'none', overflow:'hidden',
-              boxShadow: glow ? `0 0 6px ${zone.color}` : undefined,
-              outline: isMine ? '1px solid #1a1a1a' : (neon ? `0.8px solid ${zone.color}` : undefined),
-              outlineOffset: '-0.5px',
+              // 네온: 바깥 다중 발광 + 안쪽 발광으로 선명하게 빛남
+              boxShadow: neon
+                ? `0 0 2px ${nc}, 0 0 6px ${nc}, 0 0 14px ${nc}, inset 0 0 5px ${nc}`
+                : (h.visit_count >= 5 ? `0 0 6px ${zone.color}` : undefined),
+              outline: neon ? `1.2px solid ${nc}` : (isMine ? '1px solid #1a1a1a' : undefined),
+              outlineOffset: '-0.6px',
             }}>
               <img
                 src={h.exterior_image_url || h.interior_image_url || ''} alt="" draggable={false}
