@@ -10,6 +10,9 @@ interface FloatingHeaderProps {
   userId?: string
   userEmail?: string
   isAdmin?: boolean
+  isRealAdmin?: boolean          // 실제 관리자 계정 여부 (이용자 모드여도 true)
+  viewAsUser?: boolean           // 이용자 모드로 보는 중
+  onToggleViewAsUser?: () => void
   activeZone: string | null
   onZoneFilter: (zone: string | null) => void
   onApplyClick: () => void
@@ -22,6 +25,7 @@ interface FloatingHeaderProps {
 
 export default function FloatingHeader({
   occupiedCount, totalCells, userId, userEmail, isAdmin,
+  isRealAdmin, viewAsUser, onToggleViewAsUser,
   activeZone, onZoneFilter,
   onApplyClick, onMyHouseClick, onLogin, onLogout,
   houses, onSearchSelect,
@@ -241,8 +245,29 @@ export default function FloatingHeader({
                   <div style={{ padding:'12px 14px', borderBottom:'1px solid #e9e7e4', background:'#f4f3f1' }}>
                     <div style={{ fontSize:10, color:'#6f6d6a', marginBottom:3 }}>로그인된 계정</div>
                     <div style={{ fontSize:12, color:'#1a1a1a', fontWeight:600, wordBreak:'break-all' }}>{userEmail}</div>
-                    {isAdmin && <div style={{ marginTop:5, fontSize:10, color:'#6f6d6a', fontWeight:600 }}>관리자 계정</div>}
+                    {isRealAdmin && (
+                      <div style={{ marginTop:5, fontSize:10, fontWeight:600, color: viewAsUser ? '#97948f' : '#6f6d6a' }}>
+                        {viewAsUser ? '이용자 모드로 보는 중' : '관리자 계정'}
+                      </div>
+                    )}
                   </div>
+                  {/* 관리자/이용자 모드 전환 (실제 관리자만) */}
+                  {isRealAdmin && (
+                    <button onClick={() => { setProfileOpen(false); onToggleViewAsUser?.() }} style={{
+                      display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, width:'100%',
+                      padding:'11px 14px', background:'transparent', border:'none',
+                      borderBottom:'1px solid #e9e7e4', color:'#1a1a1a',
+                      fontSize:13, fontWeight:600, cursor:'pointer', textAlign:'left',
+                    }}
+                      onMouseEnter={e => (e.currentTarget.style.background='#f4f3f1')}
+                      onMouseLeave={e => (e.currentTarget.style.background='transparent')}
+                    >
+                      <span>{viewAsUser ? '관리자 모드로 전환' : '이용자 모드로 보기'}</span>
+                      <span style={{ fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:6, background: viewAsUser ? '#1c1c1e' : '#f4f3f1', color: viewAsUser ? '#fff' : '#6f6d6a', border:'1px solid #e0ddd9' }}>
+                        {viewAsUser ? '이용자' : '관리자'}
+                      </span>
+                    </button>
+                  )}
                   <button onClick={() => { setProfileOpen(false); onMyHouseClick() }} style={{
                     display:'flex', alignItems:'center', gap:10, width:'100%',
                     padding:'11px 14px', background:'transparent', border:'none',

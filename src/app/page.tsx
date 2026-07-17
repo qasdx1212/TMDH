@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { hashPwd } from '@/lib/hash'
+import { isAdminEmail } from '@/lib/admins'
 import type { CellData, Zone } from '@/types/cell'
 import MapGrid from '@/components/MapGrid'
 import FloatingHeader from '@/components/FloatingHeader'
@@ -16,7 +17,14 @@ export default function Home() {
   const [houses, setHouses] = useState<CellData[]>([])
   const [userId, setUserId] = useState<string | undefined>()
   const [userEmail, setUserEmail] = useState<string | undefined>()
-  const isAdmin = userEmail === 'qasdx1212@gmail.com'
+  const isRealAdmin = isAdminEmail(userEmail)
+  // 관리자가 "이용자 모드"로 볼 때 true (localStorage 저장). 이 땐 관리자 권한/버튼 숨김.
+  const [viewAsUser, setViewAsUser] = useState(false)
+  useEffect(() => { setViewAsUser(localStorage.getItem('zipzip_view_as_user') === '1') }, [])
+  const toggleViewAsUser = useCallback(() => {
+    setViewAsUser(v => { const nv = !v; localStorage.setItem('zipzip_view_as_user', nv ? '1' : '0'); return nv })
+  }, [])
+  const isAdmin = isRealAdmin && !viewAsUser
   const [myHouseIds, setMyHouseIds] = useState<Set<string>>(new Set())
   const [selectedCell, setSelectedCell] = useState<CellData | null>(null)
   const [showApply, setShowApply] = useState(false)
@@ -201,6 +209,9 @@ export default function Home() {
         userId={userId}
         userEmail={userEmail}
         isAdmin={isAdmin}
+        isRealAdmin={isRealAdmin}
+        viewAsUser={viewAsUser}
+        onToggleViewAsUser={toggleViewAsUser}
         activeZone={activeZone}
         onZoneFilter={setActiveZone}
         onApplyClick={() => { if (!userId) setShowApply(true); else setApplyMode(m => !m) }}

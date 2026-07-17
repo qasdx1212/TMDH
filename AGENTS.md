@@ -102,8 +102,10 @@ ApplyFlow → orders 테이블 insert(pending) → 포트원 결제창
 - 이미지: 크롭 조정값을 **실제 이미지에 구워서** 업로드 → 미리보기 = 지도 = 저장본 일치
 
 ### 권한
-- 관리자 = **`qasdx1212@gmail.com` 하드코딩**
-- UI뿐 아니라 **서버(`/api/admin/vacate`)에서도 이메일 검증** → 개발자도구로 못 뚫음
+- 관리자 = **`src/lib/admins.ts`의 `ADMIN_EMAILS`** (현재 qasdx1212, salgmls98). 여기만 고치면 전체 반영
+- UI뿐 아니라 **서버(`/api/admin/vacate`)·관리자페이지에서도 이메일 검증** → 개발자도구로 못 뚫음
+- **이용자 모드:** 관리자는 프로필 메뉴 "이용자 모드로 보기"로 일반 사용자처럼 체험 가능
+  (localStorage `zipzip_view_as_user`, 클라이언트 UI 한정 — /admin 직접 접근은 여전히 됨)
 
 ---
 

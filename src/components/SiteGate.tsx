@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { ADMIN_EMAILS } from '@/lib/admins'
 
-const ADMIN_EMAIL = 'qasdx1212@gmail.com'
 // 유지보수(비공개) 모드: 기본 ON. 오픈할 때 Vercel 환경변수 NEXT_PUBLIC_MAINTENANCE=off 로 해제.
 const MAINTENANCE = process.env.NEXT_PUBLIC_MAINTENANCE !== 'off'
-// 비공개 모드에서도 접속 허용할 이메일 (관리자 + Vercel env NEXT_PUBLIC_ALLOWED_EMAILS 콤마 목록)
+// 비공개 모드에서도 접속 허용할 이메일 (관리자들 + Vercel env NEXT_PUBLIC_ALLOWED_EMAILS 콤마 목록)
 const ALLOWED = new Set(
-  [ADMIN_EMAIL, ...(process.env.NEXT_PUBLIC_ALLOWED_EMAILS ?? '').split(',')]
+  [...ADMIN_EMAILS, ...(process.env.NEXT_PUBLIC_ALLOWED_EMAILS ?? '').split(',')]
     .map(e => e.trim().toLowerCase())
     .filter(Boolean)
 )

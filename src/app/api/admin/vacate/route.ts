@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-
-const ADMIN_EMAIL = 'qasdx1212@gmail.com'
+import { isAdminEmail } from '@/lib/admins'
 
 export async function POST(req: NextRequest) {
   const authHeader = req.headers.get('authorization')
@@ -20,7 +19,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '인증 실패' }, { status: 401 })
   }
 
-  if (user.email !== ADMIN_EMAIL) {
+  if (!isAdminEmail(user.email)) {
     return NextResponse.json({ error: '권한 없음' }, { status: 403 })
   }
 

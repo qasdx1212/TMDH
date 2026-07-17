@@ -4,9 +4,8 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { safeUrl } from '@/lib/url'
+import { isAdminEmail } from '@/lib/admins'
 import type { CellData } from '@/types/cell'
-
-const ADMIN_EMAIL = 'qasdx1212@gmail.com'
 
 type Tab = 'all' | 'reports'
 
@@ -44,7 +43,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
-      if (data.user?.email === ADMIN_EMAIL) {
+      if (isAdminEmail(data.user?.email)) {
         setAuthorized(true)
       } else {
         router.replace('/')
