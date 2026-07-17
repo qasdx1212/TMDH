@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useEffect, useCallback, useState } from 'react'
-import { GRID_COLS, GRID_ROWS, ZONES, getZone, isNeon, neonColor, neonWidth } from '@/lib/constants'
+import { GRID_COLS, GRID_ROWS, ZONES, getZone, isNeon, neonColor, neonWidth, neonWidthPx } from '@/lib/constants'
 import type { CellData, Zone } from '@/types/cell'
 
 interface Selection { col: number; row: number; width: number; height: number; zone: Zone }
@@ -229,7 +229,7 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
       ctx.fillStyle=zone.color+'cc'; ctx.fillRect(x+1,y+1,w-2,ht-2); ctx.shadowBlur=0
       if (isNeon(h.border_effect)) {
         const nc = neonColor(h.border_effect)
-        const lw = { 1: 1.2, 2: 2, 3: 3.2 }[neonWidth(h.border_effect)] ?? 3.2
+        const lw = neonWidthPx(h.border_effect)
         ctx.shadowColor = nc; ctx.shadowBlur = 8; ctx.strokeStyle = nc; ctx.lineWidth = lw
         ctx.strokeRect(x+1, y+1, w-2, ht-2)
         ctx.shadowBlur = 4; ctx.strokeRect(x+1, y+1, w-2, ht-2)  // 이중 스트로크로 더 밝게
@@ -577,9 +577,8 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
           const isMine = myHouseIds?.has(h.id)
           const neon = isNeon(h.border_effect)
           const nc = neonColor(h.border_effect)
-          const nw = neonWidth(h.border_effect)
-          const outlinePx = { 1: 0.7, 2: 1.3, 3: 2.1 }[nw] ?? 2.1
-          const innerGlow = { 1: 3, 2: 5, 3: 8 }[nw] ?? 8
+          const outlinePx = neonWidthPx(h.border_effect)
+          const innerGlow = 2 + neonWidth(h.border_effect) * 1.4
           const showName = h.nickname && wPx >= 20
           return (
             <div key={h.id} style={{

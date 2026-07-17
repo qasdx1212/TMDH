@@ -45,9 +45,8 @@ const LEGACY_NEON_COLORS: Record<string, string> = {
   neon_blue: '#00E5FF', neon_gold: '#FFD000', neon_purple: '#B44BFF',
 }
 
-// 굵기 단계 (1=얇게 ~ 3=굵게). 저장 형식: 'neon:#RRGGBB:굵기'
-export const NEON_MAX_WIDTH = 3
-export const NEON_WIDTH_LABELS: Record<number, string> = { 1: '얇게', 2: '보통', 3: '굵게' }
+// 굵기 단계 (1=가늘게 ~ 6=굵게). 저장 형식: 'neon:#RRGGBB:굵기'
+export const NEON_MAX_WIDTH = 6
 
 export function isNeon(effect: string | null | undefined): boolean {
   return !!effect && effect.startsWith('neon')
@@ -61,6 +60,10 @@ export function neonWidth(effect: string | null | undefined): number {
   if (!effect) return NEON_MAX_WIDTH
   const w = parseInt(effect.split(':')[2] ?? '', 10)
   return w >= 1 && w <= NEON_MAX_WIDTH ? w : NEON_MAX_WIDTH   // 값 없으면 최대(굵게)
+}
+// 굵기 단계(1~6) → 실제 픽셀 두께. 지도·미리보기가 같은 비율을 쓰도록 계수만 곱해 씀.
+export function neonWidthPx(effect: string | null | undefined): number {
+  return 0.4 + neonWidth(effect) * 0.55   // 1→0.95 ~ 6→3.7 (셀 좌표 기준)
 }
 // 색·굵기로 border_effect 문자열 생성
 export function buildNeon(color: string, width: number): string {
