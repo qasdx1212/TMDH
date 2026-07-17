@@ -6,6 +6,13 @@ import { supabase } from '@/lib/supabase'
 const ADMIN_EMAIL = 'qasdx1212@gmail.com'
 // 유지보수(비공개) 모드: 기본 ON. 오픈할 때 Vercel 환경변수 NEXT_PUBLIC_MAINTENANCE=off 로 해제.
 const MAINTENANCE = process.env.NEXT_PUBLIC_MAINTENANCE !== 'off'
+// 비공개 모드에서도 접속 허용할 이메일 (관리자 + Vercel env NEXT_PUBLIC_ALLOWED_EMAILS 콤마 목록)
+const ALLOWED = new Set(
+  [ADMIN_EMAIL, ...(process.env.NEXT_PUBLIC_ALLOWED_EMAILS ?? '').split(',')]
+    .map(e => e.trim().toLowerCase())
+    .filter(Boolean)
+)
+const isAllowed = (email?: string | null) => !!email && ALLOWED.has(email.toLowerCase())
 
 export default function SiteGate({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<'checking' | 'admin' | 'blocked'>('checking')
@@ -17,10 +24,10 @@ export default function SiteGate({ children }: { children: React.ReactNode }) {
       setState('admin'); return
     }
     supabase.auth.getUser().then(({ data }) => {
-      setState(data.user?.email === ADMIN_EMAIL ? 'admin' : 'blocked')
+      setState(isAllowed(data.user?.email) ? 'admin' : 'blocked')
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      setState(session?.user?.email === ADMIN_EMAIL ? 'admin' : 'blocked')
+      setState(isAllowed(session?.user?.email) ? 'admin' : 'blocked')
     })
     return () => subscription.unsubscribe()
   }, [])
@@ -54,7 +61,7 @@ export default function SiteGate({ children }: { children: React.ReactNode }) {
           onClick={() => supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/auth/callback` } })}
           style={{ fontSize: 11, color: '#97948f', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
         >
-          관리자 로그인
+          관계자 로그인
         </button>
       </div>
     </div>
