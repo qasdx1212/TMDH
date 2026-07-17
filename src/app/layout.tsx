@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import SiteGate from "@/components/SiteGate";
 
 const BASE_URL = "https://zipzipworld.com";
 
@@ -26,14 +27,17 @@ export const metadata: Metadata = {
     images: ["/og"],
   },
   icons: { icon: "/favicon.ico" },
-  robots: { index: true, follow: true },
+  // 비공개(유지보수) 모드에선 검색 노출 안 함. 오픈 시 NEXT_PUBLIC_MAINTENANCE=off
+  robots: process.env.NEXT_PUBLIC_MAINTENANCE !== "off"
+    ? { index: false, follow: false }
+    : { index: true, follow: true },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ko">
       <body>
-        <ErrorBoundary>{children}</ErrorBoundary>
+        <ErrorBoundary><SiteGate>{children}</SiteGate></ErrorBoundary>
       </body>
     </html>
   );

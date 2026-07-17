@@ -125,6 +125,12 @@ radius 카드 14 / 버튼·행 10 · 그림자 0 1px 3px rgba(0,0,0,0.05)
 
 ## 6. 🚧 남은 작업
 
+### 🚪 비공개(유지보수) 모드 — 현재 ON
+사이트가 **관리자(qasdx1212@gmail.com) 외에는 "오픈 준비 중" 화면**만 보이도록 잠겨 있음 (`SiteGate`).
+- **오픈하려면:** Vercel → 프로젝트 → Settings → Environment Variables 에
+  **`NEXT_PUBLIC_MAINTENANCE = off`** 추가 후 재배포. (기본값=잠김)
+- 관리자는 잠금 화면 하단 "관리자 로그인"으로 들어가면 정상 접속됨.
+
 ### 🟡 오픈 직전
 1. **포트원 실키 전환** — Vercel env 3개 교체
    (`NEXT_PUBLIC_PORTONE_STORE_ID`, `NEXT_PUBLIC_PORTONE_CHANNEL_KEY`, `PORTONE_V2_API_SECRET`)

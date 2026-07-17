@@ -73,8 +73,19 @@ export default function Home() {
 
   useEffect(() => {
     if (!userId) return
-    supabase.from('houses').select('id').eq('user_id', userId)
-      .then(({ data }) => setMyHouseIds(new Set((data ?? []).map((h: { id: string }) => h.id))))
+    // 1000행 제한 대비 페이지네이션 (많이 소유 시 '내 집 테두리' 누락 방지)
+    ;(async () => {
+      const PAGE = 1000
+      const ids = new Set<string>()
+      for (let from = 0; from < 80000; from += PAGE) {
+        const { data, error } = await supabase.from('houses').select('id')
+          .eq('user_id', userId).order('id', { ascending: true }).range(from, from + PAGE - 1)
+        if (error || !data || data.length === 0) break
+        data.forEach((h: { id: string }) => ids.add(h.id))
+        if (data.length < PAGE) break
+      }
+      setMyHouseIds(ids)
+    })()
   }, [userId])
 
   const fetchHouses = useCallback(async () => {
@@ -101,10 +112,16 @@ export default function Home() {
 
   useEffect(() => {
     fetchHouses()
+    // 실시간 변경을 디바운스: 멀티셀 입주(수백 건 이벤트)가 전체 재조회를 폭주시키지 않게
+    // 마지막 변경 후 600ms 뒤에 한 번만 재조회
+    let timer: ReturnType<typeof setTimeout> | null = null
     const channel = supabase.channel('houses-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'houses' }, () => fetchHouses())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'houses' }, () => {
+        if (timer) clearTimeout(timer)
+        timer = setTimeout(() => fetchHouses(), 600)
+      })
       .subscribe()
-    return () => { supabase.removeChannel(channel) }
+    return () => { if (timer) clearTimeout(timer); supabase.removeChannel(channel) }
   }, [fetchHouses])
 
   // URL 파라미터로 특정 집 자동 오픈 (최초 1회만)
