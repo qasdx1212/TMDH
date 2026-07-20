@@ -236,12 +236,7 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
         ctx.shadowBlur = 0
       }
       if (myHouseIds?.has(h.id)) { ctx.strokeStyle='#1a1a1a'; ctx.lineWidth=2; ctx.strokeRect(x,y,w,ht) }
-      if (h.nickname && w >= 20) {
-        ctx.fillStyle = '#1a1a1a'
-        ctx.font=`bold ${Math.min(8,w/h.nickname.length)}px sans-serif`
-        ctx.textAlign='center'; ctx.textBaseline='middle'
-        ctx.fillText(h.nickname, x+w/2, y+ht/2); ctx.shadowBlur=0
-      }
+      // 지도에는 닉네임 텍스트를 올리지 않음 (사진/집 위 글씨 제거)
     })
 
     // 입주 신청 모드: 이미 입주된 칸을 어둡게 덮어 빈 칸이 도드라지게 함
@@ -582,7 +577,6 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
           const frac = neonWidthFrac(h.border_effect)
           const outlinePx = 1.2 * frac    // 최대 1.2 (원래 고정값)
           const innerGlow = 5 * frac      // 최대 5 (원래 고정값)
-          const showName = h.nickname && wPx >= 20
           return (
             <div key={h.id} style={{
               position:'absolute', left:h.col*CELL, top:h.row*CELL, width:wPx, height:htPx,
@@ -598,14 +592,6 @@ export default function MapGrid({ houses, onCellClick, onAreaSelect, myHouseIds,
                 src={h.exterior_image_url || h.interior_image_url || ''} alt="" draggable={false}
                 style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
               />
-              {showName && (
-                <div style={{
-                  position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center',
-                  color:'#fff', fontWeight:700, fontSize:Math.min(8, wPx / h.nickname!.length),
-                  textShadow:'0 0 3px rgba(0,0,0,0.85)', textAlign:'center', padding:'0 2px', lineHeight:1.1,
-                  overflow:'hidden',
-                }}>{h.nickname}</div>
-              )}
               {applyMode && <div style={{ position:'absolute', inset:0, background:'rgba(18,18,22,0.5)' }} />}
             </div>
           )

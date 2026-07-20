@@ -180,7 +180,7 @@ export default function HousePopup({ house, currentUserId, isAdmin, isOwnHouse, 
                   <div>
                     <div style={{ fontSize: 12, fontWeight: 600, color: '#97948f', marginBottom: 8 }}>링크</div>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      <a href={safeUrl(house.link_url)!} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 10, background: '#ffffff', color: '#1a1a1a', fontSize: 13, fontWeight: 600, textDecoration: 'none', border: '1px solid #e0ddd9' }}>공식 홈페이지 ↗</a>
+                      <a href={safeUrl(house.link_url)!} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 10, background: '#ffffff', color: '#1a1a1a', fontSize: 13, fontWeight: 600, textDecoration: 'none', border: '1px solid #e0ddd9' }}>집들이 가기 ↗</a>
                     </div>
                   </div>
                 )}
