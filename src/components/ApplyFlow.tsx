@@ -23,6 +23,8 @@ interface FormData {
   name: string
   description: string
   linkUrl: string
+  linkUrl2: string
+  linkUrl3: string
   nickname: string
   exteriorImage: File | null
   exteriorPreview: string | null
@@ -99,11 +101,17 @@ async function bakeFile(img: HTMLImageElement, t: Transform, tw: number, th: num
 
 /* ─── 임시저장(draft) ─── */
 interface Draft {
-  name?: string; description?: string; linkUrl?: string; nickname?: string
+  name?: string; description?: string; linkUrl?: string; linkUrl2?: string; linkUrl3?: string; nickname?: string
   days?: number; borderEffect?: string
   exteriorFit?: 'cover' | 'contain'
   exteriorScale?: number; exteriorOffset?: { x: number; y: number }
   interiorScale?: number; interiorOffset?: { x: number; y: number }
+}
+
+// 여러 링크를 검증(safeUrl)해 빈 값 제외하고 줄바꿈으로 합쳐 저장 (link_url 한 컬럼에 최대 3개)
+function buildLinks(...urls: string[]): string | null {
+  const cleaned = urls.map(u => safeUrl(u)).filter((u): u is string => !!u)
+  return cleaned.length ? cleaned.join('\n') : null
 }
 
 function linkHost(url: string): string | null {
@@ -121,7 +129,9 @@ export default function ApplyFlow({ selectedCell, userId, isAdmin, onClose, onSu
   const [form, setForm] = useState<FormData>({
     name: isEdit ? (selectedCell.name ?? '') : '',
     description: isEdit ? (selectedCell.description ?? '') : '',
-    linkUrl: isEdit ? (selectedCell.link_url ?? '') : '',
+    linkUrl: isEdit ? ((selectedCell.link_url ?? '').split('\n')[0] ?? '') : '',
+    linkUrl2: isEdit ? ((selectedCell.link_url ?? '').split('\n')[1] ?? '') : '',
+    linkUrl3: isEdit ? ((selectedCell.link_url ?? '').split('\n')[2] ?? '') : '',
     nickname: isEdit ? (selectedCell.nickname ?? '') : '',
     exteriorImage: null,
     exteriorPreview: isEdit ? (selectedCell.exterior_image_url ?? null) : null,
@@ -199,12 +209,14 @@ export default function ApplyFlow({ selectedCell, userId, isAdmin, onClose, onSu
       const raw = localStorage.getItem(draftKey)
       if (raw) {
         const d = JSON.parse(raw) as Draft
-        const hasContent = !!(d.name || d.description || d.linkUrl || d.nickname)
+        const hasContent = !!(d.name || d.description || d.linkUrl || d.linkUrl2 || d.linkUrl3 || d.nickname)
         setForm(f => ({
           ...f,
           name: d.name ?? f.name,
           description: d.description ?? f.description,
           linkUrl: d.linkUrl ?? f.linkUrl,
+          linkUrl2: d.linkUrl2 ?? f.linkUrl2,
+          linkUrl3: d.linkUrl3 ?? f.linkUrl3,
           nickname: d.nickname ?? f.nickname,
           days: typeof d.days === 'number' ? d.days : f.days,
           borderEffect: d.borderEffect ?? f.borderEffect,
@@ -225,7 +237,7 @@ export default function ApplyFlow({ selectedCell, userId, isAdmin, onClose, onSu
     if (isEdit || !hydrated.current) return
     const t = setTimeout(() => {
       const d: Draft = {
-        name: form.name, description: form.description, linkUrl: form.linkUrl, nickname: form.nickname,
+        name: form.name, description: form.description, linkUrl: form.linkUrl, linkUrl2: form.linkUrl2, linkUrl3: form.linkUrl3, nickname: form.nickname,
         days: form.days, borderEffect: form.borderEffect,
         exteriorFit: form.exteriorFit, exteriorScale: form.exteriorScale, exteriorOffset: form.exteriorOffset,
         interiorScale: form.interiorScale, interiorOffset: form.interiorOffset,
@@ -240,7 +252,7 @@ export default function ApplyFlow({ selectedCell, userId, isAdmin, onClose, onSu
     setDraftRestored(false)
     setForm(f => ({
       ...f,
-      name: '', description: '', linkUrl: '', nickname: '',
+      name: '', description: '', linkUrl: '', linkUrl2: '', linkUrl3: '', nickname: '',
       borderEffect: 'none',
       exteriorFit: 'cover', exteriorScale: 1, exteriorOffset: { x: 0, y: 0 },
       interiorScale: 1, interiorOffset: { x: 0, y: 0 },
@@ -449,7 +461,7 @@ export default function ApplyFlow({ selectedCell, userId, isAdmin, onClose, onSu
   // 통과하면 null, 막히면 사용자에게 보여줄 사유 문자열을 반환한다.
   const runContentCheck = async (): Promise<string | null> => {
     const files = [await buildExteriorFile(), await buildInteriorFile()].filter((f): f is File => !!f)
-    const text = [form.name, form.nickname, form.description, form.linkUrl].filter(Boolean).join('\n')
+    const text = [form.name, form.nickname, form.description, form.linkUrl, form.linkUrl2, form.linkUrl3].filter(Boolean).join('\n')
     if (files.length === 0 && !text.trim()) return null   // 검사할 내용 없음
 
     const images = (await Promise.all(files.map(fileToCheckData))).filter((x): x is { media_type: string; data: string } => !!x)
@@ -492,7 +504,7 @@ export default function ApplyFlow({ selectedCell, userId, isAdmin, onClose, onSu
 
       const { error } = await supabase.from('houses').update({
         name: form.name || null, nickname: form.nickname || null,
-        description: form.description || null, link_url: safeUrl(form.linkUrl),
+        description: form.description || null, link_url: buildLinks(form.linkUrl, form.linkUrl2, form.linkUrl3),
         exterior_image_url: exteriorUrl, interior_image_url: interiorUrl,
         border_effect: form.borderEffect,
         ...pwdFields,
@@ -525,7 +537,7 @@ export default function ApplyFlow({ selectedCell, userId, isAdmin, onClose, onSu
 
       const { error } = await supabase.from('houses').update({
         user_id: userId, name: form.name || null, nickname: form.nickname || null,
-        description: form.description || null, link_url: safeUrl(form.linkUrl),
+        description: form.description || null, link_url: buildLinks(form.linkUrl, form.linkUrl2, form.linkUrl3),
         exterior_image_url: exteriorUrl, interior_image_url: interiorUrl,
         border_effect: form.borderEffect, status: 'occupied', is_visible: true,
         width, height, occupied_at: occupiedAt, expires_at: expiresAt,
@@ -589,7 +601,7 @@ export default function ApplyFlow({ selectedCell, userId, isAdmin, onClose, onSu
         width: selectedCell.width ?? 1, height: selectedCell.height ?? 1,
         zone: selectedCell.zone,
         name: form.name || null, nickname: form.nickname || null,
-        description: form.description || null, link_url: safeUrl(form.linkUrl),
+        description: form.description || null, link_url: buildLinks(form.linkUrl, form.linkUrl2, form.linkUrl3),
         border_effect: form.borderEffect, days: form.days,
         exterior_url: exteriorUrl, interior_url: interiorUrl,
         amount: price, pay_method: payMethod,
@@ -667,7 +679,7 @@ export default function ApplyFlow({ selectedCell, userId, isAdmin, onClose, onSu
 
       const { error } = await supabase.from('houses').update({
         user_id: userId, name: form.name || null, nickname: form.nickname || null,
-        description: form.description || null, link_url: safeUrl(form.linkUrl),
+        description: form.description || null, link_url: buildLinks(form.linkUrl, form.linkUrl2, form.linkUrl3),
         exterior_image_url: exteriorUrl, interior_image_url: interiorUrl,
         border_effect: form.borderEffect, status: 'occupied', is_visible: true,
         width, height, occupied_at: occupiedAt, expires_at: expiresAt,
@@ -884,9 +896,11 @@ export default function ApplyFlow({ selectedCell, userId, isAdmin, onClose, onSu
 
                 <div style={{ marginTop:4, marginBottom:16 }}>
                   <div style={{ fontSize:14, fontWeight:700, color:'#1a1a1a', marginBottom:4 }}>링크 설정</div>
-                  <div style={{ fontSize:11, color:'#6f6d6a', marginBottom:8 }}>집에 연결할 링크를 설정해주세요. (최대 1개)</div>
+                  <div style={{ fontSize:11, color:'#6f6d6a', marginBottom:8 }}>집에 연결할 링크를 설정해주세요. (최대 3개)</div>
                   <Field label="집 놀러가기 링크" hint="">
-                    <input style={inputStyle} placeholder="https://" type="url" value={form.linkUrl} onChange={e => setForm(f => ({ ...f, linkUrl: e.target.value }))} />
+                    <input style={{ ...inputStyle, marginBottom:8 }} placeholder="https:// (링크 1)" type="url" value={form.linkUrl} onChange={e => setForm(f => ({ ...f, linkUrl: e.target.value }))} />
+                    <input style={{ ...inputStyle, marginBottom:8 }} placeholder="https:// (링크 2, 선택)" type="url" value={form.linkUrl2} onChange={e => setForm(f => ({ ...f, linkUrl2: e.target.value }))} />
+                    <input style={inputStyle} placeholder="https:// (링크 3, 선택)" type="url" value={form.linkUrl3} onChange={e => setForm(f => ({ ...f, linkUrl3: e.target.value }))} />
                   </Field>
                 </div>
 
@@ -1392,7 +1406,7 @@ export default function ApplyFlow({ selectedCell, userId, isAdmin, onClose, onSu
                   { label:'집 이름', value: form.name || '(없음)', highlight: !!form.name },
                   { label:'닉네임', value: form.nickname || '(없음)' },
                   { label:'소개글', value: form.description || '(없음)' },
-                  { label:'링크', value: form.linkUrl || '(없음)' },
+                  { label:'링크', value: [form.linkUrl, form.linkUrl2, form.linkUrl3].filter(u => u.trim()).join('  ·  ') || '(없음)' },
                   { label:'이펙트', value: effectPrice > 0 ? `${effectLabel(form.borderEffect)} (+${formatKRW(effectPrice)})` : effectLabel(form.borderEffect) },
                 ].map(({ label, value, highlight }) => (
                   <InfoRow key={label} label={label} value={value} highlight={highlight} />

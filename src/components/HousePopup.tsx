@@ -46,7 +46,9 @@ export default function HousePopup({ house, currentUserId, isAdmin, isOwnHouse, 
 
   useEffect(() => {
     if (!house.id || isAvailable) return
-    supabase.from('houses').update({ visit_count: house.visit_count + 1 }).eq('id', house.id)
+    // visit_count 는 houses RLS(소유자만 update)에 막히므로 SECURITY DEFINER RPC 로 올린다.
+    // (남의 집 방문이 카운트 안 되던 버그 수정 — fix_visit_count.sql)
+    supabase.rpc('increment_visit', { p_house_id: house.id })
   }, [house.id, isAvailable])
 
   const toggleLike = async () => {
@@ -205,14 +207,23 @@ export default function HousePopup({ house, currentUserId, isAdmin, isOwnHouse, 
                     <div style={{ fontSize: 14, color: '#1a1a1a', lineHeight: 1.9 }}>{house.description}</div>
                   </div>
                 )}
-                {safeUrl(house.link_url) && (
-                  <div>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: '#97948f', marginBottom: 8 }}>링크</div>
-                    <a href={safeUrl(house.link_url)!} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'flex-start', gap: 4, color: '#1a1a1a', fontSize: 13, fontWeight: 500, textDecoration: 'underline', wordBreak: 'break-all', lineHeight: 1.6 }}>
-                      {house.link_url}<span style={{ flexShrink: 0 }}>↗</span>
-                    </a>
-                  </div>
-                )}
+                {(() => {
+                  const links = (house.link_url ?? '').split('\n').map(u => u.trim()).filter(Boolean)
+                    .map(u => ({ raw: u, safe: safeUrl(u) })).filter(l => l.safe)
+                  if (links.length === 0) return null
+                  return (
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: '#97948f', marginBottom: 8 }}>링크</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {links.map((l, i) => (
+                          <a key={i} href={l.safe!} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'flex-start', gap: 4, color: '#1a1a1a', fontSize: 13, fontWeight: 500, textDecoration: 'underline', wordBreak: 'break-all', lineHeight: 1.6 }}>
+                            {l.raw}<span style={{ flexShrink: 0 }}>↗</span>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })()}
                 {!house.description && !house.link_url && (
                   <div style={{ color: '#6f6d6a', fontSize: 14, marginTop: 8 }}>소개글이 아직 없어요.</div>
                 )}

@@ -367,8 +367,8 @@ export default function AdminPage() {
                       방문 {h.visit_count.toLocaleString()} / ♥ {h.like_count.toLocaleString()}
                     </td>
                     <td style={{ padding: '11px 12px' }}>
-                      {safeUrl(h.link_url)
-                        ? <a href={safeUrl(h.link_url)!} target="_blank" rel="noopener noreferrer" style={{ color: '#1a1a1a', fontSize: 12, textDecoration: 'underline', fontWeight: 500 }}>방문</a>
+                      {safeUrl((h.link_url ?? '').split('\n')[0])
+                        ? <a href={safeUrl((h.link_url ?? '').split('\n')[0])!} target="_blank" rel="noopener noreferrer" style={{ color: '#1a1a1a', fontSize: 12, textDecoration: 'underline', fontWeight: 500 }}>방문</a>
                         : <span style={{ color: '#6f6d6a' }}>—</span>}
                     </td>
                     <td style={{ padding: '11px 12px', whiteSpace: 'nowrap' }}>
