@@ -258,6 +258,18 @@ export default function ApplyFlow({ selectedCell, userId, isAdmin, onClose, onSu
     }))
   }
 
+  // 수동 임시저장 (버튼) — 텍스트·설정을 즉시 저장하고 "저장됨" 표시
+  const [draftSaved, setDraftSaved] = useState(false)
+  const saveDraftNow = useCallback(() => {
+    const d: Draft = {
+      name: form.name, description: form.description, linkUrl: form.linkUrl, nickname: form.nickname,
+      days: form.days, borderEffect: form.borderEffect,
+      exteriorFit: form.exteriorFit, exteriorScale: form.exteriorScale, exteriorOffset: form.exteriorOffset,
+      interiorScale: form.interiorScale, interiorOffset: form.interiorOffset,
+    }
+    try { localStorage.setItem(draftKey, JSON.stringify(d)); setDraftSaved(true); setTimeout(() => setDraftSaved(false), 2000) } catch { /* 무시 */ }
+  }, [form, draftKey])
+
   // 미니맵 (Step 1) — 4구역 + 선택 셀 표시
   useEffect(() => {
     if (step !== 1) return
@@ -374,7 +386,8 @@ export default function ApplyFlow({ selectedCell, userId, isAdmin, onClose, onSu
   // 신청 확인 미리보기 카드 (Step 4)
   useEffect(() => {
     if (step !== 4) return
-    paintCanvas(confirmRef.current, extImg, extTransform, neonPaint)
+    // 네온은 대표이미지 래퍼(div)가 담당 → 캔버스엔 네온 안 그림
+    paintCanvas(confirmRef.current, extImg, extTransform, undefined)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, extImg, form.exteriorFit, form.exteriorScale, form.exteriorOffset, neonOn, neonPaintColor, neonFrac])
 
@@ -1315,24 +1328,32 @@ export default function ApplyFlow({ selectedCell, userId, isAdmin, onClose, onSu
               <div className="af-col" style={{ flex:1, padding:'24px 20px', overflowY:'auto', maxHeight:'calc(92vh - 160px)' }}>
                 <SectionTitle>이렇게 보여요</SectionTitle>
 
-                {/* 실제 집 미리보기 카드 */}
+                {/* 실제 집 미리보기 카드 (네온은 카드 전체가 아니라 대표이미지에만) */}
                 <div style={{
                   borderRadius:14, border:'1px solid #e9e7e4', background:'#fff', overflow:'hidden', marginBottom:18,
-                  boxShadow: neonOn ? `0 0 0 ${(2 * neonFrac).toFixed(2)}px ${neonPaintColor}, 0 0 22px ${neonPaintColor}` : '0 1px 3px rgba(0,0,0,0.05)',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
                 }}>
                   {/* 대표 이미지 (지도에 올라갈 모습 그대로) */}
                   <div style={{ padding:'10px 14px 0', display:'flex', alignItems:'center', gap:6 }}>
                     <span style={{ fontSize:11, fontWeight:700, padding:'3px 8px', borderRadius:6, background:'#1c1c1e', color:'#fff' }}>대표 이미지</span>
                     <span style={{ fontSize:11, color:'#6f6d6a' }}>지도(메인 화면)에 보이는 이미지예요</span>
                   </div>
-                  <div style={{ height:186, background:'#faf9f8', borderBottom:'1px solid #e9e7e4', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden', margin:'8px 0 0' }}>
-                    {cropEnabled ? (
-                      <canvas ref={confirmRef} width={cfW} height={cfH} style={{ width:cfW, height:cfH, maxWidth:'92%', maxHeight:'90%', borderRadius:8, display:'block' }} />
-                    ) : form.exteriorPreview ? (
-                      <img src={form.exteriorPreview} alt="대표 이미지" style={{ maxWidth:'92%', maxHeight:'90%', objectFit: form.exteriorFit, borderRadius:8, border:'1px solid #e9e7e4' }} />
-                    ) : (
-                      <div style={{ fontSize:12, color:'#97948f', textAlign:'center', lineHeight:1.6 }}>대표 이미지가 없어요<br />이전 단계에서 등록할 수 있어요</div>
-                    )}
+                  <div style={{ height:200, background:'#faf9f8', borderBottom:'1px solid #e9e7e4', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden', padding:'12px 14px' }}>
+                    {/* 대표이미지 래퍼 — 네온은 여기에만 (비율 유지) */}
+                    <div style={{
+                      position:'relative', display:'inline-flex', borderRadius:6, overflow:'hidden',
+                      boxShadow: neonOn ? `0 0 ${(4*neonFrac).toFixed(1)}px ${neonPaintColor}, 0 0 ${(11*neonFrac).toFixed(1)}px ${neonPaintColor}, 0 0 ${(20*neonFrac).toFixed(1)}px ${neonPaintColor}, inset 0 0 ${(6*neonFrac).toFixed(1)}px ${neonPaintColor}` : 'none',
+                      outline: neonOn ? `${Math.max(1, 2.4*neonFrac).toFixed(2)}px solid ${neonPaintColor}` : 'none',
+                      outlineOffset:'-1px',
+                    }}>
+                      {cropEnabled ? (
+                        <canvas ref={confirmRef} width={cfW} height={cfH} style={{ maxWidth:'100%', maxHeight:174, width:'auto', height:'auto', display:'block' }} />
+                      ) : form.exteriorPreview ? (
+                        <img src={form.exteriorPreview} alt="대표 이미지" style={{ maxWidth:'100%', maxHeight:174, width:'auto', height:'auto', objectFit: form.exteriorFit, display:'block' }} />
+                      ) : (
+                        <div style={{ fontSize:12, color:'#97948f', textAlign:'center', lineHeight:1.6, padding:'40px 20px' }}>대표 이미지가 없어요<br />이전 단계에서 등록할 수 있어요</div>
+                      )}
+                    </div>
                   </div>
 
                   {/* 정보 */}
@@ -1537,6 +1558,15 @@ export default function ApplyFlow({ selectedCell, userId, isAdmin, onClose, onSu
 
         {/* 하단 버튼 */}
         <div style={{ padding:'14px 20px', borderTop:'1px solid #e9e7e4', background:'#ffffff', display:'flex', gap:10, flexShrink:0 }}>
+          {/* 임시저장 (신규 입주만) */}
+          {!isEdit && !paymentDone && (
+            <button onClick={saveDraftNow} title="입력한 내용을 임시로 저장 (이미지 제외)" style={{
+              padding:'13px 14px', borderRadius:10, cursor:'pointer',
+              border:`1px solid ${draftSaved ? '#16a34a' : '#e0ddd9'}`,
+              background:'#ffffff', color: draftSaved ? '#16a34a' : '#575654',
+              fontSize:13, fontWeight:600, whiteSpace:'nowrap', flexShrink:0,
+            }}>{draftSaved ? '저장됨 ✓' : '임시저장'}</button>
+          )}
           {step > (isEdit ? 2 : 1) && !paymentDone && (
             <button onClick={() => setStep(s => (s - 1) as Step)} style={{ flex:1, padding:'13px', borderRadius:10, cursor:'pointer', border:'1px solid #e0ddd9', background:'#ffffff', color:'#1a1a1a', fontSize:14, fontWeight:600 }}>
               이전 단계
