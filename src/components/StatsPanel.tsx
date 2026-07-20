@@ -31,15 +31,18 @@ export default function StatsPanel({ houses, mapViewport, onZoomIn, onZoomOut, o
   const occupiedCount = occupiedHouses.length   // 입주 칸 수(위성칸 포함) — 분양률·남은칸 계산용
   const occupancyRate = ((occupiedCount / totalCells) * 100).toFixed(1)
 
-  const topAreas = [...occupiedHouses]
+  const topAreas = occupiedHouses
+    .filter(h => !h.parent_address)   // 대표칸만 — 위성칸 제외
     .sort((a, b) => b.visit_count - a.visit_count)
     .slice(0, 5)
     .map((h, i) => ({ name: h.name ?? h.nickname ?? h.address, zone: h.zone, count: h.visit_count, rank: i + 1 }))
 
   useEffect(() => {
     // 최근 입주자도 마스킹 뷰에서 — 비공개 집은 이름이 null 로 내려와 '이름 없음'으로 표시됨
+    // 대표칸만(parent_address 없음) — 멀티셀 집의 위성칸이 '이름 없음'으로 목록을 도배하던 버그 방지
     supabase.from('public_houses').select('id, name, nickname, zone, occupied_at')
-      .eq('status', 'occupied').order('occupied_at', { ascending: false }).limit(5)
+      .eq('status', 'occupied').is('parent_address', null)
+      .order('occupied_at', { ascending: false }).limit(5)
       .then(({ data }) => setRecentHouses((data ?? []) as RecentHouse[]))
   }, [houses])
 
@@ -125,7 +128,7 @@ export default function StatsPanel({ houses, mapViewport, onZoomIn, onZoomOut, o
 
       {/* 인기 지역 */}
       <div style={{ padding:'10px 16px', borderRight:'1px solid #e9e7e4', display:'flex', flexDirection:'column', gap:5 }}>
-        <PanelLabel>인기 지역 TOP 5 (방문자 수 기준)</PanelLabel>
+        <PanelLabel>많이 찾는 집 TOP 5 (방문자 수 기준)</PanelLabel>
         {topAreas.length === 0 ? (
           <div style={{ fontSize:11, color:'#6f6d6a', marginTop:8 }}>아직 방문 데이터가 없어요</div>
         ) : topAreas.map(area => (

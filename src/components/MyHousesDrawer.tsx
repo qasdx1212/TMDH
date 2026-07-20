@@ -52,7 +52,10 @@ export default function MyHousesDrawer({ userId, isAdmin, onClose, onEdit, onRef
   }
 
   useEffect(() => {
+    // 대표칸만 조회 — 멀티셀 집의 위성칸(parent_address 있음)은 한 집의 몸통이므로 제외.
+    // (예전엔 위성칸까지 다 나와서 1000행 제한에 대표칸이 밀려 '내 집이 안 나오는' 버그가 있었음)
     supabase.from('houses').select('*').eq('user_id', userId).eq('status', 'occupied')
+      .is('parent_address', null)
       .order('occupied_at', { ascending: false })
       .then(({ data }) => { setHouses((data ?? []) as CellData[]); setLoading(false) })
   }, [userId])

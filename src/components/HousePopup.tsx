@@ -54,12 +54,14 @@ export default function HousePopup({ house, currentUserId, isAdmin, isOwnHouse, 
     }
     if (!house.id) return
     setLikeLoading(true)
+    // like_count 는 likes 테이블 트리거(update_like_count, SECURITY DEFINER)가 갱신함.
+    // 클라이언트에서 houses 를 직접 update 하면 남의 집은 RLS 에 막혀 실패하므로 하지 않는다.
     if (liked) {
       const { error } = await supabase.from('likes').delete().eq('user_id', currentUserId).eq('house_id', house.id)
-      if (!error) { setLiked(false); const n = Math.max(0, likeCount - 1); setLikeCount(n); supabase.from('houses').update({ like_count: n }).eq('id', house.id) }
+      if (!error) { setLiked(false); setLikeCount(n => Math.max(0, n - 1)) }
     } else {
       const { error } = await supabase.from('likes').insert({ user_id: currentUserId, house_id: house.id })
-      if (!error) { setLiked(true); const n = likeCount + 1; setLikeCount(n); supabase.from('houses').update({ like_count: n }).eq('id', house.id) }
+      if (!error) { setLiked(true); setLikeCount(n => n + 1) }
     }
     setLikeLoading(false)
   }
@@ -135,22 +137,30 @@ export default function HousePopup({ house, currentUserId, isAdmin, isOwnHouse, 
           <button onClick={onClose} style={{ position: 'absolute', top: 14, right: 14, zIndex: 10, width: 32, height: 32, borderRadius: 10, background: '#f4f3f1', border: '1px solid #e9e7e4', color: '#6f6d6a', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>×</button>
 
           {/* 헤더 */}
-          <div style={{ padding: '22px 56px 20px 24px', borderBottom: '1px solid #e9e7e4', display: 'flex', alignItems: 'center', gap: 16 }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 8, background: '#f4f3f1', color: '#6f6d6a', border: '1px solid #e9e7e4' }}>{house.address}</span>
-                {house.nickname && (
-                  <span style={{ fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 8, background: '#1c1c1e', color: '#ffffff' }}>문패 {house.nickname}</span>
-                )}
-                {house.is_visible === false && (
-                  <span style={{ fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 8, background: '#f4f3f1', color: '#6f6d6a', border: '1px solid #e9e7e4' }}>비공개</span>
-                )}
-              </div>
-              <div style={{ fontSize: 24, fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.02em', lineHeight: 1.25 }}>
-                {isAvailable ? '빈 공간' : (house.name ?? '이름 없는 집')}
-                {!isAvailable && likeCount > 50 && ' 💛'}
-              </div>
+          <div style={{ padding: '16px 56px 14px 20px', borderBottom: '1px solid #e9e7e4' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 8, background: '#f4f3f1', color: '#6f6d6a', border: '1px solid #e9e7e4' }}>{house.address}</span>
+              {house.is_visible === false && (
+                <span style={{ fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 8, background: '#f4f3f1', color: '#6f6d6a', border: '1px solid #e9e7e4' }}>비공개</span>
+              )}
             </div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.02em', lineHeight: 1.25 }}>
+              {isAvailable ? '빈 공간' : (house.name ?? '이름 없는 집')}
+              {!isAvailable && likeCount > 50 && ' 💛'}
+            </div>
+            {/* 입주일 + 공유 — 상단 배치 (#6) */}
+            {!isAvailable && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
+                {house.occupied_at && (
+                  <span style={{ fontSize: 13, color: '#6f6d6a', fontWeight: 500 }}>
+                    입주일 {house.occupied_at.slice(0, 10)}
+                  </span>
+                )}
+                <button onClick={handleShare} style={{ padding: '5px 12px', borderRadius: 10, border: '1px solid #e0ddd9', background: '#ffffff', color: copied ? '#1a1a1a' : '#6f6d6a', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                  {copied ? '복사됨 ✓' : '공유'}
+                </button>
+              </div>
+            )}
           </div>
 
           {/* 바디 */}
@@ -169,7 +179,7 @@ export default function HousePopup({ house, currentUserId, isAdmin, isOwnHouse, 
             </div>
           ) : (
             <div style={{ display: 'flex', minHeight: 180, overflowY: 'auto', flex: 1 }}>
-              <div style={{ flex: 1, padding: '22px 24px', minWidth: 0 }}>
+              <div style={{ flex: 1, padding: '16px 20px', minWidth: 0 }}>
                 {house.description && (
                   <div style={{ marginBottom: 20 }}>
                     <div style={{ fontSize: 12, fontWeight: 600, color: '#97948f', marginBottom: 8 }}>소개글</div>
@@ -196,43 +206,25 @@ export default function HousePopup({ house, currentUserId, isAdmin, isOwnHouse, 
             </div>
           )}
 
-          {/* 통계 바 */}
+          {/* 통계 바 — 좋아요 · 방문 (좁게), 신고는 우측 하단 */}
           {!isAvailable && (
-            <div style={{ display: 'flex', background: '#ffffff', borderTop: '1px solid #e9e7e4' }}>
-              <StatCell>
-                <button
-                  onClick={toggleLike}
-                  disabled={likeLoading}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, padding: 0, fontSize: 15, fontWeight: 600, color: liked ? '#dc2626' : '#6f6d6a' }}
-                >
-                  {liked ? '❤️' : '🤍'} {likeCount.toLocaleString()}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 18, padding: '12px 20px', background: '#ffffff', borderTop: '1px solid #e9e7e4' }}>
+              <button
+                onClick={toggleLike}
+                disabled={likeLoading}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, padding: 0, fontSize: 15, fontWeight: 600, color: liked ? '#dc2626' : '#6f6d6a' }}
+              >
+                {liked ? '❤️' : '🤍'} {likeCount.toLocaleString()}
+              </button>
+              <span style={{ fontSize: 14, fontWeight: 500, color: '#6f6d6a' }}>
+                방문 {(house.visit_count + 1).toLocaleString()}
+              </span>
+              {/* 신고하기 — 본인 집이 아니고 로그인한 경우만 */}
+              {currentUserId && !isOwnHouse && (
+                <button onClick={() => setShowReport(true)} style={{ marginLeft: 'auto', padding: '5px 12px', borderRadius: 10, border: '1px solid #e0ddd9', background: '#ffffff', color: '#dc2626', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                  신고
                 </button>
-              </StatCell>
-              <div style={{ width: 1, background: '#e9e7e4', margin: '12px 0' }} />
-              <StatCell>
-                <span style={{ fontSize: 14, fontWeight: 500, color: '#6f6d6a', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  방문 {(house.visit_count + 1).toLocaleString()}
-                </span>
-              </StatCell>
-              <div style={{ width: 1, background: '#e9e7e4', margin: '12px 0' }} />
-              <StatCell>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
-                  {house.occupied_at && (
-                    <span style={{ fontSize: 13, color: '#6f6d6a', fontWeight: 500 }}>
-                      {house.occupied_at.slice(0, 10)}
-                    </span>
-                  )}
-                  <button onClick={handleShare} style={{ padding: '5px 12px', borderRadius: 10, border: '1px solid #e0ddd9', background: '#ffffff', color: copied ? '#1a1a1a' : '#6f6d6a', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                    {copied ? '복사됨' : '공유'}
-                  </button>
-                  {/* 신고하기 — 본인 집이 아니고 로그인한 경우만 */}
-                  {currentUserId && !isOwnHouse && (
-                    <button onClick={() => setShowReport(true)} style={{ padding: '5px 12px', borderRadius: 10, border: '1px solid #e0ddd9', background: '#ffffff', color: '#dc2626', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                      신고
-                    </button>
-                  )}
-                </div>
-              </StatCell>
+              )}
             </div>
           )}
 
@@ -311,13 +303,5 @@ export default function HousePopup({ house, currentUserId, isAdmin, isOwnHouse, 
         <ReportModal house={house} userId={currentUserId} onClose={() => setShowReport(false)} />
       )}
     </>
-  )
-}
-
-function StatCell({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '14px 12px' }}>
-      {children}
-    </div>
   )
 }
