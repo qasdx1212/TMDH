@@ -44,12 +44,24 @@ export default function HousePopup({ house, currentUserId, isAdmin, isOwnHouse, 
       .then(({ data }) => setLiked(!!data))
   }, [currentUserId, house.id])
 
+  const [visitBumped, setVisitBumped] = useState(false)
   useEffect(() => {
     if (!house.id || isAvailable) return
+    if (isOwnHouse) return   // 본인 집 방문은 카운트 제외 (순위 조작 방지)
+    // 하루에 한 번만 방문 인정 (브라우저 기준) — 팝업 열 때마다 오르는 것 방지.
     // visit_count 는 houses RLS(소유자만 update)에 막히므로 SECURITY DEFINER RPC 로 올린다.
-    // (남의 집 방문이 카운트 안 되던 버그 수정 — fix_visit_count.sql)
-    supabase.rpc('increment_visit', { p_house_id: house.id })
-  }, [house.id, isAvailable])
+    const key = `zipzip_visit_${house.id}`
+    const today = new Date().toISOString().slice(0, 10)
+    let doCount = true
+    try {
+      if (localStorage.getItem(key) === today) doCount = false
+      else localStorage.setItem(key, today)
+    } catch { /* localStorage 불가 시 그냥 카운트 */ }
+    if (doCount) {
+      supabase.rpc('increment_visit', { p_house_id: house.id })
+      setVisitBumped(true)
+    }
+  }, [house.id, isAvailable, isOwnHouse])
 
   const toggleLike = async () => {
     if (!currentUserId) {
@@ -247,7 +259,7 @@ export default function HousePopup({ house, currentUserId, isAdmin, isOwnHouse, 
                 {liked ? '❤️' : '🤍'} {likeCount.toLocaleString()}
               </button>
               <span style={{ fontSize: 14, fontWeight: 500, color: '#6f6d6a' }}>
-                방문 {(house.visit_count + 1).toLocaleString()}
+                방문 {(house.visit_count + (visitBumped ? 1 : 0)).toLocaleString()}
               </span>
               {/* 신고하기 — 본인 집이 아니고 로그인한 경우만 */}
               {currentUserId && !isOwnHouse && (
