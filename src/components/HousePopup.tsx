@@ -144,7 +144,7 @@ export default function HousePopup({ house, currentUserId, isAdmin, isOwnHouse, 
         <div
           onClick={e => e.stopPropagation()}
           style={{
-            width: 660, maxWidth: '96vw', maxHeight: '90vh',
+            width: 520, maxWidth: '96vw', maxHeight: '90vh',
             display: 'flex', flexDirection: 'column',
             background: '#ffffff', borderRadius: 14,
             border: '1px solid #e9e7e4',
@@ -208,9 +208,9 @@ export default function HousePopup({ house, currentUserId, isAdmin, isOwnHouse, 
                 {safeUrl(house.link_url) && (
                   <div>
                     <div style={{ fontSize: 12, fontWeight: 600, color: '#97948f', marginBottom: 8 }}>링크</div>
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      <a href={safeUrl(house.link_url)!} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 10, background: '#ffffff', color: '#1a1a1a', fontSize: 13, fontWeight: 600, textDecoration: 'none', border: '1px solid #e0ddd9' }}>집들이 가기 ↗</a>
-                    </div>
+                    <a href={safeUrl(house.link_url)!} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'flex-start', gap: 4, color: '#1a1a1a', fontSize: 13, fontWeight: 500, textDecoration: 'underline', wordBreak: 'break-all', lineHeight: 1.6 }}>
+                      {house.link_url}<span style={{ flexShrink: 0 }}>↗</span>
+                    </a>
                   </div>
                 )}
                 {!house.description && !house.link_url && (
