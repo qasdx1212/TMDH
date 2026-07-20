@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { ZONES, ZONE_PRICES, DURATIONS, PERMANENT_DAYS, PERMANENT_MULTIPLIER, NEON_PRESETS, NEON_PRICE, NEON_MAX_WIDTH, DEFAULT_NEON, isNeon, neonColor, neonWidth, neonWidthFrac, buildNeon, getEffectPrice, effectLabel, calcPrice, formatKRW, getAddress, getZone } from '@/lib/constants'
 import { safeUrl } from '@/lib/url'
 import { hashPwd } from '@/lib/hash'
+import { pwdChecks, isPwdValid } from '@/lib/password'
 import { toUserMessage } from '@/lib/errorMessage'
 import type { CellData } from '@/types/cell'
 
@@ -94,19 +95,7 @@ async function bakeFile(img: HTMLImageElement, t: Transform, tw: number, th: num
   return new File([blob], filename, { type: 'image/jpeg' })
 }
 
-/* ─── 비밀번호 규칙: 영문 + 숫자 + 특수문자 포함 10자 이상 ─── */
-function pwdChecks(p: string) {
-  return {
-    len: p.length >= 10,
-    alpha: /[A-Za-z]/.test(p),
-    num: /[0-9]/.test(p),
-    special: /[^A-Za-z0-9]/.test(p),
-  }
-}
-function isPwdValid(p: string): boolean {
-  const c = pwdChecks(p)
-  return c.len && c.alpha && c.num && c.special
-}
+/* 비밀번호 규칙(pwdChecks / isPwdValid)은 @/lib/password 로 이동 (HousePopup 재설정과 공유) */
 
 /* ─── 임시저장(draft) ─── */
 interface Draft {

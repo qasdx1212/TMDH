@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { ZONES } from '@/lib/constants'
 import { hashPwd } from '@/lib/hash'
+import { pwdChecks, isPwdValid } from '@/lib/password'
 import { safeUrl } from '@/lib/url'
 import type { CellData } from '@/types/cell'
 import ReportModal from './ReportModal'
@@ -30,6 +31,7 @@ export default function HousePopup({ house, currentUserId, isAdmin, isOwnHouse, 
   const [pwdInput, setPwdInput] = useState('')
   const [pwdError, setPwdError] = useState('')
   const [pwdLoading, setPwdLoading] = useState(false)
+  const [resetMode, setResetMode] = useState(false)   // #11 로그인한 집주인 비밀번호 재설정
 
   const zone = ZONES[house.zone]
   const isAvailable = house.status === 'available'
@@ -90,7 +92,7 @@ export default function HousePopup({ house, currentUserId, isAdmin, isOwnHouse, 
       if (action === 'edit') { onEdit?.(house); onClose() }
       else onVacate?.(house)
     } else {
-      setPwdInput(''); setPwdError(''); setPwdModal(action)
+      setPwdInput(''); setPwdError(''); setResetMode(false); setPwdModal(action)
     }
   }
 
@@ -107,6 +109,23 @@ export default function HousePopup({ house, currentUserId, isAdmin, isOwnHouse, 
       } else {
         setPwdError('비밀번호가 틀렸어요 🔒')
       }
+    } catch { setPwdError('오류가 발생했습니다.') }
+    finally { setPwdLoading(false) }
+  }
+
+  // #11 로그인한 집주인은 예전 비밀번호 없이 새 비밀번호로 재설정 가능 (계정 로그인 = 본인 인증).
+  // 집주인은 houses RLS(auth.uid()=user_id)를 통과하므로 password_hash 를 직접 갱신할 수 있다.
+  const handlePwdReset = async () => {
+    if (!isPwdValid(pwdInput)) { setPwdError('비밀번호 조건을 확인해주세요.'); return }
+    setPwdLoading(true); setPwdError('')
+    try {
+      const hash = await hashPwd(pwdInput)
+      const { error } = await supabase.from('houses')
+        .update({ password_hash: hash, has_password: true }).eq('id', house.id)
+      if (error) { setPwdError('재설정에 실패했어요.'); return }
+      const action = pwdModal; setPwdModal(null); setPwdInput(''); setResetMode(false)
+      if (action === 'edit') { onEdit?.(house); onClose() }
+      else if (action === 'vacate') onVacate?.(house)
     } catch { setPwdError('오류가 발생했습니다.') }
     finally { setPwdLoading(false) }
   }
@@ -257,42 +276,81 @@ export default function HousePopup({ house, currentUserId, isAdmin, isOwnHouse, 
             border:'1px solid #e9e7e4', boxShadow:'0 8px 30px rgba(0,0,0,0.12)',
           }}>
             <div style={{ fontSize:17, fontWeight:700, color:'#1a1a1a', textAlign:'center', marginBottom:6 }}>
-              {pwdModal === 'edit' ? '수정하기' : '퇴거하기'}
+              {resetMode ? '비밀번호 재설정' : pwdModal === 'edit' ? '수정하기' : '퇴거하기'}
             </div>
-            <div style={{ fontSize:13, color:'#6f6d6a', textAlign:'center', marginBottom:20, lineHeight:1.7 }}>
-              이 집에 설정된 비밀번호를 입력해주세요.
+            <div style={{ fontSize:13, color:'#6f6d6a', textAlign:'center', marginBottom:20, lineHeight:1.7, whiteSpace:'pre-line' }}>
+              {resetMode
+                ? '로그인한 집주인이므로 예전 비밀번호 없이\n새 비밀번호로 재설정할 수 있어요.'
+                : '이 집에 설정된 비밀번호를 입력해주세요.'}
             </div>
             <input
               type="password"
               autoFocus
               value={pwdInput}
               onChange={e => { setPwdInput(e.target.value); setPwdError('') }}
-              onKeyDown={e => e.key === 'Enter' && handlePwdSubmit()}
-              placeholder="비밀번호 입력"
+              onKeyDown={e => e.key === 'Enter' && (resetMode ? handlePwdReset() : handlePwdSubmit())}
+              placeholder={resetMode ? '새 비밀번호' : '비밀번호 입력'}
               style={{
                 width:'100%', padding:'11px 12px', borderRadius:10, boxSizing:'border-box',
                 border:`1px solid ${pwdError ? '#dc2626' : '#e0ddd9'}`,
                 background:'#ffffff', color:'#1a1a1a', fontSize:14, outline:'none',
               }}
             />
+            {resetMode && (
+              <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginTop:8 }}>
+                {(() => { const c = pwdChecks(pwdInput); return [
+                  { ok: c.len, label:'10자 이상' },
+                  { ok: c.alpha, label:'영문' },
+                  { ok: c.num, label:'숫자' },
+                  { ok: c.special, label:'특수문자' },
+                ]})().map(chk => (
+                  <span key={chk.label} style={{ fontSize:11, fontWeight:600, padding:'3px 8px', borderRadius:8, background: chk.ok ? '#eaf6ee' : '#f4f3f1', color: chk.ok ? '#16a34a' : '#97948f', border:`1px solid ${chk.ok ? '#d4ead9' : '#e9e7e4'}` }}>
+                    {chk.ok ? '✓ ' : ''}{chk.label}
+                  </span>
+                ))}
+              </div>
+            )}
             {pwdError && <div style={{ fontSize:12, color:'#dc2626', marginTop:6, textAlign:'center' }}>{pwdError}</div>}
-            <div style={{ display:'flex', gap:10, marginTop:18 }}>
-              <button onClick={() => setPwdModal(null)} style={{ flex:1, padding:'11px', borderRadius:10, border:'1px solid #e0ddd9', background:'#ffffff', color:'#1a1a1a', fontSize:13, fontWeight:600, cursor:'pointer' }}>
-                취소
-              </button>
+            {!resetMode && isOwnHouse && (
               <button
-                onClick={handlePwdSubmit}
-                disabled={!pwdInput || pwdLoading}
-                style={{
-                  flex:2, padding:'11px', borderRadius:10,
-                  border:'none',
-                  background: pwdModal === 'vacate' ? '#dc2626' : '#1c1c1e',
-                  color: '#ffffff', fontSize:13, fontWeight:600, cursor: !pwdInput || pwdLoading ? 'default' : 'pointer',
-                  opacity: !pwdInput || pwdLoading ? 0.5 : 1,
-                }}
+                onClick={() => { setResetMode(true); setPwdInput(''); setPwdError('') }}
+                style={{ display:'block', margin:'12px auto 0', background:'none', border:'none', color:'#97948f', fontSize:12, textDecoration:'underline', cursor:'pointer' }}
               >
-                {pwdLoading ? '확인 중...' : pwdModal === 'vacate' ? '퇴거하기' : '수정하기'}
+                비밀번호를 잊으셨나요?
               </button>
+            )}
+            <div style={{ display:'flex', gap:10, marginTop:18 }}>
+              <button onClick={() => { if (resetMode) { setResetMode(false); setPwdInput(''); setPwdError('') } else setPwdModal(null) }} style={{ flex:1, padding:'11px', borderRadius:10, border:'1px solid #e0ddd9', background:'#ffffff', color:'#1a1a1a', fontSize:13, fontWeight:600, cursor:'pointer' }}>
+                {resetMode ? '뒤로' : '취소'}
+              </button>
+              {resetMode ? (
+                <button
+                  onClick={handlePwdReset}
+                  disabled={!isPwdValid(pwdInput) || pwdLoading}
+                  style={{
+                    flex:2, padding:'11px', borderRadius:10, border:'none',
+                    background:'#1c1c1e', color:'#ffffff', fontSize:13, fontWeight:600,
+                    cursor: !isPwdValid(pwdInput) || pwdLoading ? 'default' : 'pointer',
+                    opacity: !isPwdValid(pwdInput) || pwdLoading ? 0.5 : 1,
+                  }}
+                >
+                  {pwdLoading ? '저장 중...' : '재설정하고 계속'}
+                </button>
+              ) : (
+                <button
+                  onClick={handlePwdSubmit}
+                  disabled={!pwdInput || pwdLoading}
+                  style={{
+                    flex:2, padding:'11px', borderRadius:10,
+                    border:'none',
+                    background: pwdModal === 'vacate' ? '#dc2626' : '#1c1c1e',
+                    color: '#ffffff', fontSize:13, fontWeight:600, cursor: !pwdInput || pwdLoading ? 'default' : 'pointer',
+                    opacity: !pwdInput || pwdLoading ? 0.5 : 1,
+                  }}
+                >
+                  {pwdLoading ? '확인 중...' : pwdModal === 'vacate' ? '퇴거하기' : '수정하기'}
+                </button>
+              )}
             </div>
           </div>
         </div>

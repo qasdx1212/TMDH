@@ -4,10 +4,19 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { safeUrl } from '@/lib/url'
+import { formatKRW } from '@/lib/constants'
 import { isAdminEmail } from '@/lib/admins'
 import type { CellData } from '@/types/cell'
 
 type Tab = 'all' | 'reports'
+
+interface PaymentRow {
+  house_address: string | null
+  amount: number
+  type: string | null
+  status: string | null
+  created_at: string
+}
 
 interface Report {
   id: string
@@ -40,6 +49,9 @@ export default function AdminPage() {
   const [sortBy, setSortBy] = useState<'occupied_at' | 'visit_count' | 'like_count'>('occupied_at')
   const [reports, setReports] = useState<Report[]>([])
   const [reportsLoading, setReportsLoading] = useState(false)
+  // #12 수익: 결제 내역 (집주소별 합계 + 전체/이번달 매출)
+  const [payByHouse, setPayByHouse] = useState<Record<string, number>>({})
+  const [revenue, setRevenue] = useState({ total: 0, month: 0, count: 0 })
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -63,6 +75,26 @@ export default function AdminPage() {
     setLoading(false)
   }, [])
 
+  const fetchRevenue = useCallback(async () => {
+    // 완료된 결제만 집계. 관리자 무료 입주(amount 0)는 매출에서 제외.
+    const { data } = await supabase
+      .from('payments')
+      .select('house_address, amount, type, status, created_at')
+      .eq('status', 'completed')
+    const rows = ((data ?? []) as PaymentRow[]).filter(p => (p.amount ?? 0) > 0)
+    const byHouse: Record<string, number> = {}
+    let total = 0, month = 0
+    const now = new Date()
+    for (const p of rows) {
+      if (p.house_address) byHouse[p.house_address] = (byHouse[p.house_address] ?? 0) + p.amount
+      total += p.amount
+      const d = new Date(p.created_at)
+      if (d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()) month += p.amount
+    }
+    setPayByHouse(byHouse)
+    setRevenue({ total, month, count: rows.length })
+  }, [])
+
   const fetchReports = useCallback(async () => {
     setReportsLoading(true)
     const { data: rData } = await supabase
@@ -84,8 +116,8 @@ export default function AdminPage() {
   }, [])
 
   useEffect(() => {
-    if (authorized) fetchHouses()
-  }, [authorized, fetchHouses])
+    if (authorized) { fetchHouses(); fetchRevenue() }
+  }, [authorized, fetchHouses, fetchRevenue])
 
   useEffect(() => {
     if (authorized && tab === 'reports') fetchReports()
@@ -160,13 +192,28 @@ export default function AdminPage() {
             <div style={{ width: 1, height: 20, background: '#e9e7e4' }} />
             <div style={{ fontSize: 16, fontWeight: 700 }}>관리자 대시보드</div>
           </div>
-          <button onClick={fetchHouses} style={{ padding: '8px 16px', border: '1px solid #e0ddd9', borderRadius: 10, background: '#ffffff', color: '#1a1a1a', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+          <button onClick={() => { fetchHouses(); fetchRevenue() }} style={{ padding: '8px 16px', border: '1px solid #e0ddd9', borderRadius: 10, background: '#ffffff', color: '#1a1a1a', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
             새로고침
           </button>
         </div>
       </div>
 
       <div style={{ padding: '24px', maxWidth: 1400, margin: '0 auto' }}>
+
+        {/* 수익 대시보드 (#12) */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 12 }}>
+          {[
+            { label: '총 매출', value: formatKRW(revenue.total), sub: '완료된 결제 누적 (무료 입주 제외)', accent: true },
+            { label: '이번 달 매출', value: formatKRW(revenue.month), sub: `${new Date().getMonth() + 1}월 결제분` },
+            { label: '결제 건수', value: `${revenue.count.toLocaleString()}건`, sub: '유료 결제 건수' },
+          ].map(({ label, value, sub, accent }) => (
+            <div key={label} style={{ background: accent ? '#1c1c1e' : '#ffffff', border: '1px solid ' + (accent ? '#1c1c1e' : '#e9e7e4'), borderRadius: 14, boxShadow: '0 1px 3px rgba(0,0,0,0.05)', padding: '16px' }}>
+              <div style={{ fontSize: 11, color: accent ? 'rgba(255,255,255,0.7)' : '#6f6d6a', marginBottom: 6, fontWeight: 500 }}>{label}</div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: accent ? '#ffffff' : '#1a1a1a' }}>{value}</div>
+              <div style={{ fontSize: 11, color: accent ? 'rgba(255,255,255,0.55)' : '#97948f', marginTop: 3 }}>{sub}</div>
+            </div>
+          ))}
+        </div>
 
         {/* 핵심 통계 */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
@@ -292,26 +339,30 @@ export default function AdminPage() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
               <thead>
                 <tr style={{ background: '#faf9f7' }}>
-                  {['주소', '집 이름', '닉네임', '크기', '입주일', '방문 / 좋아요', '링크', '작업'].map(h => (
+                  {['#', '입주일', '주소', '집 이름', '닉네임', '결제액', '크기', '방문 / 좋아요', '링크', '작업'].map(h => (
                     <th key={h} style={{ padding: '11px 12px', textAlign: 'left', color: '#6f6d6a', fontWeight: 600, fontSize: 12, whiteSpace: 'nowrap', borderBottom: '1px solid #e9e7e4' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={8} style={{ padding: 48, textAlign: 'center', color: '#6f6d6a' }}>불러오는 중...</td></tr>
+                  <tr><td colSpan={10} style={{ padding: 48, textAlign: 'center', color: '#6f6d6a' }}>불러오는 중...</td></tr>
                 ) : filtered.length === 0 ? (
-                  <tr><td colSpan={8} style={{ padding: 48, textAlign: 'center', color: '#6f6d6a' }}>해당하는 집이 없어요</td></tr>
-                ) : filtered.map((h) => (
+                  <tr><td colSpan={10} style={{ padding: 48, textAlign: 'center', color: '#6f6d6a' }}>해당하는 집이 없어요</td></tr>
+                ) : filtered.map((h, i) => (
                   <tr key={h.id} style={{ borderBottom: '1px solid #f0efec', background: '#ffffff' }}>
+                    <td style={{ padding: '11px 12px', color: '#97948f', fontWeight: 600, whiteSpace: 'nowrap' }}>{i + 1}</td>
+                    <td style={{ padding: '11px 12px', color: '#6f6d6a', whiteSpace: 'nowrap' }}>{h.occupied_at?.slice(0, 10) ?? '—'}</td>
                     <td style={{ padding: '11px 12px', color: '#1a1a1a', fontWeight: 600, whiteSpace: 'nowrap' }}>{h.address}</td>
                     <td style={{ padding: '11px 12px', color: '#1a1a1a', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {h.exterior_image_url && <img src={h.exterior_image_url} alt="" style={{ width: 24, height: 24, objectFit: 'cover', borderRadius: 6, border: '1px solid #e9e7e4', marginRight: 6, verticalAlign: 'middle' }} />}
                       {h.name ?? <span style={{ color: '#6f6d6a' }}>—</span>}
                     </td>
                     <td style={{ padding: '11px 12px', color: '#575654' }}>{h.nickname ?? '—'}</td>
+                    <td style={{ padding: '11px 12px', color: '#1a1a1a', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                      {payByHouse[h.address] ? formatKRW(payByHouse[h.address]) : <span style={{ color: '#6f6d6a', fontWeight: 400 }}>—</span>}
+                    </td>
                     <td style={{ padding: '11px 12px', color: '#6f6d6a', whiteSpace: 'nowrap' }}>{(h.width ?? 1)}×{(h.height ?? 1)}</td>
-                    <td style={{ padding: '11px 12px', color: '#6f6d6a', whiteSpace: 'nowrap' }}>{h.occupied_at?.slice(0, 10) ?? '—'}</td>
                     <td style={{ padding: '11px 12px', color: '#6f6d6a', whiteSpace: 'nowrap' }}>
                       방문 {h.visit_count.toLocaleString()} / ♥ {h.like_count.toLocaleString()}
                     </td>
